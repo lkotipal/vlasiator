@@ -36,6 +36,7 @@
 
 #include "Magnetosphere.h"
 #include "../../fieldsolver/derivatives.hpp"
+#include "../../sysboundary/sysboundarycondition.h"
 
 using namespace std;
 using namespace spatial_cell;
@@ -595,7 +596,7 @@ namespace projects {
    }
 
    bool Magnetosphere::canRefine(const std::array<double,3> xyz, const int refLevel, const bool debug = false) const {
-      const int bw = VLASOV_STENCIL_WIDTH * pow(2, refLevel + 1);
+      const int bw = 2 * VLASOV_STENCIL_WIDTH * pow(2, refLevel + 1);
 
       if (debug) {
          std::cout << "Coordinates: " << xyz[0] << ", " << xyz[1] << ", " << xyz[2] << std::endl;
@@ -790,7 +791,9 @@ namespace projects {
       Real unrefineTreshold = P::unrefineTreshold;
       
       for (int i = 0; i < P::amrMaxSpatialRefLevel; ++i) {
-         #pragma omp parallel for
+         std::map<CellID, SpatialCell*> unrefinedCells;
+         std::set<CellID> dontUnrefine;
+         //#pragma omp parallel for // Disable for now, debug
          for (int j = 0; j < cells.size(); ++j) {
             CellID id = cells[j];
             std::array<double,3> xyz = mpiGrid.get_center(id);
@@ -808,22 +811,87 @@ namespace projects {
                if (cell->parameters[CellParams::ALPHA] > refineTreshold) {
                   refine = true;
                }
-            } /* else if (cell->parameters[CellParams::ALPHA] < unrefineTreshold && refLevel > 0) {
-               mpiGrid.unrefine_completely(id)
-            } */ // De-refinement disabled for now, check SysBoundaryCondition::averageCellData()
+            } else if (cell->parameters[CellParams::ALPHA] < unrefineTreshold && refLevel > 0) {
+               //#pragma omp critical (check_unrefine)  // Can get segfaults otherwise
+               bool unrefine = true;
+               CellID parent = mpiGrid.get_parent(id);
+               // Already checked
+               if (unrefinedCells.find(parent) != unrefinedCells.end() || dontUnrefine.find(parent) != dontUnrefine.end()) {
+                  continue;
+               }
+
+               bool shouldUnrefine = true;
+               std::vector<CellID> siblings = mpiGrid.get_all_children(parent);
+               for (CellID sibling : siblings) {
+                  // nullptr check here for siblings that are refined further
+                  if (mpiGrid[sibling] == nullptr || mpiGrid[sibling]->parameters[CellParams::ALPHA] > unrefineTreshold) {
+                     shouldUnrefine = false;
+                     break;
+                  }
+               }
+
+               if (!shouldUnrefine) {
+                  dontUnrefine.insert(parent);
+                  continue;
+               }
+
+               if (mpiGrid.unrefine_completely(id)) {
+                  unrefinedCells[parent] = new SpatialCell;
+                  // Do this as a test for now...
+                  //*unrefinedCells[parent] = *cell;
+
+                  // Average velocity data
+                  for (uint popID=0; popID < getObjectWrapper().particleSpecies.size(); ++popID) {
+                     SBC::averageCellData(mpiGrid, siblings, unrefinedCells[parent], 0, true, 1.0); // Fairly certain fluffiness should be 1.0 here
+                  }
+                  // Take averages of cell parameters
+                  //for (int j = 0; j < CellParams::N_SPATIAL_CELL_PARAMS; ++j) {
+                  //   unrefinedCells[parent]->parameters[j] = 0; // Initialize these to zero
+                  //}
+                  //for (CellID child : siblings) {
+                  //   for (int j = 0; j < CellParams::N_SPATIAL_CELL_PARAMS; ++j) {
+                  //      unrefinedCells[parent]->parameters[j] += mpiGrid[child]->parameters[j];
+                  //   }
+                  //}
+               }
+            }
 
             if (refine) {
-               #pragma omp critical
+               //#pragma omp critical (refinement)
                mpiGrid.refine_completely(id);
             }
          }
 
+         // Can't paralellize this... #pragma omp parallel for
+         // for (map<CellID, SpatialCell*>::iterator it = unrefinedCells.begin(); it != unrefinedCells.end(); ++it) {
+         //    CellID parentID = it->first;
+         //    SpatialCell* parentCell = it->second;
+         // }
+
          cells = mpiGrid.stop_refining();
-         #pragma omp parallel for
+         //#pragma omp parallel for
          for (int j = 0; j < cells.size(); ++j) {
             CellID id = cells[j];
             *mpiGrid[id] = *mpiGrid[mpiGrid.get_parent(id)];
          }
+
+         for (map<CellID, SpatialCell*>::iterator it = unrefinedCells.begin(); it != unrefinedCells.end(); ++it) {
+            CellID parentID = it->first;
+            SpatialCell* parentCell = it->second;
+            // This should exist but doesn't always... If it ends up null after inducing refinements it's probably because it didn't end up unrefined
+            if (mpiGrid[parentID]) {
+               *mpiGrid[parentID] = *parentCell;
+               cells.push_back(parentID);
+            } else {
+               std::cout << parentID << " is null. Children: " << std::endl;
+               for (CellID child : mpiGrid.get_all_children(parentID)) { 
+                  std::cout << child << ": " << mpiGrid[child] << std::endl;
+               }
+            }
+            delete parentCell;
+            parentCell = nullptr;
+         }
+
          refineTreshold *= 2;
          unrefineTreshold /= 2;
       }
