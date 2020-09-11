@@ -502,6 +502,16 @@ std::array<Real, 3> getPerB(SpatialCell* cell)
    return std::array<Real, 3> { {cell->parameters[CellParams::PERBXVOL], cell->parameters[CellParams::PERBYVOL], cell->parameters[CellParams::PERBZVOL]} };
 }
 
+/*! \brief Returns total volumetric B of cell
+ *
+ */
+std::array<Real, 3> getB(SpatialCell* cell)
+{
+   return std::array<Real, 3> { {cell->parameters[CellParams::PERBXVOL] + cell->parameters[CellParams::BGBXVOL], 
+                                 cell->parameters[CellParams::PERBYVOL] + cell->parameters[CellParams::BGBYVOL], 
+                                 cell->parameters[CellParams::PERBZVOL] + cell->parameters[CellParams::BGBZVOL]} };
+}
+
 /*! \brief Calculates momentum density of cell
  *
  */
@@ -518,6 +528,19 @@ Real calculateU1(SpatialCell* cell)
 {
    std::array<Real, 3> E = getE(cell);
    std::array<Real, 3> B = getPerB(cell);
+   return 0.5 * (
+      physicalconstants::EPS_0 * (pow(E[0], 2) + pow(E[1], 2) + pow(E[2], 2)) + 
+      1.0/physicalconstants::MU_0 * (pow(B[0], 2) + pow(B[1], 2) + pow(B[2], 2))
+   );
+}
+
+/*! \brief Calculates EM field energy for spatial cell with the total magnetic field
+ *
+ */
+Real calculateU(SpatialCell* cell)
+{
+   std::array<Real, 3> E = getE(cell);
+   std::array<Real, 3> B = getB(cell);
    return 0.5 * (
       physicalconstants::EPS_0 * (pow(E[0], 2) + pow(E[1], 2) + pow(E[2], 2)) + 
       1.0/physicalconstants::MU_0 * (pow(B[0], 2) + pow(B[1], 2) + pow(B[2], 2))
@@ -542,15 +565,15 @@ void calculateScaledDeltas(
    Real dB = 0;
 
    Real myRho = cell->parameters[CellParams::RHOM];
-   Real myU = calculateU1(cell);
+   Real myU = calculateU(cell);
    std::array<Real, 3> myP = getP(cell);
-   std::array<Real, 3> myB = getPerB(cell);
+   std::array<Real, 3> myB = getB(cell);
    std::array<Real, 3> myE = getE(cell);
    for (SpatialCell* neighbor : neighbors) {
       Real otherRho = neighbor->parameters[CellParams::RHOM];
-      Real otherU = calculateU1(neighbor);
+      Real otherU = calculateU(neighbor);
       std::array<Real, 3> otherP = getP(neighbor);
-      std::array<Real, 3> otherB = getPerB(neighbor);
+      std::array<Real, 3> otherB = getB(neighbor);
       std::array<Real, 3> otherE = getE(neighbor);
       Real deltaBsq = pow(myB[0] - otherB[0], 2) + pow(myB[1] - otherB[1], 2) + pow(myB[2] - otherB[2], 2);
 
