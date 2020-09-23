@@ -489,7 +489,7 @@ void calculateBVOLDerivativesSimple(
 /*! \brief Returns volumetric E of cell
  *
  */
-std::array<Real, 3> getE(SpatialCell* cell)
+static std::array<Real, 3> getE(SpatialCell* cell)
 {
    return std::array<Real, 3> { {cell->parameters[CellParams::EXVOL], cell->parameters[CellParams::EYVOL], cell->parameters[CellParams::EZVOL]} };
 }
@@ -497,7 +497,7 @@ std::array<Real, 3> getE(SpatialCell* cell)
 /*! \brief Returns perturbated volumetric B of cell
  *
  */
-std::array<Real, 3> getPerB(SpatialCell* cell)
+static std::array<Real, 3> getPerB(SpatialCell* cell)
 {
    return std::array<Real, 3> { {cell->parameters[CellParams::PERBXVOL], cell->parameters[CellParams::PERBYVOL], cell->parameters[CellParams::PERBZVOL]} };
 }
@@ -505,7 +505,7 @@ std::array<Real, 3> getPerB(SpatialCell* cell)
 /*! \brief Returns total volumetric B of cell
  *
  */
-std::array<Real, 3> getB(SpatialCell* cell)
+static std::array<Real, 3> getB(SpatialCell* cell)
 {
    return std::array<Real, 3> { {cell->parameters[CellParams::PERBXVOL] + cell->parameters[CellParams::BGBXVOL], 
                                  cell->parameters[CellParams::PERBYVOL] + cell->parameters[CellParams::BGBYVOL], 
@@ -515,7 +515,7 @@ std::array<Real, 3> getB(SpatialCell* cell)
 /*! \brief Calculates momentum density of cell
  *
  */
-std::array<Real, 3> getP(SpatialCell* cell)
+static std::array<Real, 3> getMomentumDensity(SpatialCell* cell)
 {
    Real rho = cell->parameters[CellParams::RHOM];
    return std::array<Real, 3> { {rho * cell->parameters[CellParams::VX], rho * cell->parameters[CellParams::VY], rho * cell->parameters[CellParams::VZ]} };
@@ -524,7 +524,7 @@ std::array<Real, 3> getP(SpatialCell* cell)
 /*! \brief Calculates EM field energy for spatial cell with only perturbated magnetic field
  *
  */
-Real calculateU1(SpatialCell* cell)
+static Real calculateU1(SpatialCell* cell)
 {
    std::array<Real, 3> E = getE(cell);
    std::array<Real, 3> B = getPerB(cell);
@@ -537,7 +537,7 @@ Real calculateU1(SpatialCell* cell)
 /*! \brief Calculates EM field energy for spatial cell with the total magnetic field
  *
  */
-Real calculateU(SpatialCell* cell)
+static Real calculateU(SpatialCell* cell)
 {
    std::array<Real, 3> E = getE(cell);
    std::array<Real, 3> B = getB(cell);
@@ -566,13 +566,13 @@ void calculateScaledDeltas(
 
    Real myRho = cell->parameters[CellParams::RHOM];
    Real myU = calculateU(cell);
-   std::array<Real, 3> myP = getP(cell);
+   std::array<Real, 3> myP = getMomentumDensity(cell);
    std::array<Real, 3> myB = getB(cell);
    std::array<Real, 3> myE = getE(cell);
    for (SpatialCell* neighbor : neighbors) {
       Real otherRho = neighbor->parameters[CellParams::RHOM];
       Real otherU = calculateU(neighbor);
-      std::array<Real, 3> otherP = getP(neighbor);
+      std::array<Real, 3> otherP = getMomentumDensity(neighbor);
       std::array<Real, 3> otherB = getB(neighbor);
       std::array<Real, 3> otherE = getE(neighbor);
       Real deltaBsq = pow(myB[0] - otherB[0], 2) + pow(myB[1] - otherB[1], 2) + pow(myB[2] - otherB[2], 2);
