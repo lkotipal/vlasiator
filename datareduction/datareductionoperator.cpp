@@ -161,7 +161,7 @@ namespace DRO {
       if(writeAsFloat) {
          // Convert down to 32bit floats to save output space
          std::vector<float> varBufferFloat(varBuffer.size());
-         for(int i=0; i<varBuffer.size(); i++) {
+         for(uint i=0; i<varBuffer.size(); i++) {
             varBufferFloat[i] = (float)varBuffer[i];
          }
          if(vlsvWriter.writeArray("VARIABLE",attribs, "float", gridSize[0]*gridSize[1]*gridSize[2], vectorSize, sizeof(float), reinterpret_cast<const char*>(varBufferFloat.data())) == false) {
@@ -1355,7 +1355,7 @@ namespace DRO {
       emax = getObjectWrapper().particleSpecies[popID].precipitationEmax;    // already converted to SI
       nChannels = getObjectWrapper().particleSpecies[popID].precipitationNChannels; // number of energy channels, logarithmically spaced between emin and emax
       for (int i=0; i<nChannels; i++){
-         channels.push_back(emin * pow(emax/emin,float(i)/(nChannels-1)));
+         channels.push_back(emin * pow(emax/emin,(Real)i/(nChannels-1)));
       }
    }
    VariablePrecipitationDiffFlux::~VariablePrecipitationDiffFlux() { }
