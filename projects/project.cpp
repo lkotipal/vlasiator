@@ -626,12 +626,12 @@ namespace projects {
 
       for (std::pair<CellID, SpatialCell*> cellPair : cellsMap) {
          CellID id = cellPair.first;
-         const std::vector<std::pair<CellID, std::array<int, 4>>>* neighbours = mpiGrid.get_neighbors_of(id, NEAREST_NEIGHBORHOOD_ID);
+         const std::vector<std::pair<CellID, std::array<int, 3>>>* neighbours = mpiGrid.get_neighbors_of(id, NEAREST_NEIGHBORHOOD_ID);
 
          // To preserve the mean, we must only consider refined cells
          int refLevel = mpiGrid.get_refinement_level(id);
          std::vector<CellID> refinedNeighbours;
-         for (std::pair<CellID, std::array<int, 4>> neighbour : *neighbours) {
+         for (std::pair<CellID, std::array<int, 3>> neighbour : *neighbours) {
             if (mpiGrid[neighbour.first]->parameters[CellParams::RECENTLY_REFINED] && mpiGrid.get_refinement_level(neighbour.first) == refLevel) {
                refinedNeighbours.push_back(neighbour.first);
             }

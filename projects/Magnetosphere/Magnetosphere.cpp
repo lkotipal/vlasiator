@@ -620,15 +620,21 @@ namespace projects {
    }
 
    bool Magnetosphere::canRefine(const std::array<double,3> xyz, const int refLevel) const {
-      const int bw = (2 + 1*refLevel) * VLASOV_STENCIL_WIDTH; // Seems to be the limit
+      // Old method
+      // const int bw = (2 + 1*refLevel) * globalflags::AMRstencilWidth; // Seems to be the limit
+
+      int bw=0;
+      for (int i=0; i<=refLevel; i++) {
+         bw = 2*(bw + globalflags::AMRstencilWidth);
+      }
 
       return refLevel < P::amrMaxSpatialRefLevel &&
-             xyz[0] > P::xmin + P::dx_ini * bw && 
-             xyz[0] < P::xmax - P::dx_ini * bw && 
-             xyz[1] > P::ymin + P::dy_ini * bw && 
-             xyz[1] < P::ymax - P::dy_ini * bw && 
-             xyz[2] > P::zmin + P::dz_ini * bw &&
-             xyz[2] < P::zmax - P::dz_ini * bw;
+               xyz[0] > P::xmin + P::dx_ini * bw && 
+               xyz[0] < P::xmax - P::dx_ini * bw && 
+               xyz[1] > P::ymin + P::dy_ini * bw && 
+               xyz[1] < P::ymax - P::dy_ini * bw && 
+               xyz[2] > P::zmin + P::dz_ini * bw &&
+               xyz[2] < P::zmax - P::dz_ini * bw;
    }
 
    bool Magnetosphere::refineSpatialCells( dccrg::Dccrg<spatial_cell::SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid ) const {
