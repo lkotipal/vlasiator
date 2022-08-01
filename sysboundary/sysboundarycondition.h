@@ -176,7 +176,7 @@ namespace SBC {
             creal dx, creal dy, creal dz,
             const bool excludeSlicesAndPeriodicDimensions = false
          ) const;
-         void copyCellData(
+         static void copyCellData(
             SpatialCell *from,
             SpatialCell *to,
             const bool copyMomentsOnly,
@@ -195,7 +195,7 @@ namespace SBC {
                const CellID& cellID
          );
 
-         std::array<Realf*,27> getFlowtoCellsBlock(
+         static std::array<Realf*,27> getFlowtoCellsBlock(
                const std::array<SpatialCell*,27> flowtoCells,
                const vmesh::GlobalID blockGID,
                const uint popID
@@ -208,7 +208,7 @@ namespace SBC {
        * \param k Offset in z direction (-1, 0 or 1)
        * \retval int Index in the flowto cell array (0 to 26, indexed from - to + x, y, z.
        */
-      inline int nbrID(const int i, const int j, const int k){
+      static inline int nbrID(const int i, const int j, const int k) {
          return (k+1)*9 + (j+1)*3 + i + 1;
       }
       
@@ -254,13 +254,13 @@ namespace SBC {
             creal& quenchingFactor,
             const uint popID
          );
-         std::array<int, 3> getTheClosestNonsysboundaryCell(
+         static std::array<int, 3> getTheClosestNonsysboundaryCell(
             FsGrid< fsgrids::technical, FS_STENCIL_WIDTH> & technicalGrid,
             cint i,
             cint j,
             cint k
          );
-         std::vector< std::array<int, 3> > getAllClosestNonsysboundaryCells(
+         static std::vector< std::array<int, 3> > getAllClosestNonsysboundaryCells(
             FsGrid< fsgrids::technical, FS_STENCIL_WIDTH> & technicalGrid,
             cint i,
             cint j,
@@ -275,7 +275,7 @@ namespace SBC {
          std::vector<CellID> & getAllCloseNonsysboundaryCells(
             const CellID& cellID
          );
-         Real fieldBoundaryCopyFromSolvingNbrMagneticField(
+         static Real fieldBoundaryCopyFromSolvingNbrMagneticField(
             FsGrid< std::array<Real, fsgrids::bfield::N_BFIELD>, FS_STENCIL_WIDTH> & bGrid,
             FsGrid< fsgrids::technical, FS_STENCIL_WIDTH> & technicalGrid,
             cint i,

@@ -190,7 +190,7 @@ namespace SBC {
       };
       void readAtmosphericModelFile(const char* filename);
       void offset_FAC();                  // Offset field aligned currents to get overall zero current
-      void normalizeRadius(Node& n, Real R); // Scale all coordinates onto sphere with radius R
+      static void normalizeRadius(Node& n, Real R); // Scale all coordinates onto sphere with radius R
       void updateConnectivity();          // Re-link elements and nodes
       void updateIonosphereCommunicator(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid, FsGrid< fsgrids::technical, FS_STENCIL_WIDTH> & technicalGrid);// (Re-)create the subcommunicator for ionosphere-internal communication
       void initializeTetrahedron();       // Initialize grid as a base tetrahedron
@@ -214,7 +214,7 @@ namespace SBC {
          Real couplingRadius
       ); // Find coupled ionosphere mesh node for given location
       //Field Line Tracing functions
-      int ijk2Index(int i , int j ,int k ,std::array<int,3>dims); //3D to 1D indexing 
+      static int ijk2Index(int i , int j ,int k ,std::array<int,3>dims); //3D to 1D indexing 
       typedef std::function<void(std::array<Real,3>&, bool, std::array<Real, 3>&)> TracingFieldFunction;
       void bulirschStoerStep(
          std::array<Real, 3>& r,
@@ -238,7 +238,7 @@ namespace SBC {
          TracingFieldFunction& BFieldFunction,
          bool outwards=true
       ); // Modified Midpoint Method used by BS step
-      void richardsonExtrapolation(int i, std::vector<Real>& table , Real& maxError,std::array<int,3>dims ); //Richardson extrapolation method used by BS step
+      static void richardsonExtrapolation(int i, std::vector<Real>& table , Real& maxError,std::array<int,3>dims ); //Richardson extrapolation method used by BS step
       void stepFieldLine(
          std::array<Real, 3>& x,
          std::array<Real, 3>& v,
@@ -348,7 +348,7 @@ namespace SBC {
          return area;
       }
 
-      std::array<Real,3> computeGradT(const std::array<Real, 3>& a, const std::array<Real, 3>& b, const std::array<Real, 3>& c);
+      static std::array<Real,3> computeGradT(const std::array<Real, 3>& a, const std::array<Real, 3>& b, const std::array<Real, 3>& c);
       std::array<Real, 9> sigmaAverage(uint elementIndex);
       double elementIntegral(uint elementIndex, int i, int j, bool transpose = false);
 

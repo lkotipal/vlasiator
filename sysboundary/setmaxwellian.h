@@ -61,9 +61,7 @@ namespace SBC {
    protected:
       void generateTemplateCell(spatial_cell::SpatialCell& templateCell, Real B[3], int inputDataIndex, creal& t);
       
-      Real maxwellianDistribution(const uint popID,
-         creal& rho, creal& T, creal& vx, creal& vy, creal& vz
-      );
+      static Real maxwellianDistribution(const uint popID, creal& rho, creal& T, creal& vx, creal& vy, creal& vz);
       
       vector<vmesh::GlobalID> findBlocksToInitialize(
          const uint popID,

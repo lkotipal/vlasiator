@@ -234,8 +234,8 @@ namespace spatial_cell {
       Real get_velocity_block_vy_max(const uint popID,const vmesh::GlobalID block) const;
       Real get_velocity_block_vz_min(const uint popID,const vmesh::GlobalID block) const;
       Real get_velocity_block_vz_max(const uint popID,const vmesh::GlobalID block) const;
-      velocity_cell_indices_t get_velocity_cell_indices(const unsigned int cell) const;
-      unsigned int get_velocity_cell(const velocity_cell_indices_t indices) const;
+      static velocity_cell_indices_t get_velocity_cell_indices(const unsigned int cell);
+      static unsigned int get_velocity_cell(const velocity_cell_indices_t indices);
       unsigned int get_velocity_cell(const uint popID,const vmesh::GlobalID velocity_block,const Real vx,const Real vy,const Real vz) const;
       Real get_velocity_cell_vx_min(const uint popID,const vmesh::GlobalID velocity_block,const unsigned int velocity_cell) const;
       Real get_velocity_cell_vx_max(const uint popID,const vmesh::GlobalID velocity_block,const unsigned int velocity_cell) const;
@@ -1122,7 +1122,7 @@ namespace spatial_cell {
    /*!
     Returns the indices of given velocity cell
     */
-   inline velocity_cell_indices_t SpatialCell::get_velocity_cell_indices(const unsigned int cell) const {
+   inline velocity_cell_indices_t SpatialCell::get_velocity_cell_indices(const unsigned int cell) {
       velocity_cell_indices_t indices;
       
       if (cell >= VELOCITY_BLOCK_LENGTH) {
@@ -1139,7 +1139,7 @@ namespace spatial_cell {
    /*!
     Returns the velocity cell at given indices or error_velocity_cell
     */
-   inline unsigned int SpatialCell::get_velocity_cell(const velocity_cell_indices_t indices) const {
+   inline unsigned int SpatialCell::get_velocity_cell(const velocity_cell_indices_t indices) {
       if (indices[0] >= block_vx_length
        || indices[1] >= block_vy_length
        || indices[2] >= block_vz_length) {

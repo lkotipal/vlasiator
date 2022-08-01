@@ -116,10 +116,10 @@ namespace SBC {
    }
    
    Real SetMaxwellian::maxwellianDistribution(
-            const uint popID,
-            creal& rho,
-            creal& T,
-            creal& vx, creal& vy, creal& vz
+      const uint popID,
+      creal& rho,
+      creal& T,
+      creal& vx, creal& vy, creal& vz
    ) {
       const Real MASS = getObjectWrapper().particleSpecies[popID].mass;
       return rho * pow(MASS /
