@@ -57,7 +57,7 @@ public:
    std::stringstream& getStream() {return outStream;}
    bool open(MPI_Comm comm,const int& MASTERRANK,const std::string& fname,const bool& append=false);
    bool print(const std::string& s);
-   std::string str() {return outStream.str();}
+   std::string str() const {return outStream.str();}
    
    // ****************************************
    // ****** STREAM INSERTION OPERATORS ******

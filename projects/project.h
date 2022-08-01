@@ -53,7 +53,7 @@ namespace projects {
          FsGrid< std::array<Real, fsgrids::bfield::N_BFIELD>, FS_STENCIL_WIDTH> & perBGrid
       ) const;
       
-      bool initialized();
+      bool initialized() const;
       
       /** Set the background and perturbed magnetic fields for this project.
        * \param perBGrid Grid on which values of the perturbed field can be set if needed.

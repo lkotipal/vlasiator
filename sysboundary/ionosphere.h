@@ -89,10 +89,10 @@ namespace SBC {
          std::array<iSolverReal, N_IONOSPHERE_PARAMETERS> parameters = {0}; // Parameters carried by the node, see common.h
 
          // Some calculation helpers
-         Real electronDensity() { // Electron Density
+         Real electronDensity() const { // Electron Density
             return parameters[ionosphereParameters::RHON];
          }
-         Real electronTemperature() { // Electron Temperature
+         Real electronTemperature() const { // Electron Temperature
             return parameters[ionosphereParameters::TEMPERATURE];
          }
          Real deltaPhi() { // Field aligned potential drop between i'sphere and m'sphere
@@ -174,7 +174,7 @@ namespace SBC {
       constexpr static Real ion_electron_T_ratio = 4.; // TODO: Make this a parameter (and/or find value from kinetics)
       // Ionoisation production table
       std::array< std::array< std::array< Real, productionNumTemperatures >, productionNumAccEnergies >, numAtmosphereLevels > productionTable;
-      Real lookupProductionValue(int heightindex, Real energy_keV, Real temperature_keV);
+      Real lookupProductionValue(int heightindex, Real energy_keV, Real temperature_keV) const;
 
       MPI_Comm communicator = MPI_COMM_NULL; // The communicator internally used to solve the ionosphere potenital
       int rank = -1;                      // Own rank in the ionosphere communicator
@@ -284,7 +284,7 @@ namespace SBC {
       );
 
       // Returns the surface area of one element on the sphere
-      Real elementArea(uint32_t elementIndex) {
+      Real elementArea(uint32_t elementIndex) const {
          const std::array<Real, 3>& a = nodes[elements[elementIndex].corners[0]].x;
          const std::array<Real, 3>& b = nodes[elements[elementIndex].corners[1]].x;
          const std::array<Real, 3>& c = nodes[elements[elementIndex].corners[2]].x;
@@ -303,7 +303,7 @@ namespace SBC {
       // Returns the projected surface area of one element, mapped up along the magnetic field to
       // the simulation boundary. If one of the nodes maps nowhere, returns 0.
       // Returns an oriented vector, which can be dotted with B
-      std::array<Real, 3> mappedElementArea(uint32_t elementIndex) {
+      std::array<Real, 3> mappedElementArea(uint32_t elementIndex) const {
          const std::array<Real, 3>& a = nodes[elements[elementIndex].corners[0]].xMapped;
          const std::array<Real, 3>& b = nodes[elements[elementIndex].corners[1]].xMapped;
          const std::array<Real, 3>& c = nodes[elements[elementIndex].corners[2]].xMapped;

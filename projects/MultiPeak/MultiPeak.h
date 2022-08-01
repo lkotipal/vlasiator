@@ -41,7 +41,7 @@ namespace projects {
       std::vector<Real> rhoPertAbsAmp;
 
       // Test whether parameters have been set up for all peaks
-      bool isConsistent() {
+      bool isConsistent() const {
          return rho.size() == Tx.size() &&
             Tx.size() == Ty.size() &&
             Ty.size() == Tz.size() &&

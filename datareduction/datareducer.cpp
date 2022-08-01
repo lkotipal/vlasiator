@@ -3278,10 +3278,12 @@ unsigned int DataReducer::size() const {return operators.size();}
  * @param meshName Name of the spatial mesh in the output file.
  * @param vlsvWriter VLSV file writer that has output file open.
  * @return If true, DataReductionOperator wrote its data successfully.*/
-bool DataReducer::writeData(const unsigned int& operatorID,
-                  const dccrg::Dccrg<spatial_cell::SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
-                  const std::vector<CellID>& cells,const std::string& meshName,
-                  vlsv::Writer& vlsvWriter) {
+bool DataReducer::writeData(
+   const unsigned int& operatorID,
+   const dccrg::Dccrg<spatial_cell::SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
+   const std::vector<CellID>& cells,const std::string& meshName,
+   vlsv::Writer& vlsvWriter) const 
+{
    if (operatorID >= operators.size()) return false;
    DRO::DataReductionOperatorHandlesWriting* writingOperator = dynamic_cast<DRO::DataReductionOperatorHandlesWriting*>(operators[operatorID]);
    if(writingOperator == nullptr) {
@@ -3294,7 +3296,7 @@ bool DataReducer::writeData(const unsigned int& operatorID,
  * @param operatorID ID number of the selected DataReductionOperator.
  * @param vlsvWriter VLSV file writer that has output file open.
  * @return If true, DataReductionOperator wrote its parameters successfully.*/
-bool DataReducer::writeParameters(const unsigned int& operatorID, vlsv::Writer& vlsvWriter) {
+bool DataReducer::writeParameters(const unsigned int& operatorID, vlsv::Writer& vlsvWriter) const {
    if (operatorID >= operators.size()) return false;
    DRO::DataReductionOperatorHasParameters* parameterOperator = dynamic_cast<DRO::DataReductionOperatorHasParameters*>(operators[operatorID]);
    if(parameterOperator == nullptr) {
@@ -3302,23 +3304,24 @@ bool DataReducer::writeParameters(const unsigned int& operatorID, vlsv::Writer& 
    }
    return parameterOperator->writeParameters(vlsvWriter);
 }
+
 /** Write all data thet the given DataReductionOperator wants to obtain from fsgrid into the output file.
  */
 bool DataReducer::writeFsGridData(
-                      FsGrid< std::array<Real, fsgrids::bfield::N_BFIELD>, FS_STENCIL_WIDTH> & perBGrid,
-                      FsGrid< std::array<Real, fsgrids::efield::N_EFIELD>, FS_STENCIL_WIDTH> & EGrid,
-                      FsGrid< std::array<Real, fsgrids::ehall::N_EHALL>, FS_STENCIL_WIDTH> & EHallGrid,
-                      FsGrid< std::array<Real, fsgrids::egradpe::N_EGRADPE>, FS_STENCIL_WIDTH> & EGradPeGrid,
-                      FsGrid< std::array<Real, fsgrids::moments::N_MOMENTS>, FS_STENCIL_WIDTH> & momentsGrid,
-                      FsGrid< std::array<Real, fsgrids::dperb::N_DPERB>, FS_STENCIL_WIDTH> & dPerBGrid,
-                      FsGrid< std::array<Real, fsgrids::dmoments::N_DMOMENTS>, FS_STENCIL_WIDTH> & dMomentsGrid,
-                      FsGrid< std::array<Real, fsgrids::bgbfield::N_BGB>, FS_STENCIL_WIDTH> & BgBGrid,
-                      FsGrid< std::array<Real, fsgrids::volfields::N_VOL>, FS_STENCIL_WIDTH> & volGrid,
-                      FsGrid< fsgrids::technical, FS_STENCIL_WIDTH> & technicalGrid,
-                      const std::string& meshName, const unsigned int operatorID,
-                      vlsv::Writer& vlsvWriter,
-                      const bool writeAsFloat) {
-   
+   FsGrid< std::array<Real, fsgrids::bfield::N_BFIELD>, FS_STENCIL_WIDTH> & perBGrid,
+   FsGrid< std::array<Real, fsgrids::efield::N_EFIELD>, FS_STENCIL_WIDTH> & EGrid,
+   FsGrid< std::array<Real, fsgrids::ehall::N_EHALL>, FS_STENCIL_WIDTH> & EHallGrid,
+   FsGrid< std::array<Real, fsgrids::egradpe::N_EGRADPE>, FS_STENCIL_WIDTH> & EGradPeGrid,
+   FsGrid< std::array<Real, fsgrids::moments::N_MOMENTS>, FS_STENCIL_WIDTH> & momentsGrid,
+   FsGrid< std::array<Real, fsgrids::dperb::N_DPERB>, FS_STENCIL_WIDTH> & dPerBGrid,
+   FsGrid< std::array<Real, fsgrids::dmoments::N_DMOMENTS>, FS_STENCIL_WIDTH> & dMomentsGrid,
+   FsGrid< std::array<Real, fsgrids::bgbfield::N_BGB>, FS_STENCIL_WIDTH> & BgBGrid,
+   FsGrid< std::array<Real, fsgrids::volfields::N_VOL>, FS_STENCIL_WIDTH> & volGrid,
+   FsGrid< fsgrids::technical, FS_STENCIL_WIDTH> & technicalGrid,
+   const std::string& meshName, const unsigned int operatorID,
+   vlsv::Writer& vlsvWriter,
+   const bool writeAsFloat) const
+{
    if (operatorID >= operators.size()) return false;
    DRO::DataReductionOperatorFsGrid* DROf = dynamic_cast<DRO::DataReductionOperatorFsGrid*>(operators[operatorID]);
    if(!DROf) {
@@ -3329,9 +3332,9 @@ bool DataReducer::writeFsGridData(
 }
 
 bool DataReducer::writeIonosphereGridData(
-                     SBC::SphericalTriGrid& grid, const std::string& meshName,
-                     const unsigned int operatorID, vlsv::Writer& vlsvWriter) {
-
+   SBC::SphericalTriGrid& grid, const std::string& meshName,
+   const unsigned int operatorID, vlsv::Writer& vlsvWriter) const
+{
    if (operatorID >= operators.size()) return false;
    DRO::DataReductionOperatorIonosphereElement* DROe = dynamic_cast<DRO::DataReductionOperatorIonosphereElement*>(operators[operatorID]);
    DRO::DataReductionOperatorIonosphereNode* DROn = dynamic_cast<DRO::DataReductionOperatorIonosphereNode*>(operators[operatorID]);

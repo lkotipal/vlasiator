@@ -279,8 +279,7 @@ namespace SBC {
       // No need to do anything in this function, as the propagators do not touch the distribution function   
    }
    
-   bool SetByUser::setBFromTemplate(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
-                                    FsGrid< array<Real, fsgrids::bfield::N_BFIELD>, FS_STENCIL_WIDTH> & perBGrid) {
+   bool SetByUser::setBFromTemplate(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid, FsGrid< array<Real, fsgrids::bfield::N_BFIELD>, FS_STENCIL_WIDTH> & perBGrid) const {
 
       array<bool,6> isThisCellOnAFace;
       const array<int, 3> gridDims(perBGrid.getLocalSize());

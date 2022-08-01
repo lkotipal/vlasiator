@@ -175,7 +175,7 @@ namespace SBC {
             creal x, creal y, creal z,
             creal dx, creal dy, creal dz,
             const bool excludeSlicesAndPeriodicDimensions = false
-         );
+         ) const;
          void copyCellData(
             SpatialCell *from,
             SpatialCell *to,

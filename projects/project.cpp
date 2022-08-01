@@ -176,7 +176,7 @@ namespace projects {
    
    /** Check if base class has been initialized.
     * @return If true, base class was successfully initialized.*/
-   bool Project::initialized() {return baseClassInitialized;}
+   bool Project::initialized() const {return baseClassInitialized;}
 
    /*! Print a warning message to stderr and abort, one should not use the base class functions. */
    void Project::setProjectBField(

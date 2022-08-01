@@ -819,46 +819,46 @@ namespace SBC {
 
    /* Look up the free electron production rate in the ionosphere, given the atmospheric height index,
     * particle energy after the ionospheric potential drop and inflowing distribution temperature */
-   Real SphericalTriGrid::lookupProductionValue(int heightindex, Real energy_keV, Real temperature_keV) {
-            Real normEnergy = (log10(energy_keV) - log10(productionMinAccEnergy)) / (log10(productionMaxAccEnergy) - log10(productionMinAccEnergy));
-            if(normEnergy < 0) {
-               normEnergy = 0;
-            }
-            Real normTemperature = (log10(temperature_keV) - log10(productionMinTemperature)) / (log(productionMaxTemperature) - log(productionMinTemperature));
-            if(normTemperature < 0) {
-               normTemperature = 0;
-            }
+   Real SphericalTriGrid::lookupProductionValue(int heightindex, Real energy_keV, Real temperature_keV) const {
+      Real normEnergy = (log10(energy_keV) - log10(productionMinAccEnergy)) / (log10(productionMaxAccEnergy) - log10(productionMinAccEnergy));
+      if(normEnergy < 0) {
+         normEnergy = 0;
+      }
+      Real normTemperature = (log10(temperature_keV) - log10(productionMinTemperature)) / (log(productionMaxTemperature) - log(productionMinTemperature));
+      if(normTemperature < 0) {
+         normTemperature = 0;
+      }
 
-            // Interpolation bin and parameters
-            normEnergy *= productionNumAccEnergies;
-            int energyindex = int(float(normEnergy));
-            if(energyindex < 0) {
-               energyindex = 0;
-               normEnergy = 0;
-            }
-            if(energyindex > productionNumAccEnergies - 2) {
-               energyindex = productionNumAccEnergies - 2;
-               normEnergy = 0;
-            }
-            float t = normEnergy - floor(normEnergy);
+      // Interpolation bin and parameters
+      normEnergy *= productionNumAccEnergies;
+      int energyindex = int(float(normEnergy));
+      if(energyindex < 0) {
+         energyindex = 0;
+         normEnergy = 0;
+      }
+      if(energyindex > productionNumAccEnergies - 2) {
+         energyindex = productionNumAccEnergies - 2;
+         normEnergy = 0;
+      }
+      float t = normEnergy - floor(normEnergy);
 
-            normTemperature *= productionNumTemperatures;
-            int temperatureindex = int(float(normTemperature));
-            float s = normTemperature - floor(normTemperature);
-            if(temperatureindex < 0) {
-               temperatureindex = 0;
-               normTemperature = 0;
-            }
-            if(temperatureindex > productionNumTemperatures - 2) {
-               temperatureindex = productionNumTemperatures - 2;
-               normTemperature = 0;
-            }
+      normTemperature *= productionNumTemperatures;
+      int temperatureindex = int(float(normTemperature));
+      float s = normTemperature - floor(normTemperature);
+      if(temperatureindex < 0) {
+         temperatureindex = 0;
+         normTemperature = 0;
+      }
+      if(temperatureindex > productionNumTemperatures - 2) {
+         temperatureindex = productionNumTemperatures - 2;
+         normTemperature = 0;
+      }
 
-            // Lookup production rate by linearly interpolating table.
-            return (productionTable[heightindex][energyindex][temperatureindex]*(1.-t) +
-                    productionTable[heightindex][energyindex+1][temperatureindex] * t) * (1.-s) +
-                   (productionTable[heightindex][energyindex][temperatureindex+1]*(1.-t) +
-                    productionTable[heightindex][energyindex+1][temperatureindex+1] * t) * s ;
+      // Lookup production rate by linearly interpolating table.
+      return (productionTable[heightindex][energyindex][temperatureindex]*(1.-t) +
+               productionTable[heightindex][energyindex+1][temperatureindex] * t) * (1.-s) +
+               (productionTable[heightindex][energyindex][temperatureindex+1]*(1.-t) +
+               productionTable[heightindex][energyindex+1][temperatureindex+1] * t) * s ;
 
    }
 
