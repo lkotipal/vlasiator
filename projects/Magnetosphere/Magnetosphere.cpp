@@ -721,7 +721,8 @@ namespace projects {
             mpiGrid.dont_unrefine(id);
          } else if (r2 < r_max2) {
             // We don't care about cells that are too far from the ionosphere
-            const Real beta {P::useJPerB ? std::log2(cell->parameters[CellParams::AMR_JPERB]) + logDx + P::JPerBModifier + refLevel : 0.0};
+            // Use epsilon here so we don't get infinities
+            const Real beta {P::useJPerB ? std::log2(cell->parameters[CellParams::AMR_JPERB] + EPS) + logDx + P::JPerBModifier + refLevel : 0.0};
             bool shouldRefine = cell->parameters[CellParams::AMR_ALPHA] > P::refineThreshold || beta > 0.5;
             bool shouldUnrefine = cell->parameters[CellParams::AMR_ALPHA] < P::unrefineThreshold || beta < -0.5;
 
@@ -731,7 +732,7 @@ namespace projects {
             for (auto i : mpiGrid.get_face_neighbors_of(id)) {
                const auto neighbor {mpiGrid[i.first]};
                const int neighborRef = mpiGrid.get_refinement_level(i.first);
-               const Real neighborBeta {P::useJPerB ? std::log2(neighbor->parameters[CellParams::AMR_JPERB]) + logDx + P::JPerBModifier + neighborRef : 0.0};
+               const Real neighborBeta {P::useJPerB ? std::log2(neighbor->parameters[CellParams::AMR_JPERB] + EPS) + logDx + P::JPerBModifier + neighborRef : 0.0};
                if (neighborRef > refLevel) {
                   ++refined_neighbors;
                } else if (neighborRef < refLevel) {
@@ -750,7 +751,7 @@ namespace projects {
                // Unrefine a cell only if any of its neighbors is unrefined or about to be
                mpiGrid.unrefine_completely(id);
             } else {
-               // Ensure no cells above unrefine_threshold are unrefined
+               // Ensure no cells above both unrefine thresholds are unrefined
                mpiGrid.dont_unrefine(id);
             }
          }
