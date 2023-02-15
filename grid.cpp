@@ -1368,7 +1368,8 @@ bool adaptRefinement(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGri
       newBytes += mpiGrid[id]->get_cell_memory_capacity() / 8.0;
    }
    
-   report_process_memory_consumption(newBytes);
+   double hwm {report_process_memory_consumption(newBytes)};
+   MPI_Bcast(&hwm, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
    phiprof::stop("Estimate memory usage");
 
    // Bailout from estimate
@@ -1380,6 +1381,19 @@ bool adaptRefinement(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGri
 
    if (bailout) {
       return false;
+   }
+
+   // Adjust refinement parameters for next refinement based on memory usage
+   if (P::dynamicCriteria && hwm < 0.8 * Parameters::bailout_max_memory) {
+      logFile << "(AMR) Below high water mark, tuning refinement up." << std::endl;
+      P::JPerBModifier += 0.1;
+      P::unrefineThreshold *= 0.9;
+      P::refineThreshold *= 0.9;
+   } else if (P::dynamicCriteria && hwm > 0.9 * Parameters::bailout_max_memory) {
+      logFile << "(AMR) Near high water mark, tuning refinement down." << std::endl;
+      P::JPerBModifier -= 0.1;
+      P::unrefineThreshold /= 0.9;
+      P::refineThreshold /= 0.9;
    }
 
    // New cells created by refinement

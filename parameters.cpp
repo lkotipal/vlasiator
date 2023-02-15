@@ -161,6 +161,7 @@ Real P::refineRadius = LARGE_REAL;
 bool P::useJPerB = true;
 Real P::JPerBModifier = 0.0;
 Real P::leastCellsToRefine = 0.0;
+bool P::dynamicCriteria = false;
 int P::maxFilteringPasses = 0;
 uint P::amrBoxHalfWidthX = 1;
 uint P::amrBoxHalfWidthY = 1;
@@ -419,6 +420,7 @@ bool P::addParameters() {
    RP::add("AMR.use_J_per_B","Use J/B_perp as an additional refinement parameter", false);
    RP::add("AMR.J_per_B_modifier","Factor to add to log2(J / B_perp) in refinement.", 0.0);
    RP::add("AMR.least_cells_to_refine","Minimum amount of cells to refine in AMR, as a ratio of total cell count.", 0.0);
+   RP::add("AMR.dynamic_criteria", "Refine more aggressively if below bailout memory threshold, and less aggressively when nearing it.", false);
    RP::add("AMR.box_half_width_x", "Half width of the box that is refined (for testing)", (uint)1);
    RP::add("AMR.box_half_width_y", "Half width of the box that is refined (for testing)", (uint)1);
    RP::add("AMR.box_half_width_z", "Half width of the box that is refined (for testing)", (uint)1);
@@ -614,6 +616,7 @@ void Parameters::getParameters() {
    RP::get("AMR.use_J_per_B",P::useJPerB);
    RP::get("AMR.J_per_B_modifier",P::JPerBModifier);
    RP::get("AMR.least_cells_to_refine",P::leastCellsToRefine);
+   RP::get("AMR.dynamic_criteria",P::dynamicCriteria);
    RP::get("AMR.box_half_width_x", P::amrBoxHalfWidthX);
    RP::get("AMR.box_half_width_y", P::amrBoxHalfWidthY);
    RP::get("AMR.box_half_width_z", P::amrBoxHalfWidthZ);

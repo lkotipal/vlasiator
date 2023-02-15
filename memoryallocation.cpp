@@ -108,7 +108,7 @@ uint64_t get_node_free_memory(){
  *  extra_bytes is used for additional buffer for the high water mark, 
  *  for example when estimating refinement memory usage
  */
-void report_process_memory_consumption(double extra_bytes){
+double report_process_memory_consumption(double extra_bytes){
    /*Report memory consumption into logfile*/
 
    char nodename[MPI_MAX_PROCESSOR_NAME]; 
@@ -169,6 +169,7 @@ void report_process_memory_consumption(double extra_bytes){
       if(rank == MASTER_RANK) {
          bailout(max_mem_papi[0]/GiB > Parameters::bailout_max_memory, "Memory high water mark per node exceeds bailout threshold", __FILE__, __LINE__);
       }
+      return max_mem_papi[0] / GiB;
    }
    
 #endif

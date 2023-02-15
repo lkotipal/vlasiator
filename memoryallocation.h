@@ -37,7 +37,7 @@ uint64_t get_node_free_memory();
  *  extra_bytes is used for additional buffer for the high water mark, 
  *  for example when estimating refinement memory usage
  */
-void report_process_memory_consumption(double extra_bytes = 0.0);
+double report_process_memory_consumption(double extra_bytes = 0.0);
 
 /*! Alligned malloc, could be done using aligned_alloc*/
 inline void * aligned_malloc(size_t size,std::size_t align) {

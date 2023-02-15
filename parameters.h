@@ -190,6 +190,7 @@ struct Parameters {
    static bool useJPerB;
    static Real JPerBModifier;
    static Real leastCellsToRefine;
+   static bool dynamicCriteria;
    static int maxFilteringPasses;
    static uint amrBoxHalfWidthX;
    static uint amrBoxHalfWidthY;
