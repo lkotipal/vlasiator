@@ -664,8 +664,7 @@ void Parameters::getParameters() {
 
    // If we are in an AMR run we need to set up the filtering scheme.
    if (P::amrMaxSpatialRefLevel>0){
-      bool isEmpty = blurPassString.size() == 0;
-      if (!isEmpty){
+      if (blurPassString.size() > 0){
          //sanity check=> user should define a pass for every level
          if (blurPassString.size() != P::amrMaxSpatialRefLevel + 1) {
             cerr << "Filter Passes=" << blurPassString.size() << "\t" << "AMR Levels=" << P::amrMaxSpatialRefLevel + 1 << endl;
@@ -679,7 +678,7 @@ void Parameters::getParameters() {
             P::numPasses.push_back(stoi(pass));
          }
          sort(numPasses.begin(),numPasses.end(),greater<int>());
-      }else{
+      } else {
          //here we will default to manually constructing the number of passes
          numPasses.clear();
          auto g_sequence=[](int size){
@@ -778,7 +777,7 @@ void Parameters::getParameters() {
          cerr << "WARNING the number of load balance keys and values do not match. Disregarding these options." << endl;
       }
    } else {
-      for (int i = 0; i < loadBalanceKeys.size(); ++i) {
+      for (int i = 0; i < loadBalanceKeys.ssize(); ++i) {
          loadBalanceOptions[loadBalanceKeys[i]] = loadBalanceValues[i];
       }
    }
