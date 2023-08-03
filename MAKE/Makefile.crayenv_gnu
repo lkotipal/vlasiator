@@ -2,7 +2,7 @@ CMP = CC
 LNK = CC
 
 # Modules loaded
-# module --force purge ; module load LUMI/22.08 ; module load cpeCray ; module load papi
+# module --force purge ; module load LUMI/22.08 ; module load cpeGNU ; module load papi; module load Eigen
 
 #======== Vectorization ==========
 #Set vector backend type for vlasov solvers, sets precision and length. 
@@ -28,8 +28,8 @@ CXXFLAGS += -g -O3 -fopenmp -funroll-loops -std=c++17 -W -Wall -Wno-unused -mfma
 testpackage: CXXFLAGS = -g -O2 -fopenmp -funroll-loops -std=c++20 -mno-fma -mno-avx2 -mno-avx
 
 MATHFLAGS = -ffast-math
-LDFLAGS = -lrt -fopenmp
-LIB_MPI = -fopenmp
+LDFLAGS = -lrt -lgomp
+LIB_MPI = -lgomp
 
 #======== PAPI ==========
 #Add PAPI_MEM define to use papi to report memory consumption?
@@ -56,11 +56,12 @@ testpackage: CXXFLAGS += -DUSE_JEMALLOC -DJEMALLOC_NO_DEMANGLE
 #
 #======== Libraries ===========
 
-LIBRARY_PREFIX = /projappl/project_465000287/lkotipal/libraries/LUMI-Cray-milan
+LIBRARY_PREFIX = /projappl/project_465000287/lkotipal/libraries/CrayEnv-GNU
 LIBRARY_PREFIX_HEADERS = /scratch/project_465000287/libraries
 
 #compiled libraries
-LIB_BOOST = -lboost_program_options
+INC_BOOST = -I$(LIBRARY_PREFIX)/boost/include
+LIB_BOOST = -L$(LIBRARY_PREFIX)/boost/lib -lboost_program_options -Wl,-rpath=$(LIBRARY_PREFIX)/boost/lib
 
 INC_ZOLTAN = -isystem$(LIBRARY_PREFIX)/zoltan/include
 LIB_ZOLTAN = -L$(LIBRARY_PREFIX)/zoltan/lib -lzoltan -Wl,-rpath=$(LIBRARY_PREFIX)/zoltan/lib
@@ -68,7 +69,6 @@ LIB_ZOLTAN = -L$(LIBRARY_PREFIX)/zoltan/lib -lzoltan -Wl,-rpath=$(LIBRARY_PREFIX
 INC_JEMALLOC = -isystem$(LIBRARY_PREFIX)/jemalloc/include
 LIB_JEMALLOC = -L$(LIBRARY_PREFIX)/jemalloc/lib -ljemalloc -Wl,-rpath=$(LIBRARY_PREFIX)/jemalloc/lib
 
-INC_PAPI =
 LIB_PAPI = -lpapi
 
 INC_VLSV = -I$(LIBRARY_PREFIX)/vlsv

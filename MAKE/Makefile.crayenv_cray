@@ -24,7 +24,7 @@ FLAGS =
 #GNU flags:
 CC_BRAND = gcc
 CC_BRAND_VERSION = 9.3.0
-CXXFLAGS += -g -O3 -fopenmp -funroll-loops -std=c++17 -W -Wall -Wno-unused -mfma -mavx2
+CXXFLAGS += -g -O3 -fopenmp -funroll-loops -std=c++17 -w -Wno-unused -mfma -mavx2
 testpackage: CXXFLAGS = -g -O2 -fopenmp -funroll-loops -std=c++20 -mno-fma -mno-avx2 -mno-avx
 
 MATHFLAGS = -ffast-math
@@ -56,11 +56,12 @@ testpackage: CXXFLAGS += -DUSE_JEMALLOC -DJEMALLOC_NO_DEMANGLE
 #
 #======== Libraries ===========
 
-LIBRARY_PREFIX = /projappl/project_465000287/lkotipal/libraries/LUMI-Cray-milan
+LIBRARY_PREFIX = /projappl/project_465000287/lkotipal/libraries/CrayEnv-Cray
 LIBRARY_PREFIX_HEADERS = /scratch/project_465000287/libraries
 
 #compiled libraries
-LIB_BOOST = -lboost_program_options
+INC_BOOST = -I$(LIBRARY_PREFIX)/boost/include
+LIB_BOOST = -L$(LIBRARY_PREFIX)/boost/lib -lboost_program_options -Wl,-rpath=$(LIBRARY_PREFIX)/boost/lib
 
 INC_ZOLTAN = -isystem$(LIBRARY_PREFIX)/zoltan/include
 LIB_ZOLTAN = -L$(LIBRARY_PREFIX)/zoltan/lib -lzoltan -Wl,-rpath=$(LIBRARY_PREFIX)/zoltan/lib
