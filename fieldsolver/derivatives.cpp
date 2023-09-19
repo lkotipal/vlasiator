@@ -677,6 +677,14 @@ void calculateCurvatureSimple(
    phiprof::stop("Calculate curvature",N_cells,"Spatial Cells");
 }
 
+/*! \brief Returns perturbed volumetric B of cell
+ *
+ */
+static std::array<Real, 3> getPerB(SpatialCell* cell)
+{
+   return std::array<Real, 3> { {cell->parameters[CellParams::PERBXVOL], cell->parameters[CellParams::PERBYVOL], cell->parameters[CellParams::PERBZVOL]} };
+}
+
 /*! \brief Returns volumetric B of cell
  *
  */
