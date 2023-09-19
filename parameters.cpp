@@ -94,6 +94,8 @@ vector<int> P::systemWriteDistributionWriteZlineStride;
 vector<Real> P::systemWriteDistributionWriteShellRadius;
 vector<int> P::systemWriteDistributionWriteShellStride;
 vector<bool> P::systemWriteFsGrid;
+bool P::systemWriteAllDROs;
+bool P::diagnosticWriteAllDROs;
 vector<int> P::systemWrites;
 vector<pair<string, string>> P::systemWriteHints;
 vector<pair<string, string>> P::restartWriteHints;
@@ -166,6 +168,7 @@ Real P::refineAfter = 0.0;
 Real P::refineRadius = LARGE_REAL;
 bool P::useJPerB = true;
 Real P::JPerBModifier = 0.0;
+Real P::leastCellsToRefine = 0.0;
 int P::maxFilteringPasses = 0;
 uint P::amrBoxHalfWidthX = 1;
 uint P::amrBoxHalfWidthY = 1;
@@ -341,8 +344,8 @@ bool P::addParameters() {
    RP::addComposing("loadBalance.optionValue", "Zoltan option value. Has to be matched by loadBalance.optionKey.");
 
    // Output variable parameters
+   RP::add("io.system_write_all_data_reducers", "If 0 don't write all DROs, if 1 do write them.", false);
    // NOTE Do not remove the : before the list of variable names as this is parsed by tools/check_vlasiator_cfg.sh
-
    RP::addComposing("variables.output",
                     string() +
                         "List of data reduction operators (DROs) to add to the grid file output.  Each variable to be "
@@ -388,6 +391,7 @@ bool P::addParameters() {
            "BackgroundVolB PerturbedVolB " + "Pressure vg_Pressure fg_Pressure populations_PTensor " +
            "BVOLderivs b_vol_derivs");
 
+   RP::add("io.diagnostic_write_all_data_reducers", "Write all available diagnostic reducers", false);
    // NOTE Do not remove the : before the list of variable names as this is parsed by tools/check_vlasiator_cfg.sh
    RP::addComposing("variables.diagnostic",
                     string() +
@@ -441,6 +445,7 @@ bool P::addParameters() {
    RP::add("AMR.refine_radius","Maximum distance from Earth to refine", LARGE_REAL);
    RP::add("AMR.use_J_per_B","Use J/B_perp as an additional refinement parameter", false);
    RP::add("AMR.J_per_B_modifier","Factor to add to log2(J / B_perp) in refinement.", 0.0);
+   RP::add("AMR.least_cells_to_refine","Minimum amount of cells to refine in AMR, as a ratio of total cell count.", 0.0);
    RP::add("AMR.box_half_width_x", "Half width of the box that is refined (for testing)", (uint)1);
    RP::add("AMR.box_half_width_y", "Half width of the box that is refined (for testing)", (uint)1);
    RP::add("AMR.box_half_width_z", "Half width of the box that is refined (for testing)", (uint)1);
@@ -467,6 +472,7 @@ void Parameters::getParameters() {
    typedef Readparameters RP;
    // get numerical values of the parameters
    RP::get("io.diagnostic_write_interval", P::diagnosticInterval);
+   RP::get("io.diagnostic_write_all_data_reducers", P::diagnosticWriteAllDROs);
    RP::get("io.system_write_t_interval", P::systemWriteTimeInterval);
    RP::get("io.system_write_file_name", P::systemWriteName);
    RP::get("io.system_write_path", P::systemWritePath);
@@ -477,6 +483,7 @@ void Parameters::getParameters() {
    RP::get("io.system_write_distribution_shell_radius", P::systemWriteDistributionWriteShellRadius);
    RP::get("io.system_write_distribution_shell_stride", P::systemWriteDistributionWriteShellStride);
    RP::get("io.system_write_fsgrid_variables", P::systemWriteFsGrid);
+   RP::get("io.system_write_all_data_reducers", P::systemWriteAllDROs);
    RP::get("io.write_initial_state", P::writeInitialState);
    RP::get("io.write_full_bgb_data", P::writeFullBGB);
    RP::get("io.restart_walltime_interval", P::saveRestartWalltimeInterval);
@@ -681,6 +688,7 @@ void Parameters::getParameters() {
    RP::get("AMR.refine_radius",P::refineRadius);
    RP::get("AMR.use_J_per_B",P::useJPerB);
    RP::get("AMR.J_per_B_modifier",P::JPerBModifier);
+   RP::get("AMR.least_cells_to_refine",P::leastCellsToRefine);
    RP::get("AMR.box_half_width_x", P::amrBoxHalfWidthX);
    RP::get("AMR.box_half_width_y", P::amrBoxHalfWidthY);
    RP::get("AMR.box_half_width_z", P::amrBoxHalfWidthZ);
