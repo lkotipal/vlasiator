@@ -45,17 +45,20 @@ do
     fi
 done
 
-MF=$(sed -n s/^atmosphericModelFile\\s*=\\s*//p < $CFG)
-if [[ -z $MF ]]
+if grep -q "boundary = Ionosphere" $CFG
 then
-    MF=$(sed -n "s/ionosphere.atmosphericModelFile (=\(.*\))/\1/p" < check.txt)
-fi
+   MF=$(sed -n s/^atmosphericModelFile\\s*=\\s*//p < $CFG)
+   if [[ -z $MF ]]
+   then
+      MF=$(sed -n "s/ionosphere.atmosphericModelFile (=\(.*\))/\1/p" < check.txt)
+   fi
 
-if ! test -f $MF
-then
-    echo "Atmospheric model file $MF not found!"
-    echo ""
-    ERR=1
+   if ! test -f $MF
+   then
+      echo "Atmospheric model file $MF not found!"
+      echo ""
+      ERR=1
+   fi
 fi
 
 IO=$(sed -n s/^system_write_path\\s*=\\s*//p < $CFG)
