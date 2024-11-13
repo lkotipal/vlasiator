@@ -85,6 +85,47 @@ typedef VecSimple<float> Vec;
 
 #endif
 
+#ifdef VEC8F_SVE_SIPEARL
+#ifndef VEC_PER_PLANE
+const int VEC_PER_PLANE = (WID*WID/VECL);
+#endif
+#ifndef VEC_PER_BLOCK
+const int VEC_PER_BLOCK = (WID*VEC_PER_PLANE);
+#endif
+#define VECL 8
+#define VPREC 4
+
+#include <arm_sve.h>
+#include "vectorclass_fast_sve_fallback.h"
+
+
+typedef Vec8f Vec;
+typedef Vec8i Veci;
+typedef Vec8bf Vecb;
+#define to_realf(v) to_float(v)
+
+#endif
+
+#ifdef VEC4F_SVE_SIPEARL
+#ifndef VEC_PER_PLANE
+const int VEC_PER_PLANE = (WID*WID/VECL);
+#endif
+#ifndef VEC_PER_BLOCK
+const int VEC_PER_BLOCK = (WID*VEC_PER_PLANE);
+#endif
+#define VECL 4
+#define VPREC 4
+
+#include <arm_sve.h>
+#include "vectorclass_fast_sve_fallback.h"
+
+
+typedef Vec4f Vec;
+typedef Vec4i Veci;
+typedef Vec4bf Vecb;
+#define to_realf(v) to_float(v)
+
+#endif
 
 
 #ifdef VEC4D_AGNER
