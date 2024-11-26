@@ -26,7 +26,7 @@
 #include <vector>
 
 #include "definitions.h"
-#include "spatial_cell.hpp"
+#include "spatial_cell_wrapper.hpp"
 using namespace spatial_cell;
 
 #include <stdint.h>
@@ -64,7 +64,10 @@ void calculateInterpolatedVelocityMoments(
    const int cp_rhoq,
    const int cp_p11,
    const int cp_p22,
-   const int cp_p33
+   const int cp_p33,
+   const int cp_p23,
+   const int cp_p13,
+   const int cp_p12
 );
 
 /*!

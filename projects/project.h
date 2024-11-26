@@ -24,7 +24,7 @@
 #define PROJECT_H
 
 #include <random>
-#include "../spatial_cell.hpp"
+#include "../spatial_cell_wrapper.hpp"
 #include <dccrg.hpp>
 #include <dccrg_cartesian_geometry.hpp>
 #include "fsgrid.hpp"
@@ -84,6 +84,10 @@ namespace projects {
       Real setVelocityBlock(spatial_cell::SpatialCell* cell,const vmesh::LocalID& blockLID,const uint popID) const;
 
       virtual bool canRefine(spatial_cell::SpatialCell* cell) const;
+
+      virtual bool shouldRefineCell(dccrg::Dccrg<spatial_cell::SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid, CellID id, Real r_max2) const;
+
+      virtual bool shouldUnrefineCell(dccrg::Dccrg<spatial_cell::SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid, CellID id, Real r_max2) const;
 
       virtual bool refineSpatialCells( dccrg::Dccrg<spatial_cell::SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid ) const;
 

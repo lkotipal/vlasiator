@@ -32,7 +32,7 @@
 #include <dccrg.hpp>
 #include <phiprof.hpp>
 
-#include "../spatial_cell.hpp"
+#include "../spatial_cell_wrapper.hpp"
 #include "../vlasovmover.h"
 #include "../grid.h"
 #include "../definitions.h"
@@ -43,6 +43,7 @@
 #include "cpu_acc_semilag.hpp"
 #include "cpu_trans_map.hpp"
 #include "cpu_trans_map_amr.hpp"
+#include "cpu_trans_pencils.hpp"
 
 using namespace std;
 using namespace spatial_cell;
@@ -55,19 +56,17 @@ creal ONE     = 1.0;
 creal TWO     = 2.0;
 creal EPSILON = 1.0e-25;
 
-/** Propagates the distribution function in spatial space. 
-    
+/** Propagates the distribution function in spatial space.
+
     Based on SLICE-3D algorithm: Zerroukat, M., and T. Allen. "A
-    three‐dimensional monotone and conservative semi‐Lagrangian scheme
-    (SLICE‐3D) for transport problems." Quarterly Journal of the Royal
+    three-dimensional monotone and conservative semi-Lagrangian scheme
+    (SLICE-3D) for transport problems." Quarterly Journal of the Royal
     Meteorological Society 138.667 (2012): 1640-1651.
-  
+
  */
 void calculateSpatialTranslation(
         dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
-        const vector<CellID>& localCells,
         const vector<CellID>& local_propagated_cells,
-        const vector<CellID>& local_target_cells,
         const vector<CellID>& remoteTargetCellsx,
         const vector<CellID>& remoteTargetCellsy,
         const vector<CellID>& remoteTargetCellsz,
@@ -79,11 +78,8 @@ void calculateSpatialTranslation(
         Real &time
 ) {
 
-    bool AMRtranslationActive = false;
-    if (P::amrMaxSpatialRefLevel > 0) AMRtranslationActive = true;
-
     double t1;
-    
+
     int myRank;
     MPI_Comm_rank(MPI_COMM_WORLD,&myRank);
    
@@ -96,8 +92,7 @@ void calculateSpatialTranslation(
 
       phiprof::Timer transTimer {"transfer-stencil-data-z", {"MPI"}};
       //updateRemoteVelocityBlockLists(mpiGrid,popID,VLASOV_SOLVER_Z_NEIGHBORHOOD_ID);
-      SpatialCell::set_mpi_transfer_direction(2);
-      SpatialCell::set_mpi_transfer_type(Transfer::VEL_BLOCK_DATA,false,AMRtranslationActive);
+      SpatialCell::set_mpi_transfer_type(Transfer::VEL_BLOCK_DATA,false);
       mpiGrid.update_copies_of_remote_neighbors(VLASOV_SOLVER_Z_NEIGHBORHOOD_ID);
       transTimer.stop();
 
@@ -141,8 +136,7 @@ void calculateSpatialTranslation(
       
       phiprof::Timer transTimer {"transfer-stencil-data-x", {"MPI"}};
       //updateRemoteVelocityBlockLists(mpiGrid,popID,VLASOV_SOLVER_X_NEIGHBORHOOD_ID);
-      SpatialCell::set_mpi_transfer_direction(0);
-      SpatialCell::set_mpi_transfer_type(Transfer::VEL_BLOCK_DATA,false,AMRtranslationActive);
+      SpatialCell::set_mpi_transfer_type(Transfer::VEL_BLOCK_DATA,false);
       mpiGrid.update_copies_of_remote_neighbors(VLASOV_SOLVER_X_NEIGHBORHOOD_ID);
       transTimer.stop();
       
@@ -185,8 +179,7 @@ void calculateSpatialTranslation(
       
       phiprof::Timer transTimer {"transfer-stencil-data-y", {"MPI"}};
       //updateRemoteVelocityBlockLists(mpiGrid,popID,VLASOV_SOLVER_Y_NEIGHBORHOOD_ID);
-      SpatialCell::set_mpi_transfer_direction(1);
-      SpatialCell::set_mpi_transfer_type(Transfer::VEL_BLOCK_DATA,false,AMRtranslationActive);
+      SpatialCell::set_mpi_transfer_type(Transfer::VEL_BLOCK_DATA,false);
       mpiGrid.update_copies_of_remote_neighbors(VLASOV_SOLVER_Y_NEIGHBORHOOD_ID);
       transTimer.stop();
       
@@ -200,7 +193,7 @@ void calculateSpatialTranslation(
       if(P::amrMaxSpatialRefLevel == 0) {
          trans_map_1d(mpiGrid,local_propagated_cells, remoteTargetCellsy, 1,dt,popID); // map along y//
       } else {
-         trans_map_1d_amr(mpiGrid,local_propagated_cells, remoteTargetCellsy, nPencilsY, 1,dt,popID); // map along y//
+         trans_map_1d_amr(mpiGrid,local_propagated_cells, remoteTargetCellsy, nPencils, 1,dt,popID); // map along y//
       }
       computeTimer.stop();
       time += MPI_Wtime() - t1;
@@ -228,10 +221,72 @@ void calculateSpatialTranslation(
    // bailout(true, "", __FILE__, __LINE__);
 }
 
+/** Propagates the distribution function in spatial space.
+    Now does all required calculations on ghost cells,
+    coalescing all interim MPI communication into one call..
+
+    Based on SLICE-3D algorithm: Zerroukat, M., and T. Allen. "A
+    three-dimensional monotone and conservative semi-Lagrangian scheme
+    (SLICE-3D) for transport problems." Quarterly Journal of the Royal
+    Meteorological Society 138.667 (2012): 1640-1651.
+
+ */
+void calculateSpatialGhostTranslation(
+   dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
+   const vector<CellID>& local_propagated_cells,
+   vector<uint>& nPencils,
+   creal dt,
+   const uint popID,
+   Real &time
+   ) {
+
+   // Ghost translation, need all cell information, not just for a single direction.
+   // No need for remote target cells; pass a dummy list.
+   const vector<CellID> dummy_cells;
+
+   updateRemoteVelocityBlockLists(mpiGrid,popID,VLASOV_SOLVER_GHOST_NEIGHBORHOOD_ID);
+   // Need to re-do in case block lists of boundary cells change after
+   // the block adjustment just after ACC.
+
+   phiprof::Timer prepreBarrierTimer {"MPI barrier-pre-trans-comm"};
+   MPI_Barrier(MPI_COMM_WORLD);
+   prepreBarrierTimer.stop();
+
+   phiprof::Timer transferTimer {"transfer-stencil-data-all",{"MPI"}};
+   SpatialCell::set_mpi_transfer_type(Transfer::VEL_BLOCK_DATA,false);
+   mpiGrid.update_copies_of_remote_neighbors(VLASOV_SOLVER_GHOST_NEIGHBORHOOD_ID);
+   transferTimer.stop();
+
+   phiprof::Timer preBarrierTimer {"MPI barrier-pre-trans"};
+   MPI_Barrier(MPI_COMM_WORLD);
+   preBarrierTimer.stop();
+
+   //#warning TODO: Implement also 2D / non-AMR ghost translation?
+   // ------------- SLICE - map dist function in Z --------------- //
+   phiprof::Timer mappingZTimer {"compute-mapping-z"};
+   trans_map_1d_amr(mpiGrid,local_propagated_cells, dummy_cells, nPencils, 2, dt,popID); // map along z//
+   mappingZTimer.stop();
+
+   // ------------- SLICE - map dist function in X --------------- //
+   phiprof::Timer mappingXTimer {"compute-mapping-x"};
+   trans_map_1d_amr(mpiGrid,local_propagated_cells, dummy_cells, nPencils, 0,dt,popID); // map along x//
+   mappingXTimer.stop();
+
+   // ------------- SLICE - map dist function in Y --------------- //
+   phiprof::Timer mappingYTimer {"compute-mapping-y"};
+   trans_map_1d_amr(mpiGrid,local_propagated_cells, dummy_cells, nPencils, 1,dt,popID); // map along y//
+   mappingYTimer.stop();
+
+   phiprof::Timer postBarrierTimer {"MPI barrier-post-trans"};
+   MPI_Barrier(MPI_COMM_WORLD);
+   postBarrierTimer.stop();
+   return;
+}
+
 /*!
-  
-  Propagates the distribution function in spatial space. 
-  
+
+  Propagates the distribution function in spatial space.
+
   Based on SLICE-3D algorithm: Zerroukat, M., and T. Allen. "A
   three‐dimensional monotone and conservative semi‐Lagrangian scheme
   (SLICE‐3D) for transport problems." Quarterly Journal of the Royal
@@ -252,13 +307,10 @@ void calculateSpatialTranslation(
    vector<CellID> remoteTargetCellsy;
    vector<CellID> remoteTargetCellsz;
    vector<CellID> local_propagated_cells;
-   vector<CellID> local_target_cells;
-   vector<uint> nPencilsX;
-   vector<uint> nPencilsY;
-   vector<uint> nPencilsZ;
+   vector<uint> nPencils;
    Real time=0.0;
-   
-   // If dt=0 we are either initializing or distribution functions are not translated. 
+
+   // If dt=0 we are either initializing or distribution functions are not translated.
    // In both cases go to the end of this function and calculate the moments.
    if (dt == 0.0) {
       calculateMoments_R(mpiGrid,localCells,true);
@@ -266,32 +318,24 @@ void calculateSpatialTranslation(
    }
    
    phiprof::Timer computeTimer {"compute_cell_lists"};
-   remoteTargetCellsx = mpiGrid.get_remote_cells_on_process_boundary(VLASOV_SOLVER_TARGET_X_NEIGHBORHOOD_ID);
-   remoteTargetCellsy = mpiGrid.get_remote_cells_on_process_boundary(VLASOV_SOLVER_TARGET_Y_NEIGHBORHOOD_ID);
-   remoteTargetCellsz = mpiGrid.get_remote_cells_on_process_boundary(VLASOV_SOLVER_TARGET_Z_NEIGHBORHOOD_ID);
-   
+   if (!P::vlasovSolverGhostTranslate) {
+      remoteTargetCellsx = mpiGrid.get_remote_cells_on_process_boundary(VLASOV_SOLVER_TARGET_X_NEIGHBORHOOD_ID);
+      remoteTargetCellsy = mpiGrid.get_remote_cells_on_process_boundary(VLASOV_SOLVER_TARGET_Y_NEIGHBORHOOD_ID);
+      remoteTargetCellsz = mpiGrid.get_remote_cells_on_process_boundary(VLASOV_SOLVER_TARGET_Z_NEIGHBORHOOD_ID);
+   }
+
    // Figure out which spatial cells are translated,
    // result independent of particle species.
+   // If performing ghost translation, this is used for LB.
    for (size_t c=0; c<localCells.size(); ++c) {
       if (do_translate_cell(mpiGrid[localCells[c]])) {
          local_propagated_cells.push_back(localCells[c]);
       }
    }
-   
-   // Figure out target spatial cells, result
-   // independent of particle species.
-   for (size_t c=0; c<localCells.size(); ++c) {
-      if (mpiGrid[localCells[c]]->sysBoundaryFlag == sysboundarytype::NOT_SYSBOUNDARY) {
-         local_target_cells.push_back(localCells[c]);
-      }
-   }
+
    if (P::prepareForRebalance == true && P::amrMaxSpatialRefLevel != 0) {
       // One more element to count the sums
-      for (size_t c=0; c<local_propagated_cells.size()+1; c++) {
-         nPencilsX.push_back(0);
-         nPencilsY.push_back(0);
-         nPencilsZ.push_back(0);
-      }
+      nPencils.resize(local_propagated_cells.size()+1, 0);
    }
    computeTimer.stop();
 
@@ -300,55 +344,65 @@ void calculateSpatialTranslation(
       string profName = "translate "+getObjectWrapper().particleSpecies[popID].name;
       phiprof::Timer timer {profName};
       SpatialCell::setCommunicatedSpecies(popID);
-      //      std::cout << "I am at line " << __LINE__ << " of " << __FILE__ << std::endl;
-      calculateSpatialTranslation(
-         mpiGrid,
-         localCells,
-         local_propagated_cells,
-         local_target_cells,
-         remoteTargetCellsx,
-         remoteTargetCellsy,
-         remoteTargetCellsz,
-         nPencilsX,
-         nPencilsY,
-         nPencilsZ,
-         dt,
-         popID,
-         time
-      );
+      if (P::vlasovSolverGhostTranslate && (P::amrMaxSpatialRefLevel > 0) ) {
+         // All-local ghost translation with coalesced communication
+         // Not yet implemented for non-AMR solver
+         calculateSpatialGhostTranslation(
+            mpiGrid,
+            local_propagated_cells, // Used for LB
+            nPencils,
+            dt,
+            popID,
+            time
+            );
+      } else {
+         // Classic method with included remote contribution through MPI
+         calculateSpatialTranslation(
+            mpiGrid,
+            local_propagated_cells,
+            remoteTargetCellsx,
+            remoteTargetCellsy,
+            remoteTargetCellsz,
+            nPencils,
+            dt,
+            popID,
+            time
+            );
+      }
    }
 
    if (Parameters::prepareForRebalance == true) {
-      // Blocks need to be scaled to time since acceleration uses time
-      const double deltat {MPI_Wtime() - t1};
-      double totalBlocks {0.0};
+      // clear weight on all local cells
+      for (size_t c=0; c<localCells.size(); ++c) {
+         SpatialCell* SC = mpiGrid[localCells[c]];
+         SC->parameters[CellParams::LBWEIGHTCOUNTER] = 0;
+      }
+      for (size_t c=0; c<local_propagated_cells.size(); ++c) {
+         // Gather total blocks in cell
+         SpatialCell* SC = mpiGrid[local_propagated_cells[c]];
+         Real counter = 0;
+         for (uint popID=0; popID<getObjectWrapper().particleSpecies.size(); ++popID) {
+            counter += SC->get_number_of_velocity_blocks(popID);
+         }
 
-      if(P::amrMaxSpatialRefLevel == 0) {
-         for (size_t c=0; c<localCells.size(); ++c) {
-            for (uint popID=0; popID<getObjectWrapper().particleSpecies.size(); ++popID) {
-               totalBlocks += mpiGrid[localCells[c]]->get_number_of_velocity_blocks(popID);
+         // int accelerationsteps = 0; // Account for time spent in acceleration as well
+         // if (mpiGrid[local_propagated_cells[c]]->sysBoundaryFlag == sysboundarytype::NOT_SYSBOUNDARY) accelerationsteps = 3;
+         if (SC->sysBoundaryFlag != sysboundarytype::NOT_SYSBOUNDARY) {
+            // Set sysb cells to a small weight
+            SC->parameters[CellParams::LBWEIGHTCOUNTER] = counter * 0.5;
+         } else {
+            if (P::amrMaxSpatialRefLevel == 0) {
+               SC->parameters[CellParams::LBWEIGHTCOUNTER] = 3 * counter;
+            } else {
+               // SC->parameters[CellParams::LBWEIGHTCOUNTER] = nPencils[c] * counter;
+               SC->parameters[CellParams::LBWEIGHTCOUNTER] = 3 * counter;
+               // SC->parameters[CellParams::LBWEIGHTCOUNTER] += (nPencils[c]+accelerationsteps) * counter;
+               // SC->parameters[CellParams::LBWEIGHTCOUNTER] += time / localCells.size();
             }
-         }
-         for (size_t c=0; c<localCells.size(); ++c) {
-            mpiGrid[localCells[c]]->parameters[CellParams::LBWEIGHTCOUNTERX] += deltat * mpiGrid[localCells[c]]->get_number_of_all_velocity_blocks() / totalBlocks;
-            mpiGrid[localCells[c]]->parameters[CellParams::LBWEIGHTCOUNTERY] += deltat * mpiGrid[localCells[c]]->get_number_of_all_velocity_blocks() / totalBlocks;
-            mpiGrid[localCells[c]]->parameters[CellParams::LBWEIGHTCOUNTERZ] += deltat * mpiGrid[localCells[c]]->get_number_of_all_velocity_blocks() / totalBlocks;
-         }
-      } else {
-         for (size_t c=0; c<local_propagated_cells.size(); ++c) {
-            for (uint popID=0; popID<getObjectWrapper().particleSpecies.size(); ++popID) {
-               totalBlocks += (nPencilsX[c] + nPencilsY[c] + nPencilsZ[c]) * mpiGrid[local_propagated_cells[c]]->get_number_of_velocity_blocks(popID);
-            }
-         }
-         for (size_t c=0; c<local_propagated_cells.size(); ++c) {
-            Real blocks = mpiGrid[local_propagated_cells[c]]->get_number_of_all_velocity_blocks();
-            mpiGrid[local_propagated_cells[c]]->parameters[CellParams::LBWEIGHTCOUNTERX] += deltat * nPencilsX[c] * blocks / totalBlocks;
-            mpiGrid[local_propagated_cells[c]]->parameters[CellParams::LBWEIGHTCOUNTERY] += deltat * nPencilsY[c] * blocks / totalBlocks;
-            mpiGrid[local_propagated_cells[c]]->parameters[CellParams::LBWEIGHTCOUNTERZ] += deltat * nPencilsZ[c] * blocks / totalBlocks;
          }
       }
    }
-   
+
    // Mapping complete, update moments and maximum dt limits //
    calculateMoments_R(mpiGrid,localCells,true);
 }
@@ -373,18 +427,20 @@ void calculateAcceleration(const uint popID,const uint globalMaxSubcycles,const 
                            const Real& dt) {
    // Set active population
    SpatialCell::setCommunicatedSpecies(popID);
-   
-   // Calculate velocity moments, these are needed to 
+
+   // Calculate velocity moments, these are needed to
    // calculate the transforms used in the accelerations.
    // Calculated moments are stored in the "_V" variables.
    calculateMoments_V(mpiGrid, propagatedCells, false);
+
+   int timerId {phiprof::initializeTimer("cell-semilag-acc")};
 
    // Semi-Lagrangian acceleration for those cells which are subcycled
    #pragma omp parallel for schedule(dynamic,1)
    for (size_t c=0; c<propagatedCells.size(); ++c) {
       const CellID cellID = propagatedCells[c];
       const Real maxVdt = mpiGrid[cellID]->get_max_v_dt(popID);
-      
+
       //compute subcycle dt. The length is maxVdt on all steps
       //except the last one. This is to keep the neighboring
       //spatial cells in sync, so that two neighboring cells with
@@ -399,7 +455,7 @@ void calculateAcceleration(const uint popID,const uint globalMaxSubcycles,const 
          subcycleDt = maxVdt;
       }
       if (dt<0) subcycleDt = -subcycleDt;
-      
+
       //generate pseudo-random order which is always the same irrespective of parallelization, restarts, etc.
       std::default_random_engine rndState;
       // set seed, initialise generator and get value. The order is the same
@@ -407,7 +463,7 @@ void calculateAcceleration(const uint popID,const uint globalMaxSubcycles,const 
       rndState.seed(P::tstep);
 
       uint map_order=std::uniform_int_distribution<>(0,2)(rndState);
-      phiprof::Timer semilagAccTimer {"cell-semilag-acc"};
+      phiprof::Timer semilagAccTimer {timerId};
       cpu_accelerate_cell(mpiGrid[cellID],popID,map_order,subcycleDt);
       semilagAccTimer.stop();
    }
@@ -423,23 +479,23 @@ void calculateAcceleration(const uint popID,const uint globalMaxSubcycles,const 
    if(step < (globalMaxSubcycles - 1)) adjustVelocityBlocks(mpiGrid, propagatedCells, false, popID);
 }
 
-/** Accelerate all particle populations to new time t+dt. 
+/** Accelerate all particle populations to new time t+dt.
  * This function is AMR safe.
  * @param mpiGrid Parallel grid library.
  * @param dt Time step.*/
 void calculateAcceleration(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
                            Real dt
-                          ) {    
+                          ) {
    typedef Parameters P;
    const vector<CellID>& cells = getLocalCells();
 
    int myRank;
    MPI_Comm_rank(MPI_COMM_WORLD,&myRank);
-   
+
    if (dt == 0.0 && P::tstep > 0) {
-      
-      // Even if acceleration is turned off we need to adjust velocity blocks 
-      // because the boundary conditions may have altered the velocity space, 
+
+      // Even if acceleration is turned off we need to adjust velocity blocks
+      // because the boundary conditions may have altered the velocity space,
       // and to update changes in no-content blocks during translation.
       for (uint popID=0; popID<getObjectWrapper().particleSpecies.size(); ++popID) {
          adjustVelocityBlocks(mpiGrid, cells, true, popID);
@@ -535,10 +591,13 @@ void calculateInterpolatedVelocityMoments(
    const int cp_rhoq,
    const int cp_p11,
    const int cp_p22,
-   const int cp_p33
+   const int cp_p33,
+   const int cp_p23,
+   const int cp_p13,
+   const int cp_p12
 ) {
    const vector<CellID>& cells = getLocalCells();
-   
+
    //Iterate through all local cells
     #pragma omp parallel for
    for (size_t c=0; c<cells.size(); ++c) {
@@ -552,13 +611,18 @@ void calculateInterpolatedVelocityMoments(
       SC->parameters[cp_p11]   = 0.5* ( SC->parameters[CellParams::P_11_R] + SC->parameters[CellParams::P_11_V] );
       SC->parameters[cp_p22]   = 0.5* ( SC->parameters[CellParams::P_22_R] + SC->parameters[CellParams::P_22_V] );
       SC->parameters[cp_p33]   = 0.5* ( SC->parameters[CellParams::P_33_R] + SC->parameters[CellParams::P_33_V] );
+      SC->parameters[cp_p23]   = 0.5* ( SC->parameters[CellParams::P_23_R] + SC->parameters[CellParams::P_23_V] );
+      SC->parameters[cp_p13]   = 0.5* ( SC->parameters[CellParams::P_13_R] + SC->parameters[CellParams::P_13_V] );
+      SC->parameters[cp_p12]   = 0.5* ( SC->parameters[CellParams::P_12_R] + SC->parameters[CellParams::P_12_V] );
 
       for (uint popID=0; popID<getObjectWrapper().particleSpecies.size(); ++popID) {
          spatial_cell::Population& pop = SC->get_population(popID);
          pop.RHO = 0.5 * ( pop.RHO_R + pop.RHO_V );
-         for(int i=0; i<3; i++) {
+         for (int i = 0; i < 3; i++) {
             pop.V[i] = 0.5 * ( pop.V_R[i] + pop.V_V[i] );
-            pop.P[i]    = 0.5 * ( pop.P_R[i] + pop.P_V[i] );
+         }
+         for (int i = 0; i < 6; i++) {
+            pop.P[i] = 0.5 * ( pop.P_R[i] + pop.P_V[i] );
          }
       }
    }

@@ -37,22 +37,21 @@
  * "$ vlsvdiff <file1> <folder2> <Variable> <component>" or "$ vlsvdiff <folder1> <file2> <Variable> <component>": Gives single-file statistics and distances between a file, and files grid*.vlsv taken in alphanumeric order in the given folder, for the variable and component given
  */
 
-
-
-#include <cstdlib>
-#include <exception>
-#include <iostream>
-#include <stdint.h>
+#include <algorithm>
 #include <cmath>
+#include <cstdlib>
+#include <cstring>
+#include <dirent.h>
+#include <exception>
+#include <iomanip>
+#include <iostream>
 #include <limits> // YK
 #include <list>
 #include <set>
 #include <sstream>
-#include <dirent.h>
+#include <stdint.h>
 #include <string>
 #include <typeinfo>
-#include <algorithm>
-#include <cstring>
 
 #include "definitions.h"
 #include <vlsv_reader.h>
@@ -939,11 +938,11 @@ bool outputDistance(const Real p,
 {
    if(verboseOutput == true) {
       if(shiftedAverage == false) {
-         cout << "The absolute " << p << "-distance between both datasets is " << *absolute  << endl;
-         cout << "The relative " << p << "-distance between both datasets is " << *relative  << endl;
+         cout << "The absolute " << p << "-distance between both datasets is " << setprecision(3) << *absolute  << endl;
+         cout << "The relative " << p << "-distance between both datasets is " << setprecision(3) << *relative  << endl;
       } else {
-         cout << "The average-shifted absolute " << p << "-distance between both datasets is " << *absolute  << endl;
-         cout << "The average-shifted relative " << p << "-distance between both datasets is " << *relative  << endl;
+         cout << "The average-shifted absolute " << p << "-distance between both datasets is " << setprecision(3) << *absolute  << endl;
+         cout << "The average-shifted relative " << p << "-distance between both datasets is " << setprecision(3) << *relative  << endl;
       }
    } else {
       static vector<Real> fileOutputData;
@@ -952,7 +951,7 @@ bool outputDistance(const Real p,
       if(lastCall == true) {
          vector<Real>::const_iterator it;
          for(it = fileOutputData.begin(); it != fileOutputData.end(); it++) {
-            cout << *it << "\t";
+            cout << setprecision(3) << *it << "\t";
          }
          fileOutputData.clear();
          return 0;
@@ -1613,6 +1612,7 @@ bool compareAvgs( const string fileName1,
 
    const double relativeSumDiff = sumDiff / totalAbsAvgs;
    cout << "File names: " << fileName1 << " & " << fileName2 << endl <<
+      setprecision(3) <<
       "NonIdenticalBlocks:      " << numOfNonIdenticalBlocks << endl <<
       "IdenticalBlocks:         " << numOfIdenticalBlocks <<  endl <<
       "Absolute_Error:          " << totalAbsDiff  << endl <<
@@ -1964,47 +1964,36 @@ int main(int argn,char* args[]) {
    DIR* dir1 = opendir(fileName1.c_str());
    DIR* dir2 = opendir(fileName2.c_str());
 
-   if (dir1 == NULL && dir2 == NULL) {
+   if (dir1 == nullptr && dir2 == nullptr) {
       cout << "INFO Reading in two files." << endl;
       
       // Process two files with verbose output (last argument true)
       process2Files(fileName1, fileName2, varToExtract, compToExtract, true, compToExtract2);
-      //CONTINUE
-      
-      closedir(dir1);
-      closedir(dir2);
-   }
-   else if (dir1 == NULL || dir2 == NULL)
-   {
+   } else if (dir1 == nullptr || dir2 == nullptr) {
       // Mixed file and directory
       cout << "#INFO Reading in one file and one directory." << endl;
       set<string> fileList;
-      set<string>::iterator it;
 
-      if(dir1 == NULL){
+      if(dir1 == nullptr){
          //file in 1, directory in 2
          processDirectory(dir2, &fileList);
-         for(it = fileList.begin(); it != fileList.end();++it){
+         for(auto f : fileList) {
             // Process two files with non-verbose output (last argument false), give full path to the file processor
-            process2Files(fileName1,fileName2 + "/" + *it, varToExtract, compToExtract, false, compToExtract2);
+            process2Files(fileName1,fileName2 + "/" + f, varToExtract, compToExtract, false, compToExtract2);
          }
+         closedir(dir2);
       }
 
-      if(dir2 == NULL){
+      if(dir2 == nullptr){
          //directory in 1, file in 2
          processDirectory(dir1, &fileList);
-         for(it = fileList.begin(); it != fileList.end();++it){
+         for(auto f : fileList) {
             // Process two files with non-verbose output (last argument false), give full path to the file processor
-            process2Files(fileName1+"/"+*it,fileName2, varToExtract, compToExtract, false, compToExtract2);
+            process2Files(fileName1 + "/" + f,fileName2, varToExtract, compToExtract, false, compToExtract2);
          }
+         closedir(dir1);
       }
-
-      closedir(dir1);
-      closedir(dir2);
-      return 1;
-   }
-   else if (dir1 != NULL && dir2 != NULL)
-   {
+   } else if (dir1 && dir2) {
       // Process two folders, files of the same rank compared, first folder is reference in relative distances
       cout << "#INFO Reading in two directories." << endl;
       set<string> fileList1, fileList2;
@@ -2014,20 +2003,15 @@ int main(int argn,char* args[]) {
       processDirectory(dir2, &fileList2);
       
       // Basic consistency check
-      if(fileList1.size() != fileList2.size())
-      {
+      if(fileList1.size() != fileList2.size()) {
          cerr << "ERROR Folders have different number of files." << endl;
          return 1;
       }
       
-      set<string>::iterator it1, it2;
-      for(it1 = fileList1.begin(), it2 = fileList2.begin();
-          it1 != fileList2.end(), it2 != fileList2.end();
-          it1++, it2++)
-      {
-      // Process two files with non-verbose output (last argument false), give full path to the file processor
-      process2Files(fileName1 + "/" + *it1,
-                    fileName2 + "/" + *it2, varToExtract, compToExtract, false, compToExtract2);
+      // TODO zip these once we're using C++23
+      for (auto it1 = fileList1.begin(), it2 = fileList2.begin(); it1 != fileList2.end(), it2 != fileList2.end(); it1++, it2++) {
+         // Process two files with non-verbose output (last argument false), give full path to the file processor
+         process2Files(fileName1 + "/" + *it1, fileName2 + "/" + *it2, varToExtract, compToExtract, false, compToExtract2);
       }
       
       closedir(dir1);

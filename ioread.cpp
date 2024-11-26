@@ -38,6 +38,7 @@
 #include "vlsv_reader_parallel.h"
 #include "vlasovmover.h"
 #include "object_wrapper.h"
+#include "grid.h"
 
 using namespace std;
 using namespace phiprof;
@@ -131,9 +132,9 @@ bool exitOnError(bool success, const string& message, MPI_Comm comm) {
       successInt=1;
    else
       successInt=0;
-   
+
    MPI_Allreduce(&successInt,&globalSuccessInt,1,MPI_INT,MPI_MIN,comm);
-   
+
    if(globalSuccessInt==1) {
       return true;
    } else {
@@ -176,14 +177,14 @@ bool readCellIds(vlsv::ParallelReader & file, vector<CellID>& fileCells, const i
          logFile << "(RESTART) ERROR: Bad vectorsize at " << __FILE__ << " " << __LINE__ << endl << write;
          return false;
       }
-      
+
       //   Read cell Ids:
       char* IDbuffer = new char[arraySize*vectorSize*byteSize];
       if (file.readArrayMaster("VARIABLE",attribs,readFromFirstIndex,arraySize,IDbuffer) == false) {
          logFile << "(RESTART) ERROR: Failed to read cell Ids!" << endl << write;
          success = false;
       }
-   
+
    // Convert global Ids into our local DCCRG 64 bit uints
       const uint64_t& numberOfCells = arraySize;
       fileCells.resize(numberOfCells);
@@ -1196,8 +1197,8 @@ bool exec_readGrid(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
 
    phiprof::Timer readLayoutimer {"readDatalayout"};
    if (success) {
-		success = readCellIds(file,fileCells,MASTER_RANK,MPI_COMM_WORLD);
-	}
+      success = readCellIds(file,fileCells,MASTER_RANK,MPI_COMM_WORLD);
+   }
 
    // Check that the cellID lists are identical in file and grid
    if (myRank==0) {
@@ -1258,7 +1259,7 @@ bool exec_readGrid(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
    mpiGrid.balance_load(false);
 
    //update list of local gridcells
-   recalculateLocalCellsCache();
+   recalculateLocalCellsCache(mpiGrid);
 
    //get new list of local gridcells
    const vector<CellID>& gridCells = getLocalCells();
@@ -1327,7 +1328,6 @@ bool exec_readGrid(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
    if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"max_r_dt",CellParams::MAXRDT,1,mpiGrid); }
    if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"max_fields_dt",CellParams::MAXFDT,1,mpiGrid); }
    if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"vg_drift",CellParams::BULKV_FORCING_X,3,mpiGrid); }
-   if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"vg_bulk_forcing_flag",CellParams::FORCING_CELL_NUM,1,mpiGrid); }
    if (P::refineOnRestart) {
       // Refinement indices alpha_1 and alpha_2
       if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"vg_amr_alpha1",CellParams::AMR_ALPHA1,1,mpiGrid); }
@@ -1422,6 +1422,7 @@ bool readGrid(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
 */
 bool readFileCells(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid, const std::string& name)
 {
+   phiprof::Timer readCellIdsTimer {"Restart read File cellIDs"};
    vector<CellID> fileCells; /*< CellIds for all cells in file*/
    bool success = true;
    vlsv::ParallelReader file;
@@ -1432,8 +1433,10 @@ bool readFileCells(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
    exitOnError(success,"(READ_FILE_CELLS) Could not open file",MPI_COMM_WORLD);
 
    readCellIds(file,fileCells,MASTER_RANK,MPI_COMM_WORLD);
+   phiprof::Timer loadCellsTimer {"load CellIDs into grid"};
    success = mpiGrid.load_cells(fileCells);
    exitOnError(success,"(READ_FILE_CELLS) Failed to refine grid",MPI_COMM_WORLD);
+   loadCellsTimer.stop();
 
    success = file.close();
    exitOnError(success,"(READ_FILE_CELLS) Other error",MPI_COMM_WORLD);
@@ -1443,10 +1446,6 @@ bool readFileCells(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
 
 bool readFsgridDecomposition(vlsv::ParallelReader& file, std::array<FsGridTools::Task_t,3>& decomposition){
    list<pair<string,string> > attribs;
-   uint64_t arraySize;
-   uint64_t vectorSize;
-   vlsv::datatype::type dataType;
-   uint64_t byteSize;
 
    int myRank;   
    MPI_Comm_rank(MPI_COMM_WORLD,&myRank);
@@ -1497,7 +1496,6 @@ bool readFsgridDecomposition(vlsv::ParallelReader& file, std::array<FsGridTools:
       std::set<FsGridTools::FsIndex_t> x_corners, y_corners, z_corners;
       
       int64_t begin_rank = 0;
-      int i = 0;
       for(auto rank_size : mesh_domain_sizes){
          if(myRank == MASTER_RANK){
             if(file.read("MESH", mesh_attribs, begin_rank, 1, ids_ptr, false) == false){
