@@ -151,7 +151,7 @@ void initializeGrids(
    initializeStencils(mpiGrid);
 
    phiprof::Timer refineTimer {"Refine spatial cells"};
-   recalculateLocalCellsCache();
+   recalculateLocalCellsCache(mpiGrid);
 
    setPartitioningNeighborhoods(mpiGrid);
 
@@ -304,9 +304,7 @@ void initializeGrids(
 
       #pragma omp parallel for schedule(static)
       for (size_t i=0; i<cells.size(); ++i) {
-         mpiGrid[cells[i]]->parameters[CellParams::LBWEIGHTCOUNTERX] = 0;
-         mpiGrid[cells[i]]->parameters[CellParams::LBWEIGHTCOUNTERY] = 0;
-         mpiGrid[cells[i]]->parameters[CellParams::LBWEIGHTCOUNTERZ] = 0;
+         mpiGrid[cells[i]]->parameters[CellParams::LBWEIGHTCOUNTER] = 0;
       }
 
       for (uint popID=0; popID<getObjectWrapper().particleSpecies.size(); ++popID) {
@@ -345,9 +343,7 @@ void initializeGrids(
    } else if (P::writeFullBGB) {
       // If, instead of starting a regular simulation, we are only writing out the background field, it is enough to set a dummy load balance value of 1 here.
       for (size_t i=0; i<cells.size(); ++i) {
-         for (int j = 0; j < 3; ++i) {
-            mpiGrid[cells[i]]->parameters[CellParams::LBWEIGHTCOUNTERX + j] = 1;
-         }
+         mpiGrid[cells[i]]->parameters[CellParams::LBWEIGHTCOUNTER] = 1.0;
       }
    }
 

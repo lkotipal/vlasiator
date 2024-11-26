@@ -70,9 +70,7 @@ void calculateSpatialTranslation(
         const vector<CellID>& remoteTargetCellsx,
         const vector<CellID>& remoteTargetCellsy,
         const vector<CellID>& remoteTargetCellsz,
-        vector<uint>& nPencilsX,
-        vector<uint>& nPencilsY,
-        vector<uint>& nPencilsZ,
+        vector<uint>& nPencils,
         creal dt,
         const uint popID,
         Real &time
@@ -106,7 +104,7 @@ void calculateSpatialTranslation(
       if(P::amrMaxSpatialRefLevel == 0) {
          trans_map_1d(mpiGrid,local_propagated_cells, remoteTargetCellsz, 2, dt,popID); // map along z//
       } else {
-         trans_map_1d_amr(mpiGrid,local_propagated_cells, remoteTargetCellsz, nPencilsZ, 2, dt,popID); // map along z//
+         trans_map_1d_amr(mpiGrid,local_propagated_cells, remoteTargetCellsz, nPencils, 2, dt,popID); // map along z//
       }
       computeTimer.stop();
       time += MPI_Wtime() - t1;
@@ -150,7 +148,7 @@ void calculateSpatialTranslation(
       if(P::amrMaxSpatialRefLevel == 0) {
          trans_map_1d(mpiGrid,local_propagated_cells, remoteTargetCellsx, 0,dt,popID); // map along x//
       } else {
-         trans_map_1d_amr(mpiGrid,local_propagated_cells, remoteTargetCellsx, nPencilsX, 0,dt,popID); // map along x//
+         trans_map_1d_amr(mpiGrid,local_propagated_cells, remoteTargetCellsx, nPencils, 0,dt,popID); // map along x//
       }
       computeTimer.stop();
       time += MPI_Wtime() - t1;
