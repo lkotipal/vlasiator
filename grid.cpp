@@ -181,8 +181,6 @@ void initializeGrids(
    /** RCB_MULTICRITERIA_NORM
        Norm used in multicriteria algorithm; this determines how to balance the different weight constraints. Valid values are 1,2, and 3. Roughly, if the weights correspond to different phases, then the value 1 (1-norm) tries to minimize the  total time (sum over all phases) while the value 3 (max-norm) attempts to minimize the worst imbalance in any phase. The 2-norm does something in between. Try a different value if you're not happy with the balance. **/
 
-   initializeStencils(mpiGrid);
-
    for (const auto& [key, value] : P::loadBalanceOptions) {
       mpiGrid.set_partitioning_option(key, value);
    }
