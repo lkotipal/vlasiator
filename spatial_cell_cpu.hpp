@@ -356,6 +356,10 @@ namespace spatial_cell {
       //SpatialCell& operator=(const SpatialCell&);
       template<typename T>
       inline MPI_Aint displacement_of(const T* p) const {
+         if (alignof(SpatialCell) % 4) {
+            std::cerr << "SpatialCell alignment is " + std::to_string(alignof(SpatialCell)) + "\n";
+            abort_mpi("SpatialCell is unaligned to uint32_t!");
+         }
          if (sizeof(T) < 4) {
             abort_mpi("Pointer too small to cast to uint32_t!");
          }
