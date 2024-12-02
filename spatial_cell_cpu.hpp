@@ -354,7 +354,22 @@ namespace spatial_cell {
       //SpatialCell& operator=(const SpatialCell& other);
     private:
       //SpatialCell& operator=(const SpatialCell&);
-      
+      template<typename T>
+      inline MPI_Aint displacement_of(const T* p) const {
+         if (sizeof(T) < 4) {
+            abort_mpi("Pointer too small to cast to uint32_t!");
+         }
+         return reinterpret_cast<const uint32_t*>(p) - reinterpret_cast<const uint32_t*>(this);
+      }
+
+      template<typename T>
+      static inline int block_length(const size_t len = 1) {
+         if (sizeof(T) < 4) {
+            abort_mpi("Pointer too small to cast to uint32_t!");
+         }
+         return len * sizeof(T) / 4;
+      }
+
       bool compute_block_has_content(const vmesh::GlobalID& block,const uint popID) const;
       void merge_values_recursive(const uint popID,vmesh::GlobalID parentGID,vmesh::GlobalID blockGID,uint8_t refLevel,bool recursive,const Realf* data,
 				  std::set<vmesh::GlobalID>& blockRemovalList);
