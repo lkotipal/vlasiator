@@ -172,6 +172,9 @@ namespace spatial_cell {
       vmesh::VelocityBlockContainer<vmesh::LocalID> blockContainer;  /**< Velocity block data.*/
    };
 
+   typedef uint8_t transferType;
+   constexpr MPI_Datatype transferTypeMPI MPI_BYTE;
+
    class SpatialCell {
    public:
       SpatialCell();
@@ -364,7 +367,7 @@ namespace spatial_cell {
          // if (sizeof(T) < 4) {
          //    abort_mpi("Pointer too small to cast to uint32_t!");
          // }
-         return reinterpret_cast<const uint8_t*>(p) - reinterpret_cast<const uint8_t*>(this);
+         return reinterpret_cast<const transferType*>(p) - reinterpret_cast<const transferType*>(this);
       }
 
       template<typename T>
@@ -373,7 +376,7 @@ namespace spatial_cell {
          // if (sizeof(T) < 4) {
          //    abort_mpi("Pointer too small to cast to uint32_t!");
          // }
-         return len * sizeof(T) / sizeof(uint8_t);
+         return len * sizeof(T) / sizeof(transferType);
       }
 
       bool compute_block_has_content(const vmesh::GlobalID& block,const uint popID) const;

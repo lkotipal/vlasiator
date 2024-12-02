@@ -773,12 +773,12 @@ namespace spatial_cell {
             displacements.size(),
             block_lengths.data(),
             displacements.data(),
-            MPI_UINT32_T,
+            transferTypeMPI,
             &datatype
          );
       } else {
          count = 0;
-         datatype = MPI_UINT32_T;
+         datatype = transferTypeMPI;
       }
 
       const bool printMpiDatatype = false;
