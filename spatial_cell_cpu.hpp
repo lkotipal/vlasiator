@@ -173,7 +173,7 @@ namespace spatial_cell {
    };
 
    typedef uint8_t transferType;
-   constexpr MPI_Datatype transferTypeMPI MPI_BYTE;
+   constexpr MPI_Datatype transferTypeMPI {MPI_BYTE};
 
    class SpatialCell {
    public:
