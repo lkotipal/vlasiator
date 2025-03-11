@@ -168,7 +168,7 @@ all: vlasiator tools
 INSTALL = $(CURDIR)
 
 # Executable:
-EXE = vlasiator_${ARCH}
+EXE = vlasiator
 
 # Collect libraries into single variable:
 LIBS = ${LIB_BOOST}

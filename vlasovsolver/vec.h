@@ -86,14 +86,15 @@ typedef VecSimple<float> Vec;
 #endif
 
 #ifdef VEC8F_SVE_SIPEARL
+#define VECL 8
+#define VPREC 4
+
 #ifndef VEC_PER_PLANE
 const int VEC_PER_PLANE = (WID*WID/VECL);
 #endif
 #ifndef VEC_PER_BLOCK
 const int VEC_PER_BLOCK = (WID*VEC_PER_PLANE);
 #endif
-#define VECL 8
-#define VPREC 4
 
 #include <arm_sve.h>
 #include "vectorclass_fast_sve_fallback.h"
@@ -107,14 +108,16 @@ typedef Vec8bf Vecb;
 #endif
 
 #ifdef VEC4F_SVE_SIPEARL
+
+#define VECL 4
+#define VPREC 4
+
 #ifndef VEC_PER_PLANE
 const int VEC_PER_PLANE = (WID*WID/VECL);
 #endif
 #ifndef VEC_PER_BLOCK
 const int VEC_PER_BLOCK = (WID*VEC_PER_PLANE);
 #endif
-#define VECL 4
-#define VPREC 4
 
 #include <arm_sve.h>
 #include "vectorclass_fast_sve_fallback.h"

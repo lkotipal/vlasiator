@@ -165,7 +165,7 @@ cog.outl("#endif")
    if(dimension == 0) {
       for (vmesh::LocalID block_k=0; block_k<n_blocks; ++block_k) {
          Realf* __restrict__ data = blockContainer->getData(vmesh->getLocalID(blocks[block_k]));
-   #if (defined(VEC4D_AGNER) || defined(VEC4F_AGNER) || defined(VEC_FALLBACK_GENERIC)) && VECL == 4
+   #if (defined(VEC4D_AGNER) || defined(VEC4F_AGNER) || defined(VEC_FALLBACK_GENERIC) || defined(VEC4F_SVE_SIPEARL)) && VECL == 4
    // WID 4, vecl 4
          values[i_pcolumnv_b(0, 0, block_k, n_blocks)] = Vec({data[0], data[16], data[32], data[48]});
          values[i_pcolumnv_b(1, 0, block_k, n_blocks)] = Vec({data[4], data[20], data[36], data[52]});
@@ -183,7 +183,7 @@ cog.outl("#endif")
          values[i_pcolumnv_b(1, 3, block_k, n_blocks)] = Vec({data[7], data[23], data[39], data[55]});
          values[i_pcolumnv_b(2, 3, block_k, n_blocks)] = Vec({data[11], data[27], data[43], data[59]});
          values[i_pcolumnv_b(3, 3, block_k, n_blocks)] = Vec({data[15], data[31], data[47], data[63]});
-   #elif (defined(VEC8D_AGNER) || defined(VEC8F_AGNER) || defined(VEC_FALLBACK_GENERIC)) && VECL == 8
+   #elif (defined(VEC8D_AGNER) || defined(VEC8F_AGNER) || defined(VEC_FALLBACK_GENERIC) || defined(VEC8F_SVE_SIPEARL)) && VECL == 8
    // WID 4, vecl 8
          values[i_pcolumnv_b(0, 0, block_k, n_blocks)] = Vec({data[0], data[16], data[32], data[48], data[4], data[20], data[36], data[52]});
          values[i_pcolumnv_b(1, 0, block_k, n_blocks)] = Vec({data[8], data[24], data[40], data[56], data[12], data[28], data[44], data[60]});
@@ -212,7 +212,7 @@ cog.outl("#endif")
    if(dimension == 1) {
       for (vmesh::LocalID block_k=0; block_k<n_blocks; ++block_k) {
          Realf* __restrict__ data = blockContainer->getData(vmesh->getLocalID(blocks[block_k]));
-   #if (defined(VEC4D_AGNER) || defined(VEC4F_AGNER) || defined(VEC_FALLBACK_GENERIC)) && VECL == 4
+   #if (defined(VEC4D_AGNER) || defined(VEC4F_AGNER) || defined(VEC_FALLBACK_GENERIC) || defined(VEC4F_SVE_SIPEARL)) && VECL == 4
    // WID 4, vecl 4
          values[i_pcolumnv_b(0, 0, block_k, n_blocks)] = Vec({data[0], data[1], data[2], data[3]});
          values[i_pcolumnv_b(1, 0, block_k, n_blocks)] = Vec({data[16], data[17], data[18], data[19]});
@@ -230,7 +230,7 @@ cog.outl("#endif")
          values[i_pcolumnv_b(1, 3, block_k, n_blocks)] = Vec({data[28], data[29], data[30], data[31]});
          values[i_pcolumnv_b(2, 3, block_k, n_blocks)] = Vec({data[44], data[45], data[46], data[47]});
          values[i_pcolumnv_b(3, 3, block_k, n_blocks)] = Vec({data[60], data[61], data[62], data[63]});
-   #elif (defined(VEC8D_AGNER) || defined(VEC8F_AGNER) || defined(VEC_FALLBACK_GENERIC)) && VECL == 8
+   #elif (defined(VEC8D_AGNER) || defined(VEC8F_AGNER) || defined(VEC_FALLBACK_GENERIC) || defined(VEC8F_SVE_SIPEARL)) && VECL == 8
    // WID 4, vecl 8
          values[i_pcolumnv_b(0, 0, block_k, n_blocks)] = Vec({data[0], data[1], data[2], data[3], data[16], data[17], data[18], data[19]});
          values[i_pcolumnv_b(1, 0, block_k, n_blocks)] = Vec({data[32], data[33], data[34], data[35], data[48], data[49], data[50], data[51]});
@@ -260,7 +260,7 @@ cog.outl("#endif")
    if(dimension == 0) {
       for (vmesh::LocalID block_k=0; block_k<n_blocks; ++block_k) {
          Realf* __restrict__ data = blockContainer->getData(vmesh->getLocalID(blocks[block_k]));
-   #if (defined(VEC8D_AGNER) || defined(VEC8F_AGNER) || defined(VEC_FALLBACK_GENERIC)) && VECL == 8
+   #if (defined(VEC8D_AGNER) || defined(VEC8F_AGNER) || defined(VEC_FALLBACK_GENERIC) || defined(VEC8F_SVE_SIPEARL)) && VECL == 8
    // WID 8, vecl 8
          values[i_pcolumnv_b(0, 0, block_k, n_blocks)] = Vec({data[0], data[64], data[128], data[192], data[256], data[320], data[384], data[448]});
          values[i_pcolumnv_b(1, 0, block_k, n_blocks)] = Vec({data[8], data[72], data[136], data[200], data[264], data[328], data[392], data[456]});
