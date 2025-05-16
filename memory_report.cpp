@@ -90,7 +90,7 @@ uint64_t get_node_free_memory(){
    const char * memfree_attribute_name = "MemFree:";
    if( in_file ) {
       // Read free memory:
-      while( fscanf( in_file, "%s %d %s", attribute_name, &memory, memory_unit ) != EOF ) {
+      while (fscanf(in_file, "%199s %d %9s", attribute_name, &memory, memory_unit) != EOF) {
          // Check if the attribute name equals memory free
          if( strcmp(attribute_name, memfree_attribute_name ) == 0 ) {
             //free memory in KB, transform to B
