@@ -21,6 +21,7 @@
  */
 
 #include "common.h"
+#include <cstdint>
 #include <cstdlib>
 #include <iostream>
 #include <sstream>
@@ -85,20 +86,25 @@ uint64_t get_node_free_memory(){
    uint64_t mem_proc_free = 0;
    FILE * in_file = fopen("/proc/meminfo", "r");
    char attribute_name[200];
-   int memory;
+   uint64_t memory=0;
    char memory_unit[10];
    const char * memfree_attribute_name = "MemFree:";
-   if( in_file ) {
-      // Read free memory:
-      while (fscanf(in_file, "%199s %d %9s", attribute_name, &memory, memory_unit) != EOF) {
-         // Check if the attribute name equals memory free
-         if( strcmp(attribute_name, memfree_attribute_name ) == 0 ) {
-            //free memory in KB, transform to B
-            mem_proc_free = (uint64_t)memory * 1024;
+   if (in_file) {
+      while (!feof(in_file)) {
+         int retval = fscanf(in_file, "%199s %lu %9s", attribute_name, &memory, memory_unit);
+         if (retval >= 2) {
+            if (strcmp(attribute_name, memfree_attribute_name) == 0) {
+               // free memory in KB, transform to B
+               mem_proc_free = memory * 1024;
+               break;
+            }
+         } else {
+            // Skip to neww line
+            fscanf(in_file, "%*[^\n]\n");
          }
       }
+      fclose(in_file);
    }
-   fclose( in_file );
 
    return mem_proc_free;
 }
