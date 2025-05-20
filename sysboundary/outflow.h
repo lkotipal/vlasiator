@@ -26,7 +26,7 @@
 #include <vector>
 #include "../definitions.h"
 #include "../readparameters.h"
-#include "../spatial_cell_wrapper.hpp"
+#include "../spatial_cells/spatial_cell_wrapper.hpp"
 #include "sysboundarycondition.h"
 
 namespace SBC {
@@ -131,7 +131,8 @@ namespace SBC {
          const uint popID,
          const bool calculate_V_moments
       );
-      
+      virtual void setupL2OutflowAtRestart(dccrg::Dccrg<SpatialCell, dccrg::Cartesian_Geometry>& mpiGrid) override;
+
       virtual void getFaces(bool* faces);
       virtual std::string getName() const;
       virtual uint getIndex() const;
@@ -153,7 +154,6 @@ namespace SBC {
       enum vlasovscheme {
          NONE,
          COPY,
-         LIMIT,
          N_SCHEMES
       };
    }; // class Outflow
