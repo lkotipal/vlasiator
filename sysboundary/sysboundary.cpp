@@ -694,6 +694,7 @@ void SysBoundary::applySysBoundaryVlasovConditions(
    mpiGrid.update_copies_of_remote_neighbors(Neighborhoods::SYSBOUNDARIES_EXTENDED);
 
    // Mark cells that are communicating velocity blocks on system boundaries
+   // This is not used for anything in the simulation, it's just for user analysis of sysboundary communication
    for (auto& cell : mpiGrid.get_local_cells_on_process_boundary(SYSBOUNDARIES_EXTENDED_NEIGHBORHOOD_ID)) {
       mpiGrid[cell]->parameters[CellParams::SYSBOUNDARIES_COMM] = mpiGrid[cell]->sysBoundaryLayer == 1 || mpiGrid[cell]->sysBoundaryLayer == 2;
    }
