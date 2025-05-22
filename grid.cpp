@@ -504,7 +504,7 @@ void setPartitioningNeighborhoods(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geom
       for (auto neighborhood : P::partitioningNeighborhoods) {
          // TODO: for now, layer 1 cells communicate in the extended neighborhood
          // If this is ever fixed, SYSBOUNDRIES_NEIGHBORHOOD_ID needs a case
-         if (neighborhood == SYSBOUNDARIES_EXTENDED_NEIGHBORHOOD_ID) {
+         if (neighborhood == Neighborhoods::SYSBOUNDARIES_EXTENDED) {
             if (mpiGrid[cell]->sysBoundaryLayer == 1 || mpiGrid[cell]->sysBoundaryLayer == 2) {
                mpiGrid.add_partitioning_neighborhood(cell, neighborhood);
             }

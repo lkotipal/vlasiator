@@ -1067,7 +1067,7 @@ void Parameters::getParameters() {
    RP::get("loadBalance.partitioning_neighborhood", P::partitioningNeighborhoods);
 
    if (P::partitioningNeighborhoods.empty()) {
-      P::partitioningNeighborhoods.push_back(FULL_NEIGHBORHOOD_ID);
+      P::partitioningNeighborhoods.push_back(Neighborhoods::FULL);
    }
 
    loadBalanceOptions["IMBALANCE_TOL"] = "";
