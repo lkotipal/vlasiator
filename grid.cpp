@@ -66,7 +66,6 @@ using namespace std;
 
 extern Logger logFile;
 
-void initVelocityGridGeometry(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid);
 void initSpatialCellCoordinates(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid);
 void initializeStencils(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid);
 
@@ -179,9 +178,6 @@ void initializeGrids(
       }
    }
    refineTimer.stop();
-
-   // Init velocity mesh on all cells
-   initVelocityGridGeometry(mpiGrid);
 
    mpiGrid.set_partitioning_option("OBJ_WEIGHTS_COMPARABLE", "1");
 
