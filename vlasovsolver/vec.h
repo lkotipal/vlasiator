@@ -85,33 +85,37 @@ typedef VecSimple<float> Vec;
 
 #endif
 
-#ifdef VEC8F_SVE_SIPEARL
-#define VECL 8
-#define VPREC 4
-
-#ifndef VEC_PER_PLANE
-const int VEC_PER_PLANE = (WID*WID/VECL);
-#endif
-#ifndef VEC_PER_BLOCK
-const int VEC_PER_BLOCK = (WID*VEC_PER_PLANE);
-#endif
-
-#include <arm_sve.h>
-#include "vectorclass_fast_sve_fallback.h"
-
-
-typedef Vec8f Vec;
-typedef Vec8i Veci;
-typedef Vec8bf Vecb;
-#define to_realf(v) to_float(v)
-
-#endif
-
-#ifdef VEC4F_SVE_SIPEARL
-
+// SVE Definitions
+#if (defined(VEC4F_SVE) || defined(VEC4D_SVE))
 #define VECL 4
-#define VPREC 4
+#define __USE_SVE
+#endif
 
+#if (defined(VEC8F_SVE) || defined(VEC8D_SVE))
+#define VECL 8
+#define __USE_SVE
+#endif
+
+#if (defined(VEC16F_SVE) || defined(VEC16D_SVE))
+#define VECL 16
+#define __USE_SVE
+#endif
+
+#if (defined(VEC32F_SVE) || defined(VEC32D_SVE))
+#define VECL 32
+#define __USE_SVE
+#endif
+
+#if (defined(VEC64F_SVE) || defined(VEC64D_SVE))
+#define VECL 64
+#define __USE_SVE
+#endif
+
+#if defined(__USE_SVE)
+
+#include "vectorclass_sve.h"
+
+#define VPREC 8
 #ifndef VEC_PER_PLANE
 const int VEC_PER_PLANE = (WID*WID/VECL);
 #endif
@@ -119,17 +123,19 @@ const int VEC_PER_PLANE = (WID*WID/VECL);
 const int VEC_PER_BLOCK = (WID*VEC_PER_PLANE);
 #endif
 
-#include <arm_sve.h>
-#include "vectorclass_fast_sve_fallback.h"
-
-
-typedef Vec4f Vec;
-typedef Vec4i Veci;
-typedef Vec4bf Vecb;
+#if defined(DPF)
+using Vec  = VecSVE<double, VECL>;
+using Veci = VecSVE<int64_t, VECL>;
+using Vecb = VecSVEMask<double, VECL>;
+#define to_realf(v) to_double(v)
+#else
+using Vec  = VecSVE<float, VECL>;
+using Veci = VecSVE<int32_t, VECL>;
+using Vecb = VecSVEMask<float, VECL>;
 #define to_realf(v) to_float(v)
-
 #endif
 
+#endif // END __USE_SVE
 
 #ifdef VEC4D_AGNER
 //user Agner's AVX2 optimized datatypes, double precision accuracy
