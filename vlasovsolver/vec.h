@@ -113,7 +113,7 @@ typedef VecSimple<float> Vec;
 
 #if defined(__USE_SVE)
 
-#include "vectorclass_sve.h"
+#include "vectorclass_sve.hpp"
 
 #define VPREC 8
 #ifndef VEC_PER_PLANE
