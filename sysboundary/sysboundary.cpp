@@ -693,16 +693,6 @@ void SysBoundary::applySysBoundaryVlasovConditions(
    SpatialCell::set_mpi_transfer_type(Transfer::CELL_PARAMETERS | Transfer::POP_METADATA | Transfer::CELL_SYSBOUNDARYFLAG, true);
    mpiGrid.update_copies_of_remote_neighbors(Neighborhoods::SYSBOUNDARIES_EXTENDED);
 
-   // Mark cells that are communicating velocity blocks on system boundaries
-   // This is not used for anything in the simulation, it's just for user analysis of sysboundary communication
-   for (auto& cell : mpiGrid.get_local_cells_on_process_boundary(Neighborhoods::SYSBOUNDARIES_EXTENDED)) {
-      mpiGrid[cell]->parameters[CellParams::SYSBOUNDARIES_COMM] = mpiGrid[cell]->sysBoundaryLayer == 1 || mpiGrid[cell]->sysBoundaryLayer == 2;
-   }
-
-   for (auto& cell : mpiGrid.get_local_cells_not_on_process_boundary(Neighborhoods::SYSBOUNDARIES_EXTENDED)) {
-      mpiGrid[cell]->parameters[CellParams::SYSBOUNDARIES_COMM] = false;
-   }
-
    // Loop over existing particle species
    for (uint popID = 0; popID < getObjectWrapper().particleSpecies.size(); ++popID) {
       SpatialCell::setCommunicatedSpecies(popID);
