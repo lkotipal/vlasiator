@@ -237,13 +237,6 @@ void initializeDataReducers(DataReducer * outputReducer, DataReducer * diagnosti
             continue;
          }
       }
-      if(P::systemWriteAllDROs || lowercase == "vg_amr_translate_comm") { // Flag for AMR translation communication
-         outputReducer->addOperator(new DRO::DataReductionOperatorCellParams("vg_amr_translate_comm",CellParams::AMR_TRANSLATE_COMM, 1));
-         outputReducer->addMetadata(outputReducer->size()-1,"","","AMRtranslate","1.0");
-         if(!P::systemWriteAllDROs) {
-            continue;
-         }
-      }
       if(P::systemWriteAllDROs || lowercase == "vg_sysboundaries_comm") { // Flag for sysboundaries vspace communication
          outputReducer->addOperator(new DRO::DataReductionOperatorCellParams("vg_sysboundaries_comm",CellParams::SYSBOUNDARIES_COMM, 1));
          outputReducer->addMetadata(outputReducer->size()-1,"","","SysboundariesComm","1.0");
