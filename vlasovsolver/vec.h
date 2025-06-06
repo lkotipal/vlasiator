@@ -88,30 +88,30 @@ typedef VecSimple<float> Vec;
 // SVE Definitions
 #if (defined(VEC4F_SVE) || defined(VEC4D_SVE))
 #define VECL 4
-#define __USE_SVE
+#define VEC_SVE
 #endif
 
 #if (defined(VEC8F_SVE) || defined(VEC8D_SVE))
 #define VECL 8
-#define __USE_SVE
+#define VEC_SVE
 #endif
 
 #if (defined(VEC16F_SVE) || defined(VEC16D_SVE))
 #define VECL 16
-#define __USE_SVE
+#define VEC_SVE
 #endif
 
 #if (defined(VEC32F_SVE) || defined(VEC32D_SVE))
 #define VECL 32
-#define __USE_SVE
+#define VEC_SVE
 #endif
 
 #if (defined(VEC64F_SVE) || defined(VEC64D_SVE))
 #define VECL 64
-#define __USE_SVE
+#define VEC_SVE
 #endif
 
-#if defined(__USE_SVE)
+#if defined(VEC_SVE)
 
 #include "vectorclass_sve.hpp"
 
@@ -135,7 +135,7 @@ using Vecb = VecSVEMask<float, VECL>;
 #define to_realf(v) to_float(v)
 #endif
 
-#endif // END __USE_SVE
+#endif // END VEC_SVE
 
 #ifdef VEC4D_AGNER
 //user Agner's AVX2 optimized datatypes, double precision accuracy
