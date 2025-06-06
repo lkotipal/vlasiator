@@ -32,24 +32,49 @@
 #include <new>
 #include <type_traits>
 
-// We ignore the hint here because X86 flags are in the opposite
-// order as __builtin_prefetch
-// Another solution could be to pass 3 - __ignored_hint as last argument
-// but this would cover only the first 3 cases of prefetching (whereas x86 has 6)
-// In any case, within vlasiator, the only used flag is _prefetch into L1_,
-// which corresponds to 3 in __builtin_prefetch
-//
+#define SVE_INLINE __attribute__((always_inline))
+
+#ifndef _mm_prefetch
+
 // Ideally, we would want to use the __pld or __pldw intrinsic,
 // but afaik they're available only in armclang...
-#ifndef _mm_prefetch
-#define _mm_prefetch(addr, __ignored_hint) __builtin_prefetch(addr, 0, 3);
+// This weird switch is to keep compatibility with X86 flags
+template <uint32_t hint>
+void SVE_INLINE aarch64_do_prefetch(void* addr) {
+   switch (hint) {
+      case /*_MM_HINT_T0*/ 1:
+         __asm__ __volatile__("prfm PLDL1KEEP, [%0]\n" : : "r"(addr) : "memory");
+         break;
+      case /*_MM_HINT_T1*/ 2:
+         __asm__ __volatile__("prfm PLDL2KEEP, [%0]\n" : : "r"(addr) : "memory");
+         break;
+      case /*_MM_HINT_T2*/ 3:
+         __asm__ __volatile__("prfm PLDL3KEEP, [%0]\n" : : "r"(addr) : "memory");
+         break;
+      case /*_MM_HINT_NTA*/ 0:
+         __asm__ __volatile__("prfm PLDL1STRM, [%0]\n" : : "r"(addr) : "memory");
+         break;
+      case /*_MM_HINT_ENTA*/ 4:
+         __asm__ __volatile__("prfm PSTL1KEEP, [%0]\n" : : "r"(addr) : "memory");
+         break;
+      case /*_MM_HINT_ET0*/ 5:
+         __asm__ __volatile__("prfm PSTL1KEEP, [%0]\n" : : "r"(addr) : "memory");
+         break;
+      case /*_MM_HINT_ET1*/ 6:
+         __asm__ __volatile__("prfm PSTL2KEEP, [%0]\n" : : "r"(addr) : "memory");
+         break;
+      case /*_MM_HINT_ET0*/ 7:
+         __asm__ __volatile__("prfm PSTL3KEEP, [%0]\n" : : "r"(addr) : "memory");
+         break;
+    }
+}
+
+#define _mm_prefetch(addr, hint) aarch64_do_prefetch<hint>(addr)
 #endif
 
 #if !defined(CACHE_LINE_SIZE)
 #define CACHE_LINE_SIZE (64)
 #endif
-
-#define SVE_INLINE __attribute__((always_inline))
 
 #define SVE_DISPATCH_1ARG(prefix, arg1)                                                                                \
    if constexpr (std::is_same_v<T, __fp16>) {                                                                          \
