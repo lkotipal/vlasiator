@@ -561,7 +561,7 @@ bool readBlockData(
             success = false;
          }
 
-         const Real dVx = vmesh::getMeshWrapper()->velocityMeshes->at(meshID).cellSize[0];
+         const Real dVx = vmesh::getMeshWrapper()->velocityMeshes->at(meshID).getDx(0);
          for(const auto& c : fileVelCoordsX) {
             Real cellindex = (c - vmesh::getMeshWrapper()->velocityMeshes->at(meshID).meshMinLimits[0]) / dVx;
             if(fabs(nearbyint(cellindex) - cellindex) > 1./10000.) {
@@ -572,7 +572,7 @@ bool readBlockData(
             }
          }
 
-         const Real dVy = vmesh::getMeshWrapper()->velocityMeshes->at(meshID).cellSize[1];
+         const Real dVy = vmesh::getMeshWrapper()->velocityMeshes->at(meshID).getDx(1);
          for(const auto& c : fileVelCoordsY) {
             Real cellindex = (c - vmesh::getMeshWrapper()->velocityMeshes->at(meshID).meshMinLimits[1]) / dVy;
             if(fabs(nearbyint(cellindex) - cellindex) > 1./10000.) {
@@ -583,7 +583,7 @@ bool readBlockData(
             }
          }
 
-         const Real dVz = vmesh::getMeshWrapper()->velocityMeshes->at(meshID).cellSize[2];
+         const Real dVz = vmesh::getMeshWrapper()->velocityMeshes->at(meshID).getDx(2);
          for(const auto& c : fileVelCoordsY) {
             Real cellindex = (c - vmesh::getMeshWrapper()->velocityMeshes->at(meshID).meshMinLimits[2]) / dVz;
             if(fabs(nearbyint(cellindex) - cellindex) > 1./10000.) {

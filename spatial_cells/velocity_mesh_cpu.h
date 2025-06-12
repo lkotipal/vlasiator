@@ -269,10 +269,7 @@ namespace vmesh {
       array[2] = (*vmesh::getMeshWrapper()->velocityMeshes)[meshID].meshMinLimits[2] + indices[2]*(*vmesh::getMeshWrapper()->velocityMeshes)[meshID].blockSize[2];
 
       // Indices 3-5 contain the cell size.
-      // The values are the same as if getCellSize(globalID,&(array[3])) was called
-      array[3] = (*vmesh::getMeshWrapper()->velocityMeshes)[meshID].cellSize[0];
-      array[4] = (*vmesh::getMeshWrapper()->velocityMeshes)[meshID].cellSize[1];
-      array[5] = (*vmesh::getMeshWrapper()->velocityMeshes)[meshID].cellSize[2];
+      getCellSize(globalID, array + 3);
    }
 
    inline const Real* VelocityMesh::getBlockSize() const {
@@ -287,14 +284,15 @@ namespace vmesh {
    }
 
    inline const Real* VelocityMesh::getCellSize() const {
-      return (*vmesh::getMeshWrapper()->velocityMeshes)[meshID].cellSize;
+      return (*vmesh::getMeshWrapper()->velocityMeshes)[meshID].getCellSize();
    }
 
    inline bool VelocityMesh::getCellSize(const vmesh::GlobalID& globalID,Real size[3]) const {
-      size[0] = (*vmesh::getMeshWrapper()->velocityMeshes)[meshID].cellSize[0];
-      size[1] = (*vmesh::getMeshWrapper()->velocityMeshes)[meshID].cellSize[1];
-      size[2] = (*vmesh::getMeshWrapper()->velocityMeshes)[meshID].cellSize[2];
-      return true;
+      return (*vmesh::getMeshWrapper()->velocityMeshes)[meshID].getCellSize(globalID, size);
+   }
+   
+   inline Real VelocityMesh::getDx(const vmesh::GlobalID& globalID, int idx) const {
+      return (*vmesh::getMeshWrapper()->velocityMeshes)[meshID].getDx(globalID, idx);
    }
 
    inline vmesh::GlobalID VelocityMesh::getGlobalID(const vmesh::LocalID& localID) const {

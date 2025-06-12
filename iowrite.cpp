@@ -198,7 +198,7 @@ bool writeVelocityDistributionData(const uint popID,Writer& vlsvWriter,
       for (int crd=0; crd<3; ++crd) {
          const size_t N_nodes = bbox[crd]*bbox[crd+3]+1;
          Real* crds = new Real[N_nodes];
-         const Real dV = vmesh::getMeshWrapper()->velocityMeshes->at(meshID).cellSize[crd];
+         const Real dV = vmesh::getMeshWrapper()->velocityMeshes->at(meshID).getDx(crd);
 
          for (size_t i=0; i<N_nodes; ++i) {
             crds[i] = vmesh::getMeshWrapper()->velocityMeshes->at(meshID).meshMinLimits[crd] + i*dV;

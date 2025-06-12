@@ -51,23 +51,55 @@ namespace vmesh {
     * wrapper functions, which return the values stored in MeshParameters.
     */
    struct MeshParameters {
-      std::string name;                         /**< Name of the mesh (unique).*/
-      vmesh::LocalID max_velocity_blocks;       /**< Maximum valid block local ID.*/
-      Real meshLimits[6];                       /**< Velocity mesh bounding box limits vx_min,vx_max,...,vz_max.*/
-      vmesh::LocalID gridLength[3];             /**< Number of blocks in mesh per coordinate at base grid level.*/
-      vmesh::LocalID blockLength[3];            /**< Number of phase-space cells per coordinate in block.*/
+      // TODO encapsulate everything!!!!!
+      private:
+         Real cellSize[3];                         /**< Size of a cell in a block at base grid level.*/
 
-      // ***** DERIVED PARAMETERS, CALCULATED BY INITVELOCITYMESHES ***** //
-      bool initialized;                         /**< If true, variables in this struct contain sensible values.*/
-      Real meshMinLimits[3];                    /**< Minimum coordinate values of the grid bounding box.*/
-      Real meshMaxLimits[3];                    /**< Maximum coordinate values of the grid bounding box.*/
-      Real blockSize[3];                        /**< Size of a block at base grid level.*/
-      Real cellSize[3];                         /**< Size of a cell in a block at base grid level.*/
-      Real gridSize[3];                         /**< Physical size of the grid bounding box.*/
+      public:
+         std::string name;                         /**< Name of the mesh (unique).*/
+         vmesh::LocalID max_velocity_blocks;       /**< Maximum valid block local ID.*/
+         Real meshLimits[6];                       /**< Velocity mesh bounding box limits vx_min,vx_max,...,vz_max.*/
+         vmesh::LocalID gridLength[3];             /**< Number of blocks in mesh per coordinate at base grid level.*/
+         vmesh::LocalID blockLength[3];            /**< Number of phase-space cells per coordinate in block.*/
 
-      MeshParameters() {
-         initialized = false;
-      }
+         // ***** DERIVED PARAMETERS, CALCULATED BY INITVELOCITYMESHES ***** //
+         bool initialized;                         /**< If true, variables in this struct contain sensible values.*/
+         Real meshMinLimits[3];                    /**< Minimum coordinate values of the grid bounding box.*/
+         Real meshMaxLimits[3];                    /**< Maximum coordinate values of the grid bounding box.*/
+         Real blockSize[3];                        /**< Size of a block at base grid level.*/
+         Real gridSize[3];                         /**< Physical size of the grid bounding box.*/
+
+         MeshParameters() {
+            initialized = false;
+         }
+
+         // TODO will be deprecated
+         inline Real getDx(int idx) const {
+            return cellSize[idx];
+         }
+
+         inline Real getDx(const vmesh::GlobalID globalID, int idx) const {
+            return cellSize[idx];
+         }
+
+         // TODO I don't think this should exist!
+         inline const Real* getCellSize() const {
+            return cellSize;
+         }
+
+         inline bool getCellSize(const vmesh::GlobalID globalID, Real size[3]) const {
+            for (int i = 0; i < 3; ++i) {
+               size[i] = getDx(globalID, i);
+            }
+            return true;
+         }
+
+         // TODO this shouldn't happen outside initialization but has to be public due to dogshit encapsulation
+         inline void setCellSize(const std::array<Real, 3>& size) {
+            for (int i = 0; i < 3; ++i) {
+               cellSize[i] = size[i];
+            }
+         }
    };
 
    struct MeshWrapper {
@@ -146,7 +178,9 @@ namespace vmesh {
       printf("Derived mesh parameters \n");
       printf(" gridSize %f %f %f \n",vMesh->gridSize[0],vMesh->gridSize[1],vMesh->gridSize[2]);
       printf(" blockSize %f %f %f \n",vMesh->blockSize[0],vMesh->blockSize[1],vMesh->blockSize[2]);
-      printf(" cellSize %f %f %f \n",vMesh->cellSize[0],vMesh->cellSize[1],vMesh->cellSize[2]);
+
+      // This will be nonsense with variable size
+      // printf(" cellSize %f %f %f \n",vMesh->cellSize[0],vMesh->cellSize[1],vMesh->cellSize[2]);
       printf(" max velocity blocks %d \n\n",vMesh->max_velocity_blocks);
    }
 
