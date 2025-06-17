@@ -14,7 +14,12 @@ Uncomment the relevant lines to obtain png output instead.
 
 Test run on 1 node as in the given cfg file, and extended on *n* nodes by expanding the domain by a factor *n* along the *y* and *z* dimensions respectively, and both along *y* and *z* for the cases where the node count is *m^2*. All runs using 16 tasks per node, 16 threads per task (multihtreading).
 
+![](weak/weak_scaling.png)
+![](weak/weak_scaling_efficiency.png)
+
 # Strong scaling
 
 Tests run with the given cfg. All runs using 16 tasks per node, 16 threads per task (multihtreading).
 
+![](strong/strong_scaling.png)
+![](strong/strong_scaling_efficiency.png)
