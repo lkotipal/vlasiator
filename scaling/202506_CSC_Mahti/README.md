@@ -23,8 +23,8 @@ Tests run with the given cfg. All runs using 16 tasks per node, 16 threads per t
 
 ![](strong/strong_scaling_light.png)
 ![](strong/strong_scaling_medium.png)
-![](strong/strong_scaling_heavy.png){width=30%}
+![](strong/strong_scaling_heavy.png)
 
 ![](strong/strong_scaling_efficiency_light.png)
 ![](strong/strong_scaling_efficiency_medium.png)
-![](strong/strong_scaling_efficiency_heavy.png){width=30%}
+![](strong/strong_scaling_efficiency_heavy.png)
