@@ -6,9 +6,7 @@ Scaling runs done with a 3D IPshock setup slightly modified from the one given i
 
 Data for the logfile's "Total run time" as well as Phiprof's "Propagate", "Spatial-space", and "Velocity-space" timers are included in the dat files in the subfolders.
 
-Plot the results interactively with `gnuplot -p <script>.gnuplot` for interactive plots.
-
-Uncomment the relevant lines to obtain png output instead.
+Plot the results with `gnuplot -p <script>.gnuplot` for png plots, comment the relevant lines to obtain interactive plots instead.
 
 # Weak scaling
 
@@ -19,7 +17,9 @@ Test run on 1 node as in the given cfg file, and extended on *n* nodes by expand
 
 # Strong scaling
 
-Tests run with the given cfg. All runs using 16 tasks per node, 16 threads per task (multihtreading).
+Two cases run, "light" on 2 to 200 nodes, "medium" with 4x larger box (extended in *y* and *z* and lower phase-space density threshold)
+
+Tests run with the given cfg. All runs using 16 tasks per node, 16 threads per task (multihtreading). Change variable `case` in gnuplot scripts between "light" and "medium" to plot the different cases.
 
 ![](strong/strong_scaling.png)
 ![](strong/strong_scaling_efficiency.png)
