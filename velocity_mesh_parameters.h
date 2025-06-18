@@ -74,22 +74,12 @@ namespace vmesh {
          }
 
          //[[deprecated]]
-         inline const Real* getBlockSize() const {
-            return blockSize;
-         }
-
-         //[[deprecated]]
          inline Real getBlockDx(int idx) const {
             return blockSize[idx];
          }
 
          inline Real getBlockDx(const vmesh::GlobalID globalID, int idx) const {
             return blockSize[idx];
-         }
-
-         //[[deprecated]]
-         inline const Real* getCellSize() const {
-            return cellSize;
          }
 
          //[[deprecated]]

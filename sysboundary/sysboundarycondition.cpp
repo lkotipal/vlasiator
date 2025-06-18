@@ -801,14 +801,14 @@ namespace SBC {
 
       Real V_crds[3];
       Real dV[3];
-      dV[0] = cell.get_velocity_grid_block_size(popID)[0];
-      dV[1] = cell.get_velocity_grid_block_size(popID)[1];
-      dV[2] = cell.get_velocity_grid_block_size(popID)[2];
+      dV[0] = vmesh::getMeshWrapper()->at(popID).getBlockDx(0);
+      dV[1] = vmesh::getMeshWrapper()->at(popID).getBlockDx(1);
+      dV[2] = vmesh::getMeshWrapper()->at(popID).getBlockDx(2);
       creal minValue = cell.getVelocityBlockMinValue(popID);
       // Single cell, not block
-      const Real dvx=cell.get_velocity_grid_cell_size(popID)[0];
-      const Real dvy=cell.get_velocity_grid_cell_size(popID)[1];
-      const Real dvz=cell.get_velocity_grid_cell_size(popID)[2];
+      const Real dvx = vmesh::getMeshWrapper()->at(popID).getCellDx(0);
+      const Real dvy = vmesh::getMeshWrapper()->at(popID).getCellDx(1);
+      const Real dvz = vmesh::getMeshWrapper()->at(popID).getCellDx(2);
 
       while (search) {
          if (0.1 * minValue > projects::MaxwellianPhaseSpaceDensity(counter*dV[0]+0.5*dvx, 0.5*dvy, 0.5*dvz, T, rho, mass) || counter > vblocks_ini[0]) {

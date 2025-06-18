@@ -144,7 +144,7 @@ bool map_1d(SpatialCell* spatial_cell,
       return true;
    }
 
-   dv            = vmesh->getCellSize()[dimension];
+   dv            = vmesh->getCellDx(dimension);
    v_min         = vmesh->getMeshMinLimits()[dimension];
    max_v_length  = vmesh->getGridLength()[dimension];
 
