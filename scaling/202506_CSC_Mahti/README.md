@@ -10,7 +10,7 @@ Plot the results with `gnuplot -p <script>.gnuplot` for png plots, comment the r
 
 # Weak scaling
 
-Test run on 1 node as in the given cfg file, and extended on *n* nodes by expanding the domain by a factor *n* along the *y* and *z* dimensions respectively, and both along *y* and *z* for the cases where the node count is *m^2*. All runs using 16 tasks per node, 16 threads per task (multihtreading).
+Test run on 1 node as in the given cfg file, and extended on *n* nodes by expanding the domain by a factor *n* along the *y* and *z* dimensions respectively, and both along *y* and *z* for the cases where the node count is *m^2*. All runs using 16 tasks per node, 16 threads per task (multithreading).
 
 ![](weak/weak_scaling.png)
 ![](weak/weak_scaling_efficiency.png)
@@ -21,5 +21,10 @@ Two cases run, "light" on 2 to 200 nodes, "medium" with 4x larger box (extended 
 
 Tests run with the given cfg. All runs using 16 tasks per node, 16 threads per task (multihtreading). Change variable `case` in gnuplot scripts between "light" and "medium" to plot the different cases.
 
-![](strong/strong_scaling.png)
-![](strong/strong_scaling_efficiency.png)
+![](strong/strong_scaling_light.png)
+![](strong/strong_scaling_medium.png)
+![](strong/strong_scaling_heavy.png){width=30%}
+
+![](strong/strong_scaling_efficiency_light.png)
+![](strong/strong_scaling_efficiency_medium.png)
+![](strong/strong_scaling_efficiency_heavy.png){width=30%}
