@@ -147,6 +147,15 @@ namespace vmesh {
          velocityMeshesCreation = new std::vector<vmesh::MeshParameters>(*(other.velocityMeshesCreation));
          return *this;
       }
+
+      vmesh::MeshParameters& at(int index) {
+         return velocityMeshes->at(index);
+      }
+
+      const vmesh::MeshParameters& at(int index) const {
+         return velocityMeshes->at(index);
+      }
+
       std::vector<vmesh::MeshParameters> *velocityMeshesCreation;
       // We also need an array so we can copy this data into direct GPU-device memory.
       // On the CPU side we actually reserve enough room for
@@ -189,7 +198,7 @@ namespace vmesh {
    }
 
    ARCH_HOSTDEV inline void printVelocityMesh(const uint meshIndex) {
-      vmesh::MeshParameters *vMesh = &((*(getMeshWrapper()->velocityMeshes))[meshIndex]);
+      vmesh::MeshParameters *vMesh = &(getMeshWrapper()->at(meshIndex));
       printf("\nPrintout of velocity mesh %d \n",meshIndex);
       // printf("Meshwrapper address 0x%lx\n",getMeshWrapper());
       // printf("array of meshes address 0x%lx\n",&(getMeshWrapper()->velocityMeshes));

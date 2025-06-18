@@ -150,7 +150,7 @@ void pitchAngleDiffusion(
          const Real* parameters             = cell.get_block_parameters(popID);
          const vmesh::LocalID* nBlocks      = cell.get_velocity_grid_length(popID);
          const size_t meshID = getObjectWrapper().particleSpecies[popID].velocityMesh;
-         const vmesh::MeshParameters& vMesh = vmesh::getMeshWrapper()->velocityMeshes->at(meshID);
+         const vmesh::MeshParameters& vMesh = vmesh::getMeshWrapper()->at(meshID);
 
          // Ensure mass conservation
          Realf density_pre_adjust  = 0.0;
