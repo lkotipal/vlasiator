@@ -154,11 +154,8 @@ void vmesh::MeshWrapper::initVelocityMeshes(const uint nMeshes) {
       vMesh->gridSize[1] = vMesh->meshMaxLimits[1] - vMesh->meshMinLimits[1];
       vMesh->gridSize[2] = vMesh->meshMaxLimits[2] - vMesh->meshMinLimits[2];
 
-      vMesh->blockSize[0] = vMesh->gridSize[0] / vMesh->gridLength[0];
-      vMesh->blockSize[1] = vMesh->gridSize[1] / vMesh->gridLength[1];
-      vMesh->blockSize[2] = vMesh->gridSize[2] / vMesh->gridLength[2];
-
-      vMesh->setCellSize({vMesh->blockSize[0] / vMesh->blockLength[0], vMesh->blockSize[1] / vMesh->blockLength[1], vMesh->blockSize[2] / vMesh->blockLength[2]});
+      vMesh->setBlockSize({vMesh->gridSize[0] / vMesh->gridLength[0], vMesh->gridSize[1] / vMesh->gridLength[1], vMesh->gridSize[2] / vMesh->gridLength[2]});
+      vMesh->setCellSize({vMesh->getBlockDx(0) / vMesh->blockLength[0], vMesh->getBlockDx(1) / vMesh->blockLength[1], vMesh->getBlockDx(2) / vMesh->blockLength[2]});
 
       vMesh->max_velocity_blocks
          = vMeshIn->gridLength[0]

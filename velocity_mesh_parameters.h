@@ -54,6 +54,7 @@ namespace vmesh {
       // TODO encapsulate everything!!!!!
       private:
          Real cellSize[3];                         /**< Size of a cell in a block at base grid level.*/
+         Real blockSize[3];                        /**< Size of a block at base grid level.*/
 
       public:
          std::string name;                         /**< Name of the mesh (unique).*/
@@ -66,30 +67,50 @@ namespace vmesh {
          bool initialized;                         /**< If true, variables in this struct contain sensible values.*/
          Real meshMinLimits[3];                    /**< Minimum coordinate values of the grid bounding box.*/
          Real meshMaxLimits[3];                    /**< Maximum coordinate values of the grid bounding box.*/
-         Real blockSize[3];                        /**< Size of a block at base grid level.*/
          Real gridSize[3];                         /**< Physical size of the grid bounding box.*/
 
          MeshParameters() {
             initialized = false;
          }
 
-         // TODO will be deprecated
-         inline Real getDx(int idx) const {
-            return cellSize[idx];
+         //[[deprecated]]
+         inline const Real* getBlockSize() const {
+            return blockSize;
          }
 
-         inline Real getDx(const vmesh::GlobalID globalID, int idx) const {
-            return cellSize[idx];
+         //[[deprecated]]
+         inline Real getBlockDx(int idx) const {
+            return blockSize[idx];
          }
 
-         // TODO I don't think this should exist!
+         inline Real getBlockDx(const vmesh::GlobalID globalID, int idx) const {
+            return blockSize[idx];
+         }
+
+         //[[deprecated]]
          inline const Real* getCellSize() const {
             return cellSize;
          }
 
+         //[[deprecated]]
+         inline Real getCellDx(int idx) const {
+            return cellSize[idx];
+         }
+
+         inline Real getCellDx(const vmesh::GlobalID globalID, int idx) const {
+            return cellSize[idx];
+         }
+
+         inline bool getBlockSize(const vmesh::GlobalID globalID, Real size[3]) const {
+            for (int i = 0; i < 3; ++i) {
+               size[i] = getBlockDx(globalID, i);
+            }
+            return true;
+         }
+
          inline bool getCellSize(const vmesh::GlobalID globalID, Real size[3]) const {
             for (int i = 0; i < 3; ++i) {
-               size[i] = getDx(globalID, i);
+               size[i] = getCellDx(globalID, i);
             }
             return true;
          }
@@ -98,6 +119,12 @@ namespace vmesh {
          inline void setCellSize(const std::array<Real, 3>& size) {
             for (int i = 0; i < 3; ++i) {
                cellSize[i] = size[i];
+            }
+         }
+
+         inline void setBlockSize(const std::array<Real, 3>& size) {
+            for (int i = 0; i < 3; ++i) {
+               blockSize[i] = size[i];
             }
          }
    };
@@ -177,9 +204,8 @@ namespace vmesh {
       printf(" %f %f %f %f \n",vMesh->meshMinLimits[2],vMesh->meshLimits[4],vMesh->meshMaxLimits[2],vMesh->meshLimits[5]);
       printf("Derived mesh parameters \n");
       printf(" gridSize %f %f %f \n",vMesh->gridSize[0],vMesh->gridSize[1],vMesh->gridSize[2]);
-      printf(" blockSize %f %f %f \n",vMesh->blockSize[0],vMesh->blockSize[1],vMesh->blockSize[2]);
-
       // This will be nonsense with variable size
+      // printf(" blockSize %f %f %f \n",vMesh->blockSize[0],vMesh->blockSize[1],vMesh->blockSize[2]);
       // printf(" cellSize %f %f %f \n",vMesh->cellSize[0],vMesh->cellSize[1],vMesh->cellSize[2]);
       printf(" max velocity blocks %d \n\n",vMesh->max_velocity_blocks);
    }
