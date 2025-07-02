@@ -2,7 +2,7 @@ set log x
 set xrange [1:201]
 set xlabel "Nodes"
 set ylabel "Total run time (s)"
-set title "Weak scaling"
+set title "Weak scaling (Mahti)"
 set key left top
 
 set term png font "Corbel,14"

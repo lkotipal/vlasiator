@@ -1,13 +1,13 @@
-case = "light"
+#case = "light"
 #case = "medium"
-#case = "heavy"
+case = "heavy"
 
 set log x
 set xrange [1:201]
 set yrange [0:1.1]
 set xlabel "Nodes"
 set ylabel "Efficiency"
-set title "Strong scaling efficiency (".case.")"
+set title "Strong scaling efficiency ".case." (Mahti)"
 set key left bottom
 
 set term png font "Corbel,14"

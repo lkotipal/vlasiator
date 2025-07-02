@@ -8,6 +8,8 @@ Data for the logfile's "Total run time" as well as Phiprof's "Propagate", "Spati
 
 Plot the results with `gnuplot -p <script>.gnuplot` for png plots, comment the relevant lines to obtain interactive plots instead.
 
+The same tests were run on EuroHPC's LUMI (see folder 202507_EuroHPC_LUMI-C).
+
 # Weak scaling
 
 Test run on 1 node as in the given cfg file, and extended on *n* nodes by expanding the domain by a factor *n* along the *y* and *z* dimensions respectively, and both along *y* and *z* for the cases where the node count is *m^2*. All runs using 16 tasks per node, 16 threads per task (multithreading).
@@ -17,9 +19,9 @@ Test run on 1 node as in the given cfg file, and extended on *n* nodes by expand
 
 # Strong scaling
 
-Two cases run, "light" on 2 to 200 nodes, "medium" with 4x larger box (extended in *y* and *z* and lower phase-space density threshold)
+Three cases run, "light", "medium", and "heavy" with progressively larger problems (extended in *y* and *z* and lower phase-space density threshold)
 
-Tests run with the given cfg. All runs using 16 tasks per node, 16 threads per task (multihtreading). Change variable `case` in gnuplot scripts between "light" and "medium" to plot the different cases.
+Tests run with the given cfg. All runs using 16 tasks per node, 16 threads per task (multihtreading). Change variable `case` in gnuplot scripts between "light", "medium", and "heavy" to plot the different cases.
 
 ![](strong/strong_scaling_light.png)
 ![](strong/strong_scaling_medium.png)

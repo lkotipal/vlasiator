@@ -1,6 +1,6 @@
-case = "light"
+#case = "light"
 #case = "medium"
-#case = "heavy"
+case = "heavy"
 
 set log x
 set xrange [1:201]
@@ -8,7 +8,7 @@ set yrange [10:11000]
 set log y
 set xlabel "Nodes"
 set ylabel "Total run time (s)"
-set title "Strong scaling (".case.")"
+set title "Strong scaling ".case." (Mahti)"
 set key right bottom
 
 set term png font "Corbel,14"

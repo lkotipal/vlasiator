@@ -3,7 +3,7 @@ set xrange [1:201]
 set yrange [0:1.1]
 set xlabel "Nodes"
 set ylabel "Efficiency"
-set title "Weak scaling efficiency"
+set title "Weak scaling efficiency (Mahti)"
 set key left bottom
 
 set term png font "Corbel,14"
