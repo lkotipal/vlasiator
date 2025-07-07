@@ -1,6 +1,6 @@
-#case = "light"
+case = "light"
 #case = "medium"
-case = "heavy"
+#case = "heavy"
 
 set log x
 set xrange [1:513]

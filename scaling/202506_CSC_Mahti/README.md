@@ -19,7 +19,7 @@ Test run on 1 node as in the given cfg file, and extended on *n* nodes by expand
 
 # Strong scaling
 
-Three cases run, "light", "medium", and "heavy" with progressively larger problems (extended in *y* and *z* and lower phase-space density threshold)
+Three cases run, "light", "medium", and "heavy" with progressively larger problems (extended in *y* and *z* and lower phase-space density threshold).
 
 Tests run with the given cfg. All runs using 16 tasks per node, 16 threads per task (multihtreading). Change variable `case` in gnuplot scripts between "light", "medium", and "heavy" to plot the different cases.
 
