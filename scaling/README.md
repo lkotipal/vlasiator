@@ -13,7 +13,8 @@
 Identical IPShock-based setups were run in summer 2025 on [CSC's Mahti](https://docs.csc.fi/computing/systems-mahti/) and [EuroHPC's LUMI-C](https://docs.lumi-supercomputer.eu/), see the subfolders. Those were run on dev with slightly updated version for the latter.
 
 [CSC/Mahti results](202506_CSC_Mahti/README.md)
-[EuroHPC/LUMI-C](202507_EuroHPC_LUMI-C/README.md)
+
+[EuroHPC/LUMI-C results](202507_EuroHPC_LUMI-C/README.md)
 
 
 ## Plots
