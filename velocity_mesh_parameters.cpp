@@ -123,46 +123,9 @@ void vmesh::MeshWrapper::initVelocityMeshes(const uint nMeshes) {
 
    // Copy data in, also set auxiliary values
    for (uint i=0; i<nMeshes; ++i) {
-      vmesh::MeshParameters* vMesh = &(meshWrapper->velocityMeshes->at(i));
-      vmesh::MeshParameters* vMeshIn = &(meshWrapper->velocityMeshesCreation->at(i));
-
-      // Limits
-      vMesh->meshLimits[0] = vMeshIn->meshLimits[0];
-      vMesh->meshLimits[1] = vMeshIn->meshLimits[1];
-      vMesh->meshLimits[2] = vMeshIn->meshLimits[2];
-      vMesh->meshLimits[3] = vMeshIn->meshLimits[3];
-      vMesh->meshLimits[4] = vMeshIn->meshLimits[4];
-      vMesh->meshLimits[5] = vMeshIn->meshLimits[5];
-      // Grid length
-      vMesh->gridLength[0] = vMeshIn->gridLength[0];
-      vMesh->gridLength[1] = vMeshIn->gridLength[1];
-      vMesh->gridLength[2] = vMeshIn->gridLength[2];
-      // Block length
-      vMesh->blockLength[0] = vMeshIn->blockLength[0];
-      vMesh->blockLength[1] = vMeshIn->blockLength[1];
-      vMesh->blockLength[2] = vMeshIn->blockLength[2];
-
-      // Calculate derived mesh parameters:
-      vMesh->meshMinLimits[0] = vMesh->meshLimits[0];
-      vMesh->meshMinLimits[1] = vMesh->meshLimits[2];
-      vMesh->meshMinLimits[2] = vMesh->meshLimits[4];
-      vMesh->meshMaxLimits[0] = vMesh->meshLimits[1];
-      vMesh->meshMaxLimits[1] = vMesh->meshLimits[3];
-      vMesh->meshMaxLimits[2] = vMesh->meshLimits[5];
-
-      vMesh->gridSize[0] = vMesh->meshMaxLimits[0] - vMesh->meshMinLimits[0];
-      vMesh->gridSize[1] = vMesh->meshMaxLimits[1] - vMesh->meshMinLimits[1];
-      vMesh->gridSize[2] = vMesh->meshMaxLimits[2] - vMesh->meshMinLimits[2];
-
-      vMesh->setBlockSize({vMesh->gridSize[0] / vMesh->gridLength[0], vMesh->gridSize[1] / vMesh->gridLength[1], vMesh->gridSize[2] / vMesh->gridLength[2]});
-      vMesh->setCellSize({vMesh->getBlockDx(0) / vMesh->blockLength[0], vMesh->getBlockDx(1) / vMesh->blockLength[1], vMesh->getBlockDx(2) / vMesh->blockLength[2]});
-
-      vMesh->max_velocity_blocks
-         = vMeshIn->gridLength[0]
-         * vMeshIn->gridLength[1]
-         * vMeshIn->gridLength[2];
-      vMesh->initialized = true;
+      meshWrapper->velocityMeshes->at(i) = meshWrapper->velocityMeshesCreation->at(i);
    }
+
 #ifdef USE_GPU
    // Now all velocity meshes have been initialized on host, into
    // the array. Now we need to upload a copy onto GPU.
@@ -175,4 +138,26 @@ void vmesh::MeshWrapper::initVelocityMeshes(const uint nMeshes) {
 #endif
 
    return;
+}
+
+vmesh::MeshParameters::MeshParameters(std::string_view name, std::array<Real, 6> meshLimits, std::array<uint32_t, 3> gridLength, std::array<uint32_t, 3> blockLength) :
+   name {name}, 
+   meshLimits {meshLimits}, 
+   gridLength {gridLength}, 
+   blockLength {blockLength},
+   max_velocity_blocks {gridLength[0] * gridLength[1] * gridLength[2]},
+   meshMinLimits {},
+   meshMaxLimits {},
+   blockSize {},
+   cellSize {},
+   gridSize {},
+   initialized {true}
+{
+   for (int i = 0; i < 3; ++i) {
+      this->meshMinLimits[i] = this->meshLimits[2 * i];
+      this->meshMaxLimits[i] = this->meshLimits[2 * i + 1];
+      this->gridSize[i] = this->meshMaxLimits[i] - this->meshMinLimits[i];
+      this->blockSize[i] = this->gridSize[i] / this->gridLength[i];
+      this->cellSize[i] = this->blockSize[i] / this->blockLength[i];
+   }
 }

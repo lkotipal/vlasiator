@@ -274,7 +274,7 @@ namespace spatial_cell {
       const Real& get_max_r_dt(const uint popID) const;
       const Real& get_max_v_dt(const uint popID) const;
 
-      const vmesh::LocalID* get_velocity_grid_length(const uint popID);
+      const std::array<uint32_t, 3>& get_velocity_grid_length(const uint popID);
       void get_velocity_block_coordinates(const uint popID,const vmesh::GlobalID& globalID,Real* coords);
       velocity_block_indices_t get_velocity_block_indices(const uint popID,const vmesh::GlobalID globalID);
       vmesh::GlobalID get_velocity_block(const uint popID,vmesh::GlobalID blockIndices[3]) const;
@@ -511,7 +511,7 @@ namespace spatial_cell {
       return populations;
    }
 
-   inline const vmesh::LocalID* SpatialCell::get_velocity_grid_length(const uint popID) {
+   inline const std::array<uint32_t, 3>& SpatialCell::get_velocity_grid_length(const uint popID) {
       return populations[popID].vmesh->getGridLength();
    }
 

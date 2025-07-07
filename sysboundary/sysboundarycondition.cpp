@@ -787,14 +787,14 @@ namespace SBC {
 
       bool search = true;
       uint counter = 0;
-      const vmesh::LocalID* vblocks_ini = cell.get_velocity_grid_length(popID);
+      auto vblocks_ini = cell.get_velocity_grid_length(popID);
       vmesh::VelocityMesh *vmesh = cell.get_velocity_mesh(popID);
       const Real mass = getObjectWrapper().particleSpecies[popID].mass;
 
       vmesh::GlobalID *GIDbuffer;
       #ifdef USE_GPU
       // Host-pinned memory buffer, max possible size
-      const uint blocksCount = vblocks_ini[0]*vblocks_ini[1]*vblocks_ini[2];
+      const uint32_t blocksCount = vblocks_ini[0]*vblocks_ini[1]*vblocks_ini[2];
       CHK_ERR( gpuMallocHost((void**)&GIDbuffer,blocksCount*sizeof(vmesh::GlobalID)) );
       #endif
       // Non-GPU: insert directly into vmesh
@@ -828,9 +828,9 @@ namespace SBC {
       #endif
 
       vmesh::LocalID LID = 0;
-      for (uint kv=0; kv<vblocks_ini[2]; ++kv) {
-         for (uint jv=0; jv<vblocks_ini[1]; ++jv) {
-            for (uint iv=0; iv<vblocks_ini[0]; ++iv) {
+      for (uint32_t kv=0; kv<vblocks_ini[2]; ++kv) {
+         for (uint32_t jv=0; jv<vblocks_ini[1]; ++jv) {
+            for (uint32_t iv=0; iv<vblocks_ini[0]; ++iv) {
                const vmesh::GlobalID GID = vmesh->getGlobalID(iv,jv,kv);
 
                cell.get_velocity_block_coordinates(popID,GID,V_crds);

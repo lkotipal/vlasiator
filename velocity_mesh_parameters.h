@@ -51,78 +51,66 @@ namespace vmesh {
     * wrapper functions, which return the values stored in MeshParameters.
     */
    struct MeshParameters {
-      // TODO encapsulate everything!!!!!
-      private:
-         Real cellSize[3];                         /**< Size of a cell in a block at base grid level.*/
-         Real blockSize[3];                        /**< Size of a block at base grid level.*/
 
-      public:
-         std::string name;                         /**< Name of the mesh (unique).*/
-         vmesh::LocalID max_velocity_blocks;       /**< Maximum valid block local ID.*/
-         Real meshLimits[6];                       /**< Velocity mesh bounding box limits vx_min,vx_max,...,vz_max.*/
-         vmesh::LocalID gridLength[3];             /**< Number of blocks in mesh per coordinate at base grid level.*/
-         vmesh::LocalID blockLength[3];            /**< Number of phase-space cells per coordinate in block.*/
+      // TODO these should be const'd
+      std::string name;                         /**< Name of the mesh (unique).*/
+      std::array<Real, 6> meshLimits;                       /**< Velocity mesh bounding box limits vx_min,vx_max,...,vz_max.*/
+      std::array<uint32_t, 3> gridLength;             /**< Number of blocks in mesh per coordinate at base grid level.*/
+      std::array<uint32_t, 3> blockLength;            /**< Number of phase-space cells per coordinate in block.*/
 
-         // ***** DERIVED PARAMETERS, CALCULATED BY INITVELOCITYMESHES ***** //
-         bool initialized;                         /**< If true, variables in this struct contain sensible values.*/
-         Real meshMinLimits[3];                    /**< Minimum coordinate values of the grid bounding box.*/
-         Real meshMaxLimits[3];                    /**< Maximum coordinate values of the grid bounding box.*/
-         Real gridSize[3];                         /**< Physical size of the grid bounding box.*/
+      // ***** DERIVED PARAMETERS, CALCULATED BY INITVELOCITYMESHES ***** //
+      vmesh::LocalID max_velocity_blocks;       /**< Maximum valid block local ID.*/
 
-         MeshParameters() {
-            initialized = false;
+      // TODO should these be functions instead?
+      std::array<Real, 3> meshMinLimits;                    /**< Minimum coordinate values of the grid bounding box.*/
+      std::array<Real, 3> meshMaxLimits;                    /**< Maximum coordinate values of the grid bounding box.*/
+
+      std::array<Real, 3> blockSize;                        /**< Size of a block at base grid level.*/
+      std::array<Real, 3> cellSize;                         /**< Size of a cell in a block at base grid level.*/
+      std::array<Real, 3> gridSize;                         /**< Physical size of the grid bounding box.*/
+
+      bool initialized;
+
+      MeshParameters() = default; // TODO required for array construction
+      MeshParameters(std::string_view name, std::array<Real, 6> meshLimits, std::array<uint32_t, 3> gridLength, std::array<uint32_t, 3> blockLength);
+      MeshParameters& operator=(MeshParameters& other) = default; // TODO this is silly!
+
+      //[[deprecated]]
+      Real getBlockDx(int idx) const {
+         return blockSize[idx];
+      }
+
+      Real getBlockDx(const vmesh::GlobalID globalID, int idx) const {
+         return blockSize[idx];
+      }
+
+      //[[deprecated]]
+      Real getCellDx(int idx) const {
+         return cellSize[idx];
+      }
+
+      Real getCellDx(const vmesh::GlobalID globalID, int idx) const {
+         return cellSize[idx];
+      }
+
+      bool getBlockSize(const vmesh::GlobalID globalID, Real size[3]) const {
+         for (int i = 0; i < 3; ++i) {
+            size[i] = getBlockDx(globalID, i);
          }
+         return true;
+      }
 
-         //[[deprecated]]
-         inline Real getBlockDx(int idx) const {
-            return blockSize[idx];
+      bool getCellSize(const vmesh::GlobalID globalID, Real size[3]) const {
+         for (int i = 0; i < 3; ++i) {
+            size[i] = getCellDx(globalID, i);
          }
-
-         inline Real getBlockDx(const vmesh::GlobalID globalID, int idx) const {
-            return blockSize[idx];
-         }
-
-         //[[deprecated]]
-         inline Real getCellDx(int idx) const {
-            return cellSize[idx];
-         }
-
-         inline Real getCellDx(const vmesh::GlobalID globalID, int idx) const {
-            return cellSize[idx];
-         }
-
-         inline bool getBlockSize(const vmesh::GlobalID globalID, Real size[3]) const {
-            for (int i = 0; i < 3; ++i) {
-               size[i] = getBlockDx(globalID, i);
-            }
-            return true;
-         }
-
-         inline bool getCellSize(const vmesh::GlobalID globalID, Real size[3]) const {
-            for (int i = 0; i < 3; ++i) {
-               size[i] = getCellDx(globalID, i);
-            }
-            return true;
-         }
-
-         // TODO this shouldn't happen outside initialization but has to be public due to dogshit encapsulation
-         inline void setCellSize(const std::array<Real, 3>& size) {
-            for (int i = 0; i < 3; ++i) {
-               cellSize[i] = size[i];
-            }
-         }
-
-         inline void setBlockSize(const std::array<Real, 3>& size) {
-            for (int i = 0; i < 3; ++i) {
-               blockSize[i] = size[i];
-            }
-         }
+         return true;
+      }
    };
 
    struct MeshWrapper {
       MeshWrapper() {
-         velocityMeshesCreation = new std::vector<vmesh::MeshParameters>(1);
-         velocityMeshesCreation->clear();
+         velocityMeshesCreation = new std::vector<vmesh::MeshParameters>;
       }
       ~MeshWrapper() {
          delete velocityMeshes;
@@ -150,6 +138,7 @@ namespace vmesh {
       // We also need an array so we can copy this data into direct GPU-device memory.
       // On the CPU side we actually reserve enough room for
       // MAX_VMESH_PARAMETERS_COUNT MeshParameters.
+      // TODO this should probably be a C-array, but whatever
       std::array<vmesh::MeshParameters,MAX_VMESH_PARAMETERS_COUNT> *velocityMeshes;
       void initVelocityMeshes(const uint nMeshes);  /**< Pre-calculate more helper parameters for velocity meshes. */
       void uploadMeshWrapper();   /**< Send a copy of the MeshWrapper into GPU memory */
