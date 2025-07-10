@@ -72,6 +72,8 @@ namespace vmesh {
       ARCH_HOSTDEV bool getBlockSize(const vmesh::GlobalID globalID,Real size[3]) const;
       ARCH_HOSTDEV const Real* getCellSize() const;
       ARCH_HOSTDEV bool getCellSize(const vmesh::GlobalID globalID,Real size[3]) const;
+      ARCH_HOSTDEV Real getCellDx(int idx) const;
+      ARCH_HOSTDEV Real getCellDx(const vmesh::GlobalID globalID, int idx) const;
       ARCH_HOSTDEV vmesh::GlobalID getGlobalID(const vmesh::LocalID localID) const;
       ARCH_HOSTDEV vmesh::GlobalID getGlobalID(const Real* coords) const;
       ARCH_HOSTDEV vmesh::GlobalID getGlobalID(const vmesh::LocalID indices[3]) const;
@@ -455,6 +457,15 @@ namespace vmesh {
       size[1] = vmesh::getMeshWrapper()->at(meshID).cellSize[1];
       size[2] = vmesh::getMeshWrapper()->at(meshID).cellSize[2];
       return true;
+   }
+
+   ARCH_HOSTDEV inline Real VelocityMesh::getCellDx(const vmesh::GlobalID globalID, int idx) const {
+      return vmesh::getMeshWrapper()->at(meshID).getCellDx(globalID, idx);
+   }
+
+   //[[deprecated]]
+   ARCH_HOSTDEV inline Real VelocityMesh::getCellDx(int idx) const {
+      return vmesh::getMeshWrapper()->at(meshID).getCellDx(idx);
    }
 
    ARCH_HOSTDEV inline vmesh::GlobalID VelocityMesh::getGlobalID(const vmesh::LocalID localID) const {
