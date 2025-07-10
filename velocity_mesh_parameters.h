@@ -126,11 +126,11 @@ namespace vmesh {
          return *this;
       }
 
-      vmesh::MeshParameters& at(int index) {
+      ARCH_HOSTDEV vmesh::MeshParameters& at(int index) {
          return velocityMeshes->at(index);
       }
 
-      const vmesh::MeshParameters& at(int index) const {
+      ARCH_HOSTDEV const vmesh::MeshParameters& at(int index) const {
          return velocityMeshes->at(index);
       }
 
