@@ -436,7 +436,7 @@ namespace vmesh {
    }
 
    ARCH_HOSTDEV inline const Real* VelocityMesh::getBlockSize() const {
-      return vmesh::getMeshWrapper()->at(meshID).blockSize;
+      return vmesh::getMeshWrapper()->at(meshID).blockSize.data();
    }
 
    ARCH_HOSTDEV inline bool VelocityMesh::getBlockSize(const vmesh::GlobalID globalID, Real size[3]) const {
@@ -447,7 +447,7 @@ namespace vmesh {
    }
 
    ARCH_HOSTDEV inline const Real* VelocityMesh::getCellSize() const {
-      return vmesh::getMeshWrapper()->at(meshID).cellSize;
+      return vmesh::getMeshWrapper()->at(meshID).cellSize.data();
    }
 
    ARCH_HOSTDEV inline bool VelocityMesh::getCellSize(const vmesh::GlobalID globalID, Real size[3]) const {
@@ -518,8 +518,8 @@ namespace vmesh {
       return &localToGlobalMap;
    }
 
-   ARCH_HOSTDEV inline const vmesh::LocalID* VelocityMesh::getGridLength() const {
-      return vmesh::getMeshWrapper()->at(meshID).gridLength;
+   ARCH_HOSTDEV inline const uint32_t* VelocityMesh::getGridLength() const {
+      return vmesh::getMeshWrapper()->at(meshID).gridLength.data();
    }
 
    ARCH_HOSTDEV inline void VelocityMesh::getIndices(const vmesh::GlobalID globalID,vmesh::LocalID& i,vmesh::LocalID& j,vmesh::LocalID& k) const {
@@ -573,11 +573,11 @@ namespace vmesh {
    }
 
    ARCH_HOSTDEV inline const Real* VelocityMesh::getMeshMaxLimits() const {
-      return vmesh::getMeshWrapper()->at(meshID).meshMaxLimits;
+      return vmesh::getMeshWrapper()->at(meshID).meshMaxLimits.data();
    }
 
    ARCH_HOSTDEV inline const Real* VelocityMesh::getMeshMinLimits() const {
-      return vmesh::getMeshWrapper()->at(meshID).meshMinLimits;
+      return vmesh::getMeshWrapper()->at(meshID).meshMinLimits.data();
    }
 
    ARCH_HOSTDEV inline bool VelocityMesh::initialize(const size_t meshID) {
@@ -664,7 +664,7 @@ namespace vmesh {
       if (ltg_size+blocksSize > vmesh::getMeshWrapper()->at(meshID).max_velocity_blocks) {
          printf("vmesh: too many blocks, current size is %lu",ltg_size);
          printf(", adding %lu blocks", blocksSize);
-         printf(", max is %u\n",mesh::getMeshWrapper()->at(meshID).max_velocity_blocks);
+         printf(", max is %u\n", vmesh::getMeshWrapper()->at(meshID).max_velocity_blocks);
          return false;
       }
 
@@ -715,7 +715,7 @@ namespace vmesh {
       if (ltg_size+blocksSize > vmesh::getMeshWrapper()->at(meshID).max_velocity_blocks) {
          printf("vmesh: too many blocks, current size is %lu",ltg_size);
          printf(", adding %lu blocks", blocksSize);
-         printf(", max is %u\n",mesh::getMeshWrapper()->at(meshID).max_velocity_blocks);
+         printf(", max is %u\n", vmesh::getMeshWrapper()->at(meshID).max_velocity_blocks);
          return false;
       }
 
@@ -1058,7 +1058,7 @@ namespace vmesh {
          if (b_tid==0) {
             printf("vmesh: too many blocks, current size is %u",mySize);
             printf(", adding %u blocks", blocksSize);
-            printf(", max is %u\n",mesh::getMeshWrapper()->at(meshID).max_velocity_blocks);
+            printf(", max is %u\n", vmesh::getMeshWrapper()->at(meshID).max_velocity_blocks);
          }
          return false;
       }
