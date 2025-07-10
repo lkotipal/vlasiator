@@ -420,7 +420,7 @@ namespace vmesh {
       vmesh::LocalID indices[3];
       indices[0] = globalID % vmesh::getMeshWrapper()->at(meshID).gridLength[0];
       indices[1] = (globalID / vmesh::getMeshWrapper()->at(meshID).gridLength[0]) % vmesh::getMeshWrapper()->at(meshID).gridLength[1];
-      indices[2] = globalID / (mesh::getMeshWrapper()->at(meshID).gridLength[0] * vmesh::getMeshWrapper()->at(meshID).gridLength[1]);
+      indices[2] = globalID / (vmesh::getMeshWrapper()->at(meshID).gridLength[0] * vmesh::getMeshWrapper()->at(meshID).gridLength[1]);
 
       // Indices 0-2 contain coordinates of the lower left corner.
       // The values are the same as if getBlockCoordinates(globalID,&(array[0])) was called
@@ -528,7 +528,7 @@ namespace vmesh {
       } else {
          i = globalID % vmesh::getMeshWrapper()->at(meshID).gridLength[0];
          j = (globalID / vmesh::getMeshWrapper()->at(meshID).gridLength[0]) % vmesh::getMeshWrapper()->at(meshID).gridLength[1];
-         k = globalID / (mesh::getMeshWrapper()->at(meshID).gridLength[0] * vmesh::getMeshWrapper()->at(meshID).gridLength[1]);
+         k = globalID / (vmesh::getMeshWrapper()->at(meshID).gridLength[0] * vmesh::getMeshWrapper()->at(meshID).gridLength[1]);
       }
    }
 
@@ -550,7 +550,7 @@ namespace vmesh {
       if (globalID >= invalidGlobalID()) {
          k = invalidBlockIndex();
       } else {
-         k = globalID / (mesh::getMeshWrapper()->at(meshID).gridLength[0] * vmesh::getMeshWrapper()->at(meshID).gridLength[1]);
+         k = globalID / (vmesh::getMeshWrapper()->at(meshID).gridLength[0] * vmesh::getMeshWrapper()->at(meshID).gridLength[1]);
       }
    }
 
