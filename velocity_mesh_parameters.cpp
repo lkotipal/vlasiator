@@ -70,10 +70,10 @@ vmesh::meshWrapperDevRegistor::meshWrapperDevRegistor(vmesh::MeshWrapper*& v) {
 
 void vmesh::MeshWrapper::uploadMeshWrapper() {
    // Store address to velocityMeshes array
-   std::array<vmesh::MeshParameters,MAX_VMESH_PARAMETERS_COUNT> * temp = meshWrapper->velocityMeshes;
+   vmes::MeshParameters* temp = meshWrapper->velocityMeshes;
    // gpu-Malloc space on device, copy array contents
-   CHK_ERR( gpuMalloc((void **)&velocityMeshes_upload, sizeof(std::array<vmesh::MeshParameters,MAX_VMESH_PARAMETERS_COUNT>)) );
-   CHK_ERR( gpuMemcpy(velocityMeshes_upload, meshWrapper->velocityMeshes, sizeof(std::array<vmesh::MeshParameters,MAX_VMESH_PARAMETERS_COUNT>),gpuMemcpyHostToDevice) );
+   CHK_ERR( gpuMalloc((void **)&velocityMeshes_upload, sizeof(vmesh::MeshParameters) * meshWrapper->velocityMeshesCreation->size()) );
+   CHK_ERR( gpuMemcpy(velocityMeshes_upload, meshWrapper->velocityMeshes, sizeof(vmesh::MeshParameters) * meshWrapper->velocityMeshesCreation->size(), gpuMemcpyHostToDevice) );
    // Make wrapper point to device-side array
    meshWrapper->velocityMeshes = velocityMeshes_upload;
    // Allocate and copy meshwrapper on device
@@ -118,13 +118,9 @@ void vmesh::MeshWrapper::initVelocityMeshes(const uint nMeshes) {
              (int)meshWrapper->velocityMeshesCreation->size());
       abort();
    }
-   // Create pointer to array of sufficient length
-   meshWrapper->velocityMeshes = new std::array<vmesh::MeshParameters,MAX_VMESH_PARAMETERS_COUNT>;
 
-   // Copy data in, also set auxiliary values
-   for (uint i=0; i<nMeshes; ++i) {
-      meshWrapper->velocityMeshes->at(i) = meshWrapper->velocityMeshesCreation->at(i);
-   }
+   // velocityMeshes on host is just an alias for the vector data
+   meshWrapper->velocityMeshes = velocityMeshesCreation->data();
 
 #ifdef USE_GPU
    // Now all velocity meshes have been initialized on host, into
@@ -146,18 +142,9 @@ vmesh::MeshParameters::MeshParameters(std::string_view name, std::array<Real, 6>
    gridLength {gridLength}, 
    blockLength {blockLength},
    max_velocity_blocks {gridLength[0] * gridLength[1] * gridLength[2]},
-   meshMinLimits {},
-   meshMaxLimits {},
-   blockSize {},
-   cellSize {},
-   gridSize {},
-   initialized {true}
-{
-   for (int i = 0; i < 3; ++i) {
-      this->meshMinLimits[i] = this->meshLimits[2 * i];
-      this->meshMaxLimits[i] = this->meshLimits[2 * i + 1];
-      this->gridSize[i] = this->meshMaxLimits[i] - this->meshMinLimits[i];
-      this->blockSize[i] = this->gridSize[i] / this->gridLength[i];
-      this->cellSize[i] = this->blockSize[i] / this->blockLength[i];
-   }
-}
+   meshMinLimits {meshLimits[0], meshLimits[2], meshLimits[4]},
+   meshMaxLimits {meshLimits[1], meshLimits[3], meshLimits[5]},
+   gridSize {meshMaxLimits[0] - meshMinLimits[0], meshMaxLimits[1] - meshMinLimits[1], meshMaxLimits[2] - meshMinLimits[2]},
+   blockSize {gridSize[0] / gridLength[0], gridSize[1] / gridLength[1], gridSize[2] / gridLength[2]},
+   cellSize {blockSize[0] / blockLength[0], blockSize[1] / blockLength[1], blockSize[2] / blockLength[2]}
+{ }

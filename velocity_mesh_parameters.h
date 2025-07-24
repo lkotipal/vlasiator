@@ -53,27 +53,23 @@ namespace vmesh {
    struct MeshParameters {
 
       // TODO these should be const'd
-      std::string name;                         /**< Name of the mesh (unique).*/
-      std::array<Real, 6> meshLimits;                       /**< Velocity mesh bounding box limits vx_min,vx_max,...,vz_max.*/
-      std::array<uint32_t, 3> gridLength;             /**< Number of blocks in mesh per coordinate at base grid level.*/
-      std::array<uint32_t, 3> blockLength;            /**< Number of phase-space cells per coordinate in block.*/
+      const std::string name;                         /**< Name of the mesh (unique).*/
+      const std::array<Real, 6> meshLimits;                       /**< Velocity mesh bounding box limits vx_min,vx_max,...,vz_max.*/
+      const std::array<uint32_t, 3> gridLength;             /**< Number of blocks in mesh per coordinate at base grid level.*/
+      const std::array<uint32_t, 3> blockLength;            /**< Number of phase-space cells per coordinate in block.*/
 
       // ***** DERIVED PARAMETERS, CALCULATED BY INITVELOCITYMESHES ***** //
-      vmesh::LocalID max_velocity_blocks;       /**< Maximum valid block local ID.*/
+      const vmesh::LocalID max_velocity_blocks;       /**< Maximum valid block local ID.*/
 
       // TODO should these be functions instead?
-      std::array<Real, 3> meshMinLimits;                    /**< Minimum coordinate values of the grid bounding box.*/
-      std::array<Real, 3> meshMaxLimits;                    /**< Maximum coordinate values of the grid bounding box.*/
+      const std::array<Real, 3> meshMinLimits;                    /**< Minimum coordinate values of the grid bounding box.*/
+      const std::array<Real, 3> meshMaxLimits;                    /**< Maximum coordinate values of the grid bounding box.*/
+      const std::array<Real, 3> gridSize;                         /**< Physical size of the grid bounding box.*/
 
-      std::array<Real, 3> blockSize;                        /**< Size of a block at base grid level.*/
-      std::array<Real, 3> cellSize;                         /**< Size of a cell in a block at base grid level.*/
-      std::array<Real, 3> gridSize;                         /**< Physical size of the grid bounding box.*/
+      const std::array<Real, 3> blockSize;                        /**< Size of a block at base grid level.*/
+      const std::array<Real, 3> cellSize;                         /**< Size of a cell in a block at base grid level.*/
 
-      bool initialized;
-
-      MeshParameters() = default; // TODO required for array construction
       MeshParameters(std::string_view name, std::array<Real, 6> meshLimits, std::array<uint32_t, 3> gridLength, std::array<uint32_t, 3> blockLength);
-      MeshParameters& operator=(MeshParameters& other) = default; // TODO this is silly!
 
       //[[deprecated]]
       Real getBlockDx(int idx) const {
@@ -126,20 +122,21 @@ namespace vmesh {
          return *this;
       }
 
+      // TODO bounds checking?
       ARCH_HOSTDEV vmesh::MeshParameters& at(int index) {
-         return velocityMeshes->at(index);
+         return velocityMeshes[index];
       }
 
       ARCH_HOSTDEV const vmesh::MeshParameters& at(int index) const {
-         return velocityMeshes->at(index);
+         return velocityMeshes[index];
       }
 
       std::vector<vmesh::MeshParameters> *velocityMeshesCreation;
       // We also need an array so we can copy this data into direct GPU-device memory.
       // On the CPU side we actually reserve enough room for
       // MAX_VMESH_PARAMETERS_COUNT MeshParameters.
-      // TODO this should probably be a C-array, but whatever
-      std::array<vmesh::MeshParameters,MAX_VMESH_PARAMETERS_COUNT> *velocityMeshes;
+      vmesh::MeshParameters* velocityMeshes;
+      //std::array<vmesh::MeshParameters,MAX_VMESH_PARAMETERS_COUNT> *velocityMeshes;
       void initVelocityMeshes(const uint nMeshes);  /**< Pre-calculate more helper parameters for velocity meshes. */
       void uploadMeshWrapper();   /**< Send a copy of the MeshWrapper into GPU memory */
    };

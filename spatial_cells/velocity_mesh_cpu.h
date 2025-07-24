@@ -414,7 +414,7 @@ namespace vmesh {
    }
 
    inline bool VelocityMesh::isInitialized() const {
-      return vmesh::getMeshWrapper()->at(meshID).initialized;
+      return true;
    }
 
    inline void VelocityMesh::pop() {
@@ -482,7 +482,7 @@ namespace vmesh {
    }
 
    inline bool VelocityMesh::setMesh(const size_t& meshID) {
-      if (meshID >= vmesh::getMeshWrapper()->velocityMeshes->size()) {
+      if (meshID >= vmesh::getMeshWrapper()->velocityMeshesCreation->size()) {
          return false;
       }
       this->meshID = meshID;
