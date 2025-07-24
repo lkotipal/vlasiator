@@ -34,7 +34,7 @@ static vmesh::MeshWrapper *meshWrapper;
 
 #ifdef USE_GPU
 vmesh::MeshWrapper* MWdev;
-std::array<vmesh::MeshParameters,MAX_VMESH_PARAMETERS_COUNT> *velocityMeshes_upload;
+vmesh::MeshParameters* velocityMeshes_upload;
 
 __global__ void debug_kernel(const uint popID) {
    vmesh::printVelocityMesh(0);
@@ -70,7 +70,7 @@ vmesh::meshWrapperDevRegistor::meshWrapperDevRegistor(vmesh::MeshWrapper*& v) {
 
 void vmesh::MeshWrapper::uploadMeshWrapper() {
    // Store address to velocityMeshes array
-   vmes::MeshParameters* temp = meshWrapper->velocityMeshes;
+   vmesh::MeshParameters* temp = meshWrapper->velocityMeshes;
    // gpu-Malloc space on device, copy array contents
    CHK_ERR( gpuMalloc((void **)&velocityMeshes_upload, sizeof(vmesh::MeshParameters) * meshWrapper->velocityMeshesCreation->size()) );
    CHK_ERR( gpuMemcpy(velocityMeshes_upload, meshWrapper->velocityMeshes, sizeof(vmesh::MeshParameters) * meshWrapper->velocityMeshesCreation->size(), gpuMemcpyHostToDevice) );

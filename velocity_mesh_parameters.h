@@ -72,31 +72,31 @@ namespace vmesh {
       MeshParameters(std::string_view name, std::array<Real, 6> meshLimits, std::array<uint32_t, 3> gridLength, std::array<uint32_t, 3> blockLength);
 
       //[[deprecated]]
-      Real getBlockDx(int idx) const {
+      ARCH_HOSTDEV Real getBlockDx(int idx) const {
          return blockSize[idx];
       }
 
-      Real getBlockDx(const vmesh::GlobalID globalID, int idx) const {
+      ARCH_HOSTDEV Real getBlockDx(const vmesh::GlobalID globalID, int idx) const {
          return blockSize[idx];
       }
 
       //[[deprecated]]
-      Real getCellDx(int idx) const {
+      ARCH_HOSTDEV Real getCellDx(int idx) const {
          return cellSize[idx];
       }
 
-      Real getCellDx(const vmesh::GlobalID globalID, int idx) const {
+      ARCH_HOSTDEV Real getCellDx(const vmesh::GlobalID globalID, int idx) const {
          return cellSize[idx];
       }
 
-      bool getBlockSize(const vmesh::GlobalID globalID, Real size[3]) const {
+      ARCH_HOSTDEV bool getBlockSize(const vmesh::GlobalID globalID, Real size[3]) const {
          for (int i = 0; i < 3; ++i) {
             size[i] = getBlockDx(globalID, i);
          }
          return true;
       }
 
-      bool getCellSize(const vmesh::GlobalID globalID, Real size[3]) const {
+      ARCH_HOSTDEV bool getCellSize(const vmesh::GlobalID globalID, Real size[3]) const {
          for (int i = 0; i < 3; ++i) {
             size[i] = getCellDx(globalID, i);
          }
