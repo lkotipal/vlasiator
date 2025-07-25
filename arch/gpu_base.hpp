@@ -268,10 +268,14 @@ struct GPUMemoryManager {
 
    // Allocate memory to a pointer by name
    bool allocate(const std::string& name, size_t bytes) {
-      //TODO: only allocate if needs to increase in size
       std::lock_guard<std::mutex> lock(memoryMutex);
       if (gpuMemoryPointers.count(name) == 0) {
          std::cerr << "Error: Pointer name '" << name << "' not found.\n";
+         return false;
+      }
+
+      if (allocationSizes[name] >= bytes) {
+         //No need to reallocate
          return false;
       }
       
@@ -286,10 +290,14 @@ struct GPUMemoryManager {
 
    // Allocate pinned host memory to a pointer by name
    bool hostAllocate(const std::string& name, size_t bytes) {
-      //TODO: only allocate if needs to increase in size
       std::lock_guard<std::mutex> lock(memoryMutex);
       if (gpuMemoryPointers.count(name) == 0) {
          std::cerr << "Error: Pointer name '" << name << "' not found.\n";
+         return false;
+      }
+
+      if (allocationSizes[name] >= bytes) {
+         //No need to reallocate
          return false;
       }
 
