@@ -476,6 +476,16 @@ void pitchAngleDiffusion(dccrg::Dccrg<spatial_cell::SpatialCell,dccrg::Cartesian
    } // End spatial cell loop
 
    // Allocate or reallocate memory if necessary
+   gpuMemoryManager.startSession(0,0);
+   
+   gpuMemoryManager.sessionAllocate("dev_cellIdxArray", totalNumberOfVelocityBlocks*sizeof(size_t));
+   gpuMemoryManager.sessionAllocate("dev_velocityIdxArray", totalNumberOfVelocityBlocks*sizeof(size_t));
+   gpuMemoryManager.sessionAllocate("dev_bValues", 3*numberOfLocalCells*sizeof(Real));
+
+   size_t *dev_cellIdxArray = gpuMemoryManager.getSessionPointer<size_t>("dev_cellIdxArray");
+   size_t *dev_velocityIdxArray = gpuMemoryManager.getSessionPointer<size_t>("dev_velocityIdxArray");
+   Real *dev_bValues = gpuMemoryManager.getSessionPointer<Real>("dev_bValues");
+
    gpu_batch_allocate(numberOfLocalCells, 0);
    gpu_pitch_angle_diffusion_allocate(numberOfLocalCells, nbins_v, nbins_mu, blocksPerSpatialCell, totalNumberOfVelocityBlocks);
 
@@ -795,5 +805,6 @@ void pitchAngleDiffusion(dccrg::Dccrg<spatial_cell::SpatialCell,dccrg::Cartesian
       CHK_ERR( gpuDeviceSynchronize() );
    }
 
+   gpuMemoryManager.endSession();
    diffusionTimer.stop();
 } // End function

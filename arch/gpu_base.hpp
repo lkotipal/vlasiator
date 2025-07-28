@@ -248,7 +248,14 @@ struct GPUMemoryManager {
    std::unordered_map<std::string, void*> gpuMemoryPointers;
    std::unordered_map<std::string, size_t> allocationSizes;
    std::unordered_map<std::string, int> nameCounters;
+   std::unordered_map<std::string, std::string> pointerDevice;
+   std::unordered_map<std::string, int> sessionPointerOffset;
    std::mutex memoryMutex;
+   bool sessionOn = false;
+   size_t dev_sessionSize = 0;
+   size_t host_sessionSize = 0;
+   size_t dev_sessionAllocationSize = 0;
+   size_t host_sessionAllocationSize = 0;
 
    // Create a new pointer with a base name, ensure unique name
    std::string createPointer(const std::string& baseName) {
@@ -263,7 +270,51 @@ struct GPUMemoryManager {
 
       gpuMemoryPointers[uniqueName] = nullptr;
       allocationSizes[uniqueName] = (size_t)(0);
+      pointerDevice[uniqueName] = "None";
       return uniqueName;
+   }
+
+   bool startSession(size_t dev_bytes, size_t host_bytes){
+      if (gpuMemoryPointers.count("dev_sessionPointer") == 0) {
+         createPointer("dev_sessionPointer");
+      }
+      if (gpuMemoryPointers.count("host_sessionPointer") == 0) {
+         createPointer("host_sessionPointer");
+      }
+
+      if(sessionOn){
+         std::cerr << "Concurrent sessions not supported. Please end previous session before starting a new one.\n";
+         return false;
+      }
+      sessionOn = true;
+
+      if(dev_bytes > dev_sessionAllocationSize){
+         allocate("dev_sessionPointer", dev_bytes);
+         dev_sessionAllocationSize = dev_bytes;
+      }
+      dev_sessionSize = 0;
+      pointerDevice["dev_sessionPointer"] = "dev";
+
+      if(host_bytes > host_sessionAllocationSize){
+         hostAllocate("host_sessionPointer", host_bytes);
+         host_sessionAllocationSize = host_bytes;
+      }
+      host_sessionSize = 0;
+      pointerDevice["host_sessionPointer"] = "host";
+
+      return true;
+   }
+
+   bool endSession(){
+      if(!sessionOn){
+         std::cerr << "No session is currently on. Please start a session before ending it.\n";
+         return false;
+      }
+      sessionOn = false;
+      dev_sessionSize = 0;
+      host_sessionSize = 0;
+
+      return true;
    }
 
    // Allocate memory to a pointer by name
@@ -285,6 +336,7 @@ struct GPUMemoryManager {
 
       CHK_ERR( gpuMalloc(&gpuMemoryPointers[name], bytes) );
       allocationSizes[name] = bytes;
+      pointerDevice[name] = "dev";
       return true;
    }
 
@@ -307,6 +359,28 @@ struct GPUMemoryManager {
 
       CHK_ERR( gpuMallocHost(&gpuMemoryPointers[name], bytes) );
       allocationSizes[name] = bytes;
+      pointerDevice[name] = "host";
+      return true;
+   }
+
+   bool sessionAllocate(const std::string& name, size_t bytes){
+      if (dev_sessionSize + bytes > dev_sessionAllocationSize){
+         void *sessionPointer = getPointer<void>("dev_sessionPointer");
+         void *newSessionPointer;
+
+         CHK_ERR( gpuMalloc(&newSessionPointer, dev_sessionSize + bytes) );
+         CHK_ERR( gpuMemcpy(newSessionPointer, sessionPointer, dev_sessionAllocationSize, gpuMemcpyDeviceToDevice) );
+         CHK_ERR( gpuFree(sessionPointer) );
+
+         updatePointer("dev_sessionPointer", newSessionPointer);
+         dev_sessionAllocationSize = dev_sessionSize + bytes;
+         allocationSizes["dev_sessionPointer"] = dev_sessionAllocationSize;
+      }
+
+      sessionPointerOffset[name] = dev_sessionSize;
+
+      dev_sessionSize += bytes;
+
       return true;
    }
 
@@ -320,19 +394,48 @@ struct GPUMemoryManager {
    void freeAll() {
       for (auto& pair : gpuMemoryPointers) {
          if (pair.second != nullptr) {
-            CHK_ERR( gpuFree(pair.second) );
+            std::string name = pair.first;
+            if (allocationSizes[name] > 0){
+               if (pointerDevice[name] == "dev"){
+                  CHK_ERR( gpuFree(pair.second) );
+               }else if (pointerDevice[name] == "host"){
+                  CHK_ERR( gpuFreeHost(pair.second) );
+               }
+            }
+            pair.second = nullptr;
          }
       }
       gpuMemoryPointers.clear();
       allocationSizes.clear();
       nameCounters.clear();
+      pointerDevice.clear();
+      sessionPointerOffset.clear();
    }
 
    // Get typed pointer
    template <typename T>
    T* getPointer(const std::string& name) const {
-      if (!gpuMemoryPointers.count(name)) throw std::runtime_error("Unknown pointer name");
+      if (!gpuMemoryPointers.count(name)){
+         throw std::runtime_error("Unknown pointer name");
+      }
       return static_cast<T*>(gpuMemoryPointers.at(name));
+   }
+
+   template <typename T>
+   T* getSessionPointer(const std::string& name) const {
+      if (!sessionPointerOffset.count(name)){
+         throw std::runtime_error("Unknown pointer name");
+      }
+
+      char *sessionPointer = static_cast<char*>(gpuMemoryPointers.at("dev_sessionPointer"));
+      int offset = sessionPointerOffset.at(name);
+      
+      return reinterpret_cast<T*>(sessionPointer + offset);
+   }
+
+   void updatePointer(const std::string& name, void* newPtr) {
+      std::lock_guard<std::mutex> lock(memoryMutex);
+      gpuMemoryPointers[name] = newPtr;
    }
 };
 
@@ -373,10 +476,10 @@ extern Real *host_bValues, *host_nu0Values, *host_bulkVX, *host_bulkVY, *host_bu
 extern Realf *host_sparsity, *dev_densityPreAdjust, *dev_densityPostAdjust;
 extern size_t *host_cellIdxStartCutoff, *host_smallCellIdxArray, *host_remappedCellIdxArray; // remappedCellIdxArray tells the position of the cell index in the sequence instead of the actual index
 // Device pointers
-extern Real *dev_bValues, *dev_nu0Values, *dev_bulkVX, *dev_bulkVY, *dev_bulkVZ, *dev_Ddt, *dev_potentialDdtValues;
+extern Real *dev_nu0Values, *dev_bulkVX, *dev_bulkVY, *dev_bulkVZ, *dev_Ddt, *dev_potentialDdtValues;
 extern Realf *dev_fmu, *dev_dfdt_mu, *dev_sparsity;
 extern int *dev_fcount, *dev_cellIdxKeys;
-extern size_t *dev_smallCellIdxArray, *dev_remappedCellIdxArray, *dev_cellIdxStartCutoff, *dev_cellIdxArray, *dev_velocityIdxArray;
+extern size_t *dev_smallCellIdxArray, *dev_remappedCellIdxArray, *dev_cellIdxStartCutoff;
 // Counters
 extern size_t latestNumberOfLocalCellsPitchAngle;
 extern int latestNumberOfVelocityCellsPitchAngle;
