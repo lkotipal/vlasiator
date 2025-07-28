@@ -105,9 +105,6 @@ void gpu_trans_allocate(cuint nAllCells=0,
                         cuint nPencils=0);
 void gpu_trans_deallocate();
 
-void gpu_pitch_angle_diffusion_allocate(size_t numberOfLocalCells, int nbins_v, int nbins_mu, int blocksPerSpatialCell, int totalNumberOfVelocityBlocks);
-void gpu_pitch_angle_diffusion_deallocate();
-
 extern gpuStream_t gpuStreamList[];
 extern gpuStream_t gpuPriorityStreamList[];
 
@@ -518,10 +515,5 @@ extern uint gpu_largest_columnCount;
 extern uint gpu_vlasov_allocatedSize[];
 extern uint gpu_acc_allocatedColumns;
 extern uint gpu_acc_foundColumnsCount;
-
-// Counters
-extern size_t latestNumberOfLocalCellsPitchAngle;
-extern int latestNumberOfVelocityCellsPitchAngle;
-extern bool memoryHasBeenAllocatedPitchAngle;
 
 #endif

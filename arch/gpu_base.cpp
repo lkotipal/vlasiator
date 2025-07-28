@@ -120,11 +120,6 @@ uint gpu_largest_columnCount = 0;
 uint gpu_allocated_batch_nCells = 0;
 uint gpu_allocated_batch_maxNeighbours = 0;
 
-// Counters
-size_t latestNumberOfLocalCellsPitchAngle = 0;
-int latestNumberOfVelocityCellsPitchAngle = 0;
-bool memoryHasBeenAllocatedPitchAngle = false;
-
 __host__ uint gpu_getThread() {
 #ifdef _OPENMP
     return omp_get_thread_num();
@@ -275,7 +270,6 @@ __host__ void gpu_clear_device() {
    gpu_trans_deallocate();
    gpu_moments_deallocate();
    gpu_batch_deallocate();
-   gpu_pitch_angle_diffusion_deallocate();
    // Destroy streams
    const uint maxNThreads = gpu_getMaxThreads();
    for (uint i=0; i<maxNThreads; ++i) {
@@ -859,27 +853,4 @@ __host__ void gpu_trans_deallocate() {
          DimensionPencils[dimension].gpu_allocated_sumOfLengths = 0;
       }
    }
-}
-
-void gpu_pitch_angle_diffusion_allocate(size_t numberOfLocalCells, int nbins_v, int nbins_mu, int blocksPerSpatialCell, int totalNumberOfVelocityBlocks) {
-   if (numberOfLocalCells <= latestNumberOfLocalCellsPitchAngle && totalNumberOfVelocityBlocks <= latestNumberOfVelocityCellsPitchAngle) {
-      return;
-   }
-
-   latestNumberOfVelocityCellsPitchAngle = totalNumberOfVelocityBlocks;
-
-   if (numberOfLocalCells <= latestNumberOfLocalCellsPitchAngle) {
-      return;
-   }
-
-   latestNumberOfLocalCellsPitchAngle = numberOfLocalCells;
-
-   if(memoryHasBeenAllocatedPitchAngle){
-      gpu_pitch_angle_diffusion_deallocate();
-   }
-
-   memoryHasBeenAllocatedPitchAngle = true;
-}
-
-void gpu_pitch_angle_diffusion_deallocate() {
 }

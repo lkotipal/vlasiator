@@ -543,7 +543,6 @@ void pitchAngleDiffusion(dccrg::Dccrg<spatial_cell::SpatialCell,dccrg::Cartesian
    int *dev_cellIdxKeys = gpuMemoryManager.getSessionPointer<int>("dev_cellIdxKeys");
 
    gpu_batch_allocate(numberOfLocalCells, 0);
-   gpu_pitch_angle_diffusion_allocate(numberOfLocalCells, nbins_v, nbins_mu, blocksPerSpatialCell, totalNumberOfVelocityBlocks);
 
    std::vector<bool> spatialLoopComplete(numberOfLocalCells, false);
 
