@@ -475,9 +475,33 @@ void pitchAngleDiffusion(dccrg::Dccrg<spatial_cell::SpatialCell,dccrg::Cartesian
       totalNumberOfVelocityBlocks += numberOfVelocityBlocks;
    } // End spatial cell loop
 
-   // Allocate session memory
+   // Start session
    gpuMemoryManager.startSession(0,0);
    
+   // Allocate host memory and get pointers
+   gpuMemoryManager.sessionHostAllocate<Real>("host_bValues", 3*numberOfLocalCells*sizeof(Real));
+   gpuMemoryManager.sessionHostAllocate<Real>("host_nu0Values", numberOfLocalCells*sizeof(Real));
+   gpuMemoryManager.sessionHostAllocate<Realf>("host_sparsity", numberOfLocalCells*sizeof(Realf));
+   gpuMemoryManager.sessionHostAllocate<Real>("host_bulkVX", numberOfLocalCells*sizeof(Real));
+   gpuMemoryManager.sessionHostAllocate<Real>("host_bulkVY", numberOfLocalCells*sizeof(Real));
+   gpuMemoryManager.sessionHostAllocate<Real>("host_bulkVZ", numberOfLocalCells*sizeof(Real));
+   gpuMemoryManager.sessionHostAllocate<size_t>("host_cellIdxStartCutoff", numberOfLocalCells*sizeof(size_t));
+   gpuMemoryManager.sessionHostAllocate<size_t>("host_smallCellIdxArray", numberOfLocalCells*sizeof(size_t));
+   gpuMemoryManager.sessionHostAllocate<size_t>("host_remappedCellIdxArray", numberOfLocalCells*sizeof(size_t)); // remappedCellIdxArray tells the position of the cell index in the sequence instead of the actual index
+   gpuMemoryManager.sessionHostAllocate<Real>("host_Ddt", numberOfLocalCells*sizeof(Real));
+
+   Real *host_bValues = gpuMemoryManager.getSessionHostPointer<Real>("host_bValues");
+   Real *host_nu0Values = gpuMemoryManager.getSessionHostPointer<Real>("host_nu0Values");
+   Realf *host_sparsity = gpuMemoryManager.getSessionHostPointer<Realf>("host_sparsity");
+   Real *host_bulkVX = gpuMemoryManager.getSessionHostPointer<Real>("host_bulkVX");
+   Real *host_bulkVY = gpuMemoryManager.getSessionHostPointer<Real>("host_bulkVY");
+   Real *host_bulkVZ = gpuMemoryManager.getSessionHostPointer<Real>("host_bulkVZ");
+   size_t*host_cellIdxStartCutoff = gpuMemoryManager.getSessionHostPointer<size_t>("host_cellIdxStartCutoff");
+   size_t *host_smallCellIdxArray = gpuMemoryManager.getSessionHostPointer<size_t>("host_smallCellIdxArray");
+   size_t *host_remappedCellIdxArray = gpuMemoryManager.getSessionHostPointer<size_t>("host_remappedCellIdxArray");
+   Real *host_Ddt = gpuMemoryManager.getSessionHostPointer<Real>("host_Ddt");
+
+   // Allocate device memory and get pointers
    gpuMemoryManager.sessionAllocate<size_t>("dev_cellIdxArray", totalNumberOfVelocityBlocks*sizeof(size_t));
    gpuMemoryManager.sessionAllocate<size_t>("dev_velocityIdxArray", totalNumberOfVelocityBlocks*sizeof(size_t));
    gpuMemoryManager.sessionAllocate<Real>("dev_bValues", 3*numberOfLocalCells*sizeof(Real));

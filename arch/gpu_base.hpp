@@ -396,6 +396,31 @@ struct GPUMemoryManager {
       return true;
    }
 
+   template<typename T>
+   bool sessionHostAllocate(const std::string& name, size_t bytes){
+      if (host_sessionSize + bytes > host_sessionAllocationSize){
+         void *sessionPointer = getPointer<void>("host_sessionPointer");
+         void *newSessionPointer;
+
+         CHK_ERR( gpuMallocHost(&newSessionPointer, host_sessionSize + bytes) );
+         CHK_ERR( gpuMemcpy(newSessionPointer, sessionPointer, host_sessionAllocationSize, gpuMemcpyHostToHost) );
+         CHK_ERR( gpuFreeHost(sessionPointer) );
+
+         updatePointer("host_sessionPointer", newSessionPointer);
+         host_sessionAllocationSize = host_sessionSize + bytes;
+         allocationSizes["host_sessionPointer"] = host_sessionAllocationSize;
+      }
+
+      void *sessionPointer = getPointer<void>("host_sessionPointer");
+      size_t offset = alignOffset<T>(sessionPointer, host_sessionSize);
+      sessionPointerOffset[name] = offset;
+
+      int padding = offset - host_sessionSize;
+      host_sessionSize += bytes + padding;
+
+      return true;
+   }
+
    // Get allocated size for a pointer
    size_t getSize(const std::string& name) const {
       if (allocationSizes.count(name)) return allocationSizes.at(name);
@@ -445,6 +470,18 @@ struct GPUMemoryManager {
       return reinterpret_cast<T*>(sessionPointer + offset);
    }
 
+   template <typename T>
+   T* getSessionHostPointer(const std::string& name) const {
+      if (!sessionPointerOffset.count(name)){
+         throw std::runtime_error("Unknown pointer name");
+      }
+
+      char *sessionPointer = static_cast<char*>(gpuMemoryPointers.at("host_sessionPointer"));
+      int offset = sessionPointerOffset.at(name);
+      
+      return reinterpret_cast<T*>(sessionPointer + offset);
+   }
+
    void updatePointer(const std::string& name, void* newPtr) {
       std::lock_guard<std::mutex> lock(memoryMutex);
       gpuMemoryPointers[name] = newPtr;
@@ -482,11 +519,6 @@ extern uint gpu_vlasov_allocatedSize[];
 extern uint gpu_acc_allocatedColumns;
 extern uint gpu_acc_foundColumnsCount;
 
-// Pointers used in pitch angle diffusion
-// Host pointers
-extern Real *host_bValues, *host_nu0Values, *host_bulkVX, *host_bulkVY, *host_bulkVZ, *host_Ddt;
-extern Realf *host_sparsity;
-extern size_t *host_cellIdxStartCutoff, *host_smallCellIdxArray, *host_remappedCellIdxArray; // remappedCellIdxArray tells the position of the cell index in the sequence instead of the actual index
 // Counters
 extern size_t latestNumberOfLocalCellsPitchAngle;
 extern int latestNumberOfVelocityCellsPitchAngle;
