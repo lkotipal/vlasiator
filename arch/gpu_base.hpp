@@ -370,16 +370,18 @@ struct GPUMemoryManager {
 
    template<typename T>
    bool sessionAllocate(const std::string& name, size_t bytes){
-      if (dev_sessionSize + bytes > dev_sessionAllocationSize){
+      size_t requiredSessionSize = dev_sessionSize + bytes + alignof(T);
+
+      if (requiredSessionSize > dev_sessionAllocationSize){
          void *sessionPointer = getPointer<void>("dev_sessionPointer");
          void *newSessionPointer;
 
-         CHK_ERR( gpuMalloc(&newSessionPointer, dev_sessionSize + bytes) );
+         CHK_ERR( gpuMalloc(&newSessionPointer, requiredSessionSize) );
          CHK_ERR( gpuMemcpy(newSessionPointer, sessionPointer, dev_sessionAllocationSize, gpuMemcpyDeviceToDevice) );
          CHK_ERR( gpuFree(sessionPointer) );
 
          updatePointer("dev_sessionPointer", newSessionPointer);
-         dev_sessionAllocationSize = dev_sessionSize + bytes;
+         dev_sessionAllocationSize = requiredSessionSize;
          allocationSizes["dev_sessionPointer"] = dev_sessionAllocationSize;
       }
 
@@ -395,16 +397,18 @@ struct GPUMemoryManager {
 
    template<typename T>
    bool sessionHostAllocate(const std::string& name, size_t bytes){
-      if (host_sessionSize + bytes > host_sessionAllocationSize){
+      size_t requiredSessionSize = host_sessionSize + bytes + alignof(T);
+
+      if (requiredSessionSize > host_sessionAllocationSize){
          void *sessionPointer = getPointer<void>("host_sessionPointer");
          void *newSessionPointer;
 
-         CHK_ERR( gpuMallocHost(&newSessionPointer, host_sessionSize + bytes) );
+         CHK_ERR( gpuMallocHost(&newSessionPointer, requiredSessionSize) );
          CHK_ERR( gpuMemcpy(newSessionPointer, sessionPointer, host_sessionAllocationSize, gpuMemcpyHostToHost) );
          CHK_ERR( gpuFreeHost(sessionPointer) );
 
          updatePointer("host_sessionPointer", newSessionPointer);
-         host_sessionAllocationSize = host_sessionSize + bytes;
+         host_sessionAllocationSize = requiredSessionSize;
          allocationSizes["host_sessionPointer"] = host_sessionAllocationSize;
       }
 
