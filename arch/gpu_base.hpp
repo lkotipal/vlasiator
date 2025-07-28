@@ -363,6 +363,15 @@ struct GPUMemoryManager {
       return true;
    }
 
+   template<typename T>
+   size_t alignOffset(void* base, size_t offset) {
+      uintptr_t fullAddress = reinterpret_cast<uintptr_t>(base) + offset;
+      size_t alignment = alignof(T);
+      size_t alignedAddress = (fullAddress + alignment - 1) & ~(alignment - 1);
+      return alignedAddress - reinterpret_cast<uintptr_t>(base);
+   }
+
+   template<typename T>
    bool sessionAllocate(const std::string& name, size_t bytes){
       if (dev_sessionSize + bytes > dev_sessionAllocationSize){
          void *sessionPointer = getPointer<void>("dev_sessionPointer");
@@ -377,9 +386,12 @@ struct GPUMemoryManager {
          allocationSizes["dev_sessionPointer"] = dev_sessionAllocationSize;
       }
 
-      sessionPointerOffset[name] = dev_sessionSize;
+      void *sessionPointer = getPointer<void>("dev_sessionPointer");
+      size_t offset = alignOffset<T>(sessionPointer, dev_sessionSize);
+      sessionPointerOffset[name] = offset;
 
-      dev_sessionSize += bytes;
+      int padding = offset - dev_sessionSize;
+      dev_sessionSize += bytes + padding;
 
       return true;
    }
@@ -473,13 +485,8 @@ extern uint gpu_acc_foundColumnsCount;
 // Pointers used in pitch angle diffusion
 // Host pointers
 extern Real *host_bValues, *host_nu0Values, *host_bulkVX, *host_bulkVY, *host_bulkVZ, *host_Ddt;
-extern Realf *host_sparsity, *dev_densityPreAdjust, *dev_densityPostAdjust;
+extern Realf *host_sparsity;
 extern size_t *host_cellIdxStartCutoff, *host_smallCellIdxArray, *host_remappedCellIdxArray; // remappedCellIdxArray tells the position of the cell index in the sequence instead of the actual index
-// Device pointers
-extern Real *dev_nu0Values, *dev_bulkVX, *dev_bulkVY, *dev_bulkVZ, *dev_Ddt, *dev_potentialDdtValues;
-extern Realf *dev_fmu, *dev_dfdt_mu, *dev_sparsity;
-extern int *dev_fcount, *dev_cellIdxKeys;
-extern size_t *dev_smallCellIdxArray, *dev_remappedCellIdxArray, *dev_cellIdxStartCutoff;
 // Counters
 extern size_t latestNumberOfLocalCellsPitchAngle;
 extern int latestNumberOfVelocityCellsPitchAngle;

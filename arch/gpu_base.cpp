@@ -123,14 +123,8 @@ uint gpu_allocated_batch_maxNeighbours = 0;
 // Pointers used in pitch angle diffusion
 // Host pointers
 Real *host_bValues = nullptr, *host_nu0Values = nullptr, *host_bulkVX = nullptr, *host_bulkVY = nullptr, *host_bulkVZ = nullptr, *host_Ddt = nullptr;
-Realf *host_sparsity = nullptr, *dev_densityPreAdjust = nullptr, *dev_densityPostAdjust = nullptr;
+Realf *host_sparsity = nullptr;
 size_t *host_cellIdxStartCutoff = nullptr, *host_smallCellIdxArray = nullptr, *host_remappedCellIdxArray = nullptr; // remappedCellIdxArray tells the position of the cell index in the sequence instead of the actual index
-// Device pointers
-Real *dev_nu0Values = nullptr, *dev_bulkVX = nullptr, *dev_bulkVY = nullptr, *dev_bulkVZ = nullptr,
-   *dev_Ddt = nullptr, *dev_potentialDdtValues = nullptr;
-Realf *dev_fmu = nullptr, *dev_dfdt_mu = nullptr, *dev_sparsity = nullptr;
-int *dev_fcount = nullptr, *dev_cellIdxKeys = nullptr;
-size_t *dev_smallCellIdxArray = nullptr, *dev_remappedCellIdxArray = nullptr, *dev_cellIdxStartCutoff = nullptr;
 // Counters
 size_t latestNumberOfLocalCellsPitchAngle = 0;
 int latestNumberOfVelocityCellsPitchAngle = 0;
@@ -901,77 +895,11 @@ void gpu_pitch_angle_diffusion_allocate(size_t numberOfLocalCells, int nbins_v, 
    CHK_ERR( gpuHostAlloc(&host_remappedCellIdxArray, numberOfLocalCells*sizeof(size_t)) );
    CHK_ERR( gpuHostAlloc(&host_Ddt, numberOfLocalCells*sizeof(Real)) );
 
-   // Allocate device memory
-   CHK_ERR( gpuMalloc((void**)&dev_nu0Values, numberOfLocalCells*sizeof(Real)) );
-   CHK_ERR( gpuMalloc((void**)&dev_sparsity, numberOfLocalCells*sizeof(Realf)) );
-   CHK_ERR( gpuMalloc((void**)&dev_dfdt_mu, numberOfLocalCells*nbins_v*nbins_mu*sizeof(Realf)) );
-   CHK_ERR( gpuMalloc((void**)&dev_fcount, numberOfLocalCells*nbins_v*nbins_mu*sizeof(int)) );
-   CHK_ERR( gpuMalloc((void**)&dev_fmu, numberOfLocalCells*nbins_v*nbins_mu*sizeof(Realf)) );
-   CHK_ERR( gpuMalloc((void**)&dev_bulkVX, numberOfLocalCells*sizeof(Real)) );
-   CHK_ERR( gpuMalloc((void**)&dev_bulkVY, numberOfLocalCells*sizeof(Real)) );
-   CHK_ERR( gpuMalloc((void**)&dev_bulkVZ, numberOfLocalCells*sizeof(Real)) );
-   CHK_ERR( gpuMalloc((void**)&dev_densityPreAdjust, numberOfLocalCells*sizeof(Realf)) );
-   CHK_ERR( gpuMalloc((void**)&dev_densityPostAdjust, numberOfLocalCells*sizeof(Realf)) );
-   CHK_ERR( gpuMalloc((void**)&dev_cellIdxStartCutoff, numberOfLocalCells*sizeof(size_t)) );
-   CHK_ERR( gpuMalloc((void**)&dev_smallCellIdxArray, numberOfLocalCells*sizeof(size_t)) );
-   CHK_ERR( gpuMalloc((void**)&dev_remappedCellIdxArray, numberOfLocalCells*sizeof(size_t)) );
-   CHK_ERR( gpuMalloc((void**)&dev_Ddt, numberOfLocalCells*sizeof(Real)) );
-   CHK_ERR( gpuMalloc((void**)&dev_potentialDdtValues, numberOfLocalCells*blocksPerSpatialCell*sizeof(Real)) );
-   CHK_ERR( gpuMalloc((void**)&dev_cellIdxKeys, numberOfLocalCells*blocksPerSpatialCell*sizeof(int)) );
-
    memoryHasBeenAllocatedPitchAngle = true;
 }
 
 void gpu_pitch_angle_diffusion_deallocate() {
    // Free memory
-   if (dev_nu0Values) {
-      CHK_ERR( gpuFree(dev_nu0Values) );
-   }
-   if (dev_sparsity) {
-      CHK_ERR( gpuFree(dev_sparsity) );
-   }
-   if (dev_dfdt_mu) {
-      CHK_ERR( gpuFree(dev_dfdt_mu) );
-   }
-   if (dev_fcount) {
-      CHK_ERR( gpuFree(dev_fcount) );
-   }
-   if (dev_fmu) {
-      CHK_ERR( gpuFree(dev_fmu) );
-   }
-   if (dev_bulkVX) {
-      CHK_ERR( gpuFree(dev_bulkVX) );
-   }
-   if (dev_bulkVY) {
-      CHK_ERR( gpuFree(dev_bulkVY) );
-   }
-   if (dev_bulkVZ) {
-      CHK_ERR( gpuFree(dev_bulkVZ) );
-   }
-   if (dev_densityPreAdjust) {
-      CHK_ERR( gpuFree(dev_densityPreAdjust) );
-   }
-   if (dev_densityPostAdjust) {
-      CHK_ERR( gpuFree(dev_densityPostAdjust) );
-   }
-   if (dev_cellIdxStartCutoff) {
-      CHK_ERR( gpuFree(dev_cellIdxStartCutoff) );
-   }
-   if (dev_smallCellIdxArray) {
-      CHK_ERR( gpuFree(dev_smallCellIdxArray) );
-   }
-   if (dev_remappedCellIdxArray) {
-      CHK_ERR( gpuFree(dev_remappedCellIdxArray) );
-   }
-   if (dev_Ddt) {
-      CHK_ERR( gpuFree(dev_Ddt) );
-   }
-   if (dev_potentialDdtValues) {
-      CHK_ERR( gpuFree(dev_potentialDdtValues) );
-   }
-   if (dev_cellIdxKeys) {
-      CHK_ERR( gpuFree(dev_cellIdxKeys) );
-   }
    if (host_bValues) {
       CHK_ERR( gpuFreeHost(host_bValues) );
    }

@@ -475,16 +475,48 @@ void pitchAngleDiffusion(dccrg::Dccrg<spatial_cell::SpatialCell,dccrg::Cartesian
       totalNumberOfVelocityBlocks += numberOfVelocityBlocks;
    } // End spatial cell loop
 
-   // Allocate or reallocate memory if necessary
+   // Allocate session memory
    gpuMemoryManager.startSession(0,0);
    
-   gpuMemoryManager.sessionAllocate("dev_cellIdxArray", totalNumberOfVelocityBlocks*sizeof(size_t));
-   gpuMemoryManager.sessionAllocate("dev_velocityIdxArray", totalNumberOfVelocityBlocks*sizeof(size_t));
-   gpuMemoryManager.sessionAllocate("dev_bValues", 3*numberOfLocalCells*sizeof(Real));
+   gpuMemoryManager.sessionAllocate<size_t>("dev_cellIdxArray", totalNumberOfVelocityBlocks*sizeof(size_t));
+   gpuMemoryManager.sessionAllocate<size_t>("dev_velocityIdxArray", totalNumberOfVelocityBlocks*sizeof(size_t));
+   gpuMemoryManager.sessionAllocate<Real>("dev_bValues", 3*numberOfLocalCells*sizeof(Real));
+   gpuMemoryManager.sessionAllocate<Real>("dev_nu0Values", numberOfLocalCells*sizeof(Real));
+   gpuMemoryManager.sessionAllocate<Realf>("dev_sparsity", numberOfLocalCells*sizeof(Realf));
+   gpuMemoryManager.sessionAllocate<Realf>("dev_dfdt_mu", numberOfLocalCells*nbins_v*nbins_mu*sizeof(Realf));
+   gpuMemoryManager.sessionAllocate<int>("dev_fcount", numberOfLocalCells*nbins_v*nbins_mu*sizeof(int));
+   gpuMemoryManager.sessionAllocate<Realf>("dev_fmu", numberOfLocalCells*nbins_v*nbins_mu*sizeof(Realf));
+   gpuMemoryManager.sessionAllocate<Real>("dev_bulkVX", numberOfLocalCells*sizeof(Real));
+   gpuMemoryManager.sessionAllocate<Real>("dev_bulkVY", numberOfLocalCells*sizeof(Real));
+   gpuMemoryManager.sessionAllocate<Real>("dev_bulkVZ", numberOfLocalCells*sizeof(Real));
+   gpuMemoryManager.sessionAllocate<Realf>("dev_densityPreAdjust", numberOfLocalCells*sizeof(Realf));
+   gpuMemoryManager.sessionAllocate<Realf>("dev_densityPostAdjust", numberOfLocalCells*sizeof(Realf));
+   gpuMemoryManager.sessionAllocate<size_t>("dev_cellIdxStartCutoff", numberOfLocalCells*sizeof(size_t));
+   gpuMemoryManager.sessionAllocate<size_t>("dev_smallCellIdxArray", numberOfLocalCells*sizeof(size_t));
+   gpuMemoryManager.sessionAllocate<size_t>("dev_remappedCellIdxArray", numberOfLocalCells*sizeof(size_t));
+   gpuMemoryManager.sessionAllocate<Real>("dev_Ddt", numberOfLocalCells*sizeof(Real));
+   gpuMemoryManager.sessionAllocate<Real>("dev_potentialDdtValues", numberOfLocalCells*blocksPerSpatialCell*sizeof(Real));
+   gpuMemoryManager.sessionAllocate<int>("dev_cellIdxKeys", numberOfLocalCells*blocksPerSpatialCell*sizeof(int));
 
    size_t *dev_cellIdxArray = gpuMemoryManager.getSessionPointer<size_t>("dev_cellIdxArray");
    size_t *dev_velocityIdxArray = gpuMemoryManager.getSessionPointer<size_t>("dev_velocityIdxArray");
    Real *dev_bValues = gpuMemoryManager.getSessionPointer<Real>("dev_bValues");
+   Real *dev_nu0Values = gpuMemoryManager.getSessionPointer<Real>("dev_nu0Values");
+   Realf *dev_sparsity = gpuMemoryManager.getSessionPointer<Realf>("dev_sparsity");
+   Realf *dev_dfdt_mu = gpuMemoryManager.getSessionPointer<Realf>("dev_dfdt_mu");
+   int *dev_fcount = gpuMemoryManager.getSessionPointer<int>("dev_fcount");
+   Realf *dev_fmu = gpuMemoryManager.getSessionPointer<Realf>("dev_fmu");
+   Real *dev_bulkVX = gpuMemoryManager.getSessionPointer<Real>("dev_bulkVX");
+   Real *dev_bulkVY = gpuMemoryManager.getSessionPointer<Real>("dev_bulkVY");
+   Real *dev_bulkVZ = gpuMemoryManager.getSessionPointer<Real>("dev_bulkVZ");
+   Realf *dev_densityPreAdjust = gpuMemoryManager.getSessionPointer<Realf>("dev_densityPreAdjust");
+   Realf *dev_densityPostAdjust = gpuMemoryManager.getSessionPointer<Realf>("dev_densityPostAdjust");
+   size_t*dev_cellIdxStartCutoff = gpuMemoryManager.getSessionPointer<size_t>("dev_cellIdxStartCutoff");
+   size_t *dev_smallCellIdxArray = gpuMemoryManager.getSessionPointer<size_t>("dev_smallCellIdxArray");
+   size_t *dev_remappedCellIdxArray = gpuMemoryManager.getSessionPointer<size_t>("dev_remappedCellIdxArray");
+   Real *dev_Ddt = gpuMemoryManager.getSessionPointer<Real>("dev_Ddt");
+   Real *dev_potentialDdtValues = gpuMemoryManager.getSessionPointer<Real>("dev_potentialDdtValues");
+   int *dev_cellIdxKeys = gpuMemoryManager.getSessionPointer<int>("dev_cellIdxKeys");
 
    gpu_batch_allocate(numberOfLocalCells, 0);
    gpu_pitch_angle_diffusion_allocate(numberOfLocalCells, nbins_v, nbins_mu, blocksPerSpatialCell, totalNumberOfVelocityBlocks);
