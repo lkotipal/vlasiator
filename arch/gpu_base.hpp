@@ -533,8 +533,6 @@ extern uint *gpu_cell_indices_to_id;
 extern uint *gpu_block_indices_to_id;
 extern uint *gpu_block_indices_to_probe;
 
-extern uint* dev_pencilBlocksCount;
-
 extern Real *returnReal[];
 extern Realf *returnRealf[];
 extern vmesh::LocalID *returnLID[];

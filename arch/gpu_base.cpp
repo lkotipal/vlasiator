@@ -93,14 +93,10 @@ Real* host_mass, *dev_mass;
 Realf* host_intersections, *dev_intersections; // acceleration only
 
 // Buffers, Vector and set for use in translation
-vmesh::VelocityMesh **host_allPencilsMeshes=NULL, **dev_allPencilsMeshes=NULL;
-vmesh::VelocityBlockContainer **host_allPencilsContainers=NULL, **dev_allPencilsContainers=NULL;
 split::SplitVector<vmesh::GlobalID> *unionOfBlocks=NULL, *dev_unionOfBlocks=NULL;
 Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID> *unionOfBlocksSet=NULL, *dev_unionOfBlocksSet=NULL;
 
-// pointers for translation
-Realf** dev_pencilBlockData; // Array of pointers into actual block data
-uint* dev_pencilBlocksCount; // Array of counters if pencil needs to be propagated for this block or not
+// Memory manager
 GPUMemoryManager gpuMemoryManager;
 
 // Counter for how many parallel vlasov buffers are allocated
@@ -358,12 +354,6 @@ int gpu_reportMemory(const size_t local_cells_capacity, const size_t ghost_cells
    }
 
    size_t transBuffers = 0;
-   if (dev_allPencilsMeshes) {
-      transBuffers += gpu_allocated_sumOfLengths * sizeof(vmesh::VelocityMesh*);
-   }
-   if (dev_allPencilsContainers) {
-      transBuffers += gpu_allocated_sumOfLengths * sizeof(vmesh::VelocityBlockContainer*);
-   }
    if (unionOfBlocksSet) {
       transBuffers += sizeof(Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>);
       transBuffers += unionOfBlocksSet->bucket_count() * sizeof(Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>);
@@ -372,8 +362,6 @@ int gpu_reportMemory(const size_t local_cells_capacity, const size_t ghost_cells
       transBuffers += sizeof(split::SplitVector<vmesh::GlobalID>);
       transBuffers += unionOfBlocks->capacity() * sizeof(vmesh::GlobalID);
    }
-   transBuffers += gpu_allocated_trans_pencilBlockData * sizeof(Realf*); //dev_pencilBlockData
-   transBuffers += gpu_allocated_trans_pencilBlocksCount * sizeof(uint); // dev_pencilBlocksCount
    // Pencils:
    for (uint dimension=0; dimension<3; ++dimension) {
       transBuffers += DimensionPencils[dimension].gpu_allocated_sumOfLengths * 2 * sizeof(Realf); // gpu_lengthOfPencils, gpu_idsStart
@@ -722,22 +710,8 @@ __host__ void gpu_trans_allocate(
    if (sumOfLengths > 0) {
       if (gpu_allocated_sumOfLengths == 0) {
          // New allocations
-         CHK_ERR( gpuMalloc((void**)&dev_allPencilsMeshes,sumOfLengths*sizeof(vmesh::VelocityMesh*)) );
-         CHK_ERR( gpuMallocHost((void**)&host_allPencilsMeshes,sumOfLengths*sizeof(vmesh::VelocityMesh*)) );
-         CHK_ERR( gpuMalloc((void**)&dev_allPencilsContainers,sumOfLengths*sizeof(vmesh::VelocityBlockContainer*)) );
-         CHK_ERR( gpuMallocHost((void**)&host_allPencilsContainers,sumOfLengths*sizeof(vmesh::VelocityBlockContainer*)) );
          gpu_allocated_sumOfLengths = sumOfLengths;
       } else if (sumOfLengths > gpu_allocated_sumOfLengths) {
-         // Free old
-         CHK_ERR( gpuFree(dev_allPencilsMeshes));
-         CHK_ERR( gpuFreeHost(host_allPencilsMeshes));
-         CHK_ERR( gpuFree(dev_allPencilsContainers));
-         CHK_ERR( gpuFreeHost(host_allPencilsContainers));
-         // Allocate neow
-         CHK_ERR( gpuMalloc((void**)&dev_allPencilsMeshes,sumOfLengths*sizeof(vmesh::VelocityMesh*)) );
-         CHK_ERR( gpuMallocHost((void**)&host_allPencilsMeshes,sumOfLengths*sizeof(vmesh::VelocityMesh*)) );
-         CHK_ERR( gpuMalloc((void**)&dev_allPencilsContainers,sumOfLengths*sizeof(vmesh::VelocityBlockContainer*)) );
-         CHK_ERR( gpuMallocHost((void**)&host_allPencilsContainers,sumOfLengths*sizeof(vmesh::VelocityBlockContainer*)) );
          gpu_allocated_sumOfLengths = sumOfLengths;
       }
    }
@@ -790,21 +764,13 @@ __host__ void gpu_trans_allocate(
       }
       if (gpu_allocated_trans_pencilBlockData < sumOfLengths*transGpuBlocks*allocationCount) {
          // Need larger allocation
-         if (gpu_allocated_trans_pencilBlockData != 0) {
-            CHK_ERR( gpuFree(dev_pencilBlockData) ); // Free old
-         }
          // New allocations
          gpu_allocated_trans_pencilBlockData = sumOfLengths*transGpuBlocks*allocationCount * BLOCK_ALLOCATION_FACTOR;
-         CHK_ERR( gpuMalloc((void**)&dev_pencilBlockData, gpu_allocated_trans_pencilBlockData*sizeof(Realf*)) );
       }
       if (gpu_allocated_trans_pencilBlocksCount < nPencils*transGpuBlocks*allocationCount) {
          // Need larger allocation
-         if (gpu_allocated_trans_pencilBlocksCount  != 0) {
-            CHK_ERR( gpuFree(dev_pencilBlocksCount) ); // Free old
-         }
          // New allocations
          gpu_allocated_trans_pencilBlocksCount = nPencils*transGpuBlocks*allocationCount * BLOCK_ALLOCATION_FACTOR;
-         CHK_ERR( gpuMalloc((void**)&dev_pencilBlocksCount, gpu_allocated_trans_pencilBlocksCount*sizeof(uint)) );
       }
    }
    CHK_ERR( gpuStreamSynchronize(stream) );
@@ -814,14 +780,6 @@ __host__ void gpu_trans_allocate(
 __host__ void gpu_trans_deallocate() {
    // Deallocate any translation vectors or sets which exist
    if (gpu_allocated_sumOfLengths != 0) {
-      CHK_ERR( gpuFree(dev_allPencilsMeshes));
-      CHK_ERR( gpuFreeHost(host_allPencilsMeshes));
-      CHK_ERR( gpuFree(dev_allPencilsContainers));
-      CHK_ERR( gpuFreeHost(host_allPencilsContainers));
-      dev_allPencilsMeshes = NULL;
-      host_allPencilsMeshes = NULL;
-      dev_allPencilsContainers = NULL;
-      host_allPencilsContainers = NULL;
       gpu_allocated_sumOfLengths = 0;
    }
    if (gpu_allocated_largestVmeshSizePower != 0) {
@@ -833,11 +791,9 @@ __host__ void gpu_trans_deallocate() {
       gpu_allocated_unionSetSize = 0;
    }
    if (gpu_allocated_trans_pencilBlockData != 0) {
-      CHK_ERR( gpuFree(dev_pencilBlockData) );
       gpu_allocated_trans_pencilBlockData = 0;
    }
    if (gpu_allocated_trans_pencilBlocksCount != 0) {
-      CHK_ERR( gpuFree(dev_pencilBlocksCount) );
       gpu_allocated_trans_pencilBlocksCount = 0;
    }
    // Delete also the vectors for pencils for each dimension
