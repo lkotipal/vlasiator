@@ -246,6 +246,7 @@ struct GPUMemoryManager {
    std::unordered_map<std::string, size_t> allocationSizes;
    std::unordered_map<std::string, int> nameCounters;
    std::unordered_map<std::string, std::string> pointerDevice;
+   std::unordered_map<std::string, void*> sessionPointers;
    std::unordered_map<std::string, int> sessionPointerOffset;
    std::mutex memoryMutex;
    bool sessionOn = false;
@@ -253,6 +254,8 @@ struct GPUMemoryManager {
    size_t host_sessionSize = 0;
    size_t dev_sessionAllocationSize = 0;
    size_t host_sessionAllocationSize = 0;
+   size_t dev_previousSessionSize = 0;
+   size_t host_previousSessionSize = 0;
 
    // Create a new pointer with a base name, ensure unique name
    std::string createPointer(const std::string& baseName) {
@@ -272,6 +275,9 @@ struct GPUMemoryManager {
    }
 
    bool startSession(size_t dev_bytes, size_t host_bytes){
+      size_t host_requiredSessionSize = max(host_previousSessionSize, host_bytes);
+      size_t dev_requiredSessionSize = max(dev_previousSessionSize, dev_bytes);
+
       if (gpuMemoryPointers.count("dev_sessionPointer") == 0) {
          createPointer("dev_sessionPointer");
       }
@@ -285,16 +291,16 @@ struct GPUMemoryManager {
       }
       sessionOn = true;
 
-      if(dev_bytes > dev_sessionAllocationSize){
-         allocate("dev_sessionPointer", dev_bytes);
-         dev_sessionAllocationSize = dev_bytes;
+      if(dev_requiredSessionSize > dev_sessionAllocationSize){
+         allocate("dev_sessionPointer", dev_requiredSessionSize);
+         dev_sessionAllocationSize = dev_requiredSessionSize;
       }
       dev_sessionSize = 0;
       pointerDevice["dev_sessionPointer"] = "dev";
 
-      if(host_bytes > host_sessionAllocationSize){
-         hostAllocate("host_sessionPointer", host_bytes);
-         host_sessionAllocationSize = host_bytes;
+      if(host_requiredSessionSize > host_sessionAllocationSize){
+         hostAllocate("host_sessionPointer", host_requiredSessionSize);
+         host_sessionAllocationSize = host_requiredSessionSize;
       }
       host_sessionSize = 0;
       pointerDevice["host_sessionPointer"] = "host";
@@ -308,8 +314,12 @@ struct GPUMemoryManager {
          return false;
       }
       sessionOn = false;
+      dev_previousSessionSize = dev_sessionSize;
       dev_sessionSize = 0;
+      host_previousSessionSize = host_sessionSize;
       host_sessionSize = 0;
+
+      freeSessionPointers();
 
       return true;
    }
@@ -370,21 +380,6 @@ struct GPUMemoryManager {
 
    template<typename T>
    bool sessionAllocate(const std::string& name, size_t bytes){
-      size_t requiredSessionSize = dev_sessionSize + bytes + alignof(T);
-
-      if (requiredSessionSize > dev_sessionAllocationSize){
-         void *sessionPointer = getPointer<void>("dev_sessionPointer");
-         void *newSessionPointer;
-
-         CHK_ERR( gpuMalloc(&newSessionPointer, requiredSessionSize) );
-         CHK_ERR( gpuMemcpy(newSessionPointer, sessionPointer, dev_sessionAllocationSize, gpuMemcpyDeviceToDevice) );
-         CHK_ERR( gpuFree(sessionPointer) );
-
-         updatePointer("dev_sessionPointer", newSessionPointer);
-         dev_sessionAllocationSize = requiredSessionSize;
-         allocationSizes["dev_sessionPointer"] = dev_sessionAllocationSize;
-      }
-
       void *sessionPointer = getPointer<void>("dev_sessionPointer");
       size_t offset = alignOffset<T>(sessionPointer, dev_sessionSize);
       sessionPointerOffset[name] = offset;
@@ -392,32 +387,33 @@ struct GPUMemoryManager {
       int padding = offset - dev_sessionSize;
       dev_sessionSize += bytes + padding;
 
+      if (dev_sessionSize > dev_sessionAllocationSize){
+         std::lock_guard<std::mutex> lock(memoryMutex);
+         sessionPointerOffset[name] = dev_sessionSize;
+         sessionPointers[name] = nullptr;
+         pointerDevice[name] = "dev";
+         CHK_ERR( gpuMalloc(&sessionPointers[name], bytes) );
+      }
+
       return true;
    }
 
    template<typename T>
    bool sessionHostAllocate(const std::string& name, size_t bytes){
-      size_t requiredSessionSize = host_sessionSize + bytes + alignof(T);
-
-      if (requiredSessionSize > host_sessionAllocationSize){
-         void *sessionPointer = getPointer<void>("host_sessionPointer");
-         void *newSessionPointer;
-
-         CHK_ERR( gpuMallocHost(&newSessionPointer, requiredSessionSize) );
-         CHK_ERR( gpuMemcpy(newSessionPointer, sessionPointer, host_sessionAllocationSize, gpuMemcpyHostToHost) );
-         CHK_ERR( gpuFreeHost(sessionPointer) );
-
-         updatePointer("host_sessionPointer", newSessionPointer);
-         host_sessionAllocationSize = requiredSessionSize;
-         allocationSizes["host_sessionPointer"] = host_sessionAllocationSize;
-      }
-
       void *sessionPointer = getPointer<void>("host_sessionPointer");
       size_t offset = alignOffset<T>(sessionPointer, host_sessionSize);
       sessionPointerOffset[name] = offset;
 
       int padding = offset - host_sessionSize;
       host_sessionSize += bytes + padding;
+
+      if (host_sessionSize > host_sessionAllocationSize){
+         std::lock_guard<std::mutex> lock(memoryMutex);
+         sessionPointerOffset[name] = host_sessionSize;
+         sessionPointers[name] = nullptr;
+         pointerDevice[name] = "host";
+         CHK_ERR( gpuMallocHost(&sessionPointers[name], bytes) );
+      }
 
       return true;
    }
@@ -426,6 +422,22 @@ struct GPUMemoryManager {
    size_t getSize(const std::string& name) const {
       if (allocationSizes.count(name)) return allocationSizes.at(name);
       return 0;
+   }
+
+   // Free all allocated GPU memory
+   void freeSessionPointers() {
+      for (auto& pair : sessionPointers) {
+         if (pair.second != nullptr) {
+            std::string name = pair.first;
+            if (pointerDevice[name] == "dev"){
+               CHK_ERR( gpuFree(pair.second) );
+            }else if (pointerDevice[name] == "host"){
+               CHK_ERR( gpuFreeHost(pair.second) );
+            }
+            pair.second = nullptr;
+         }
+      }
+      sessionPointers.clear();
    }
 
    // Free all allocated GPU memory
@@ -443,11 +455,20 @@ struct GPUMemoryManager {
             pair.second = nullptr;
          }
       }
+      freeSessionPointers();
+
       gpuMemoryPointers.clear();
       allocationSizes.clear();
       nameCounters.clear();
       pointerDevice.clear();
       sessionPointerOffset.clear();
+      sessionOn = false;
+      dev_sessionSize = 0;
+      host_sessionSize = 0;
+      dev_sessionAllocationSize = 0;
+      host_sessionAllocationSize = 0;
+      dev_previousSessionSize = 0;
+      host_previousSessionSize = 0;
    }
 
    // Get typed pointer
@@ -467,6 +488,13 @@ struct GPUMemoryManager {
 
       char *sessionPointer = static_cast<char*>(gpuMemoryPointers.at("dev_sessionPointer"));
       int offset = sessionPointerOffset.at(name);
+
+      if (offset > dev_sessionAllocationSize){
+         if (!sessionPointers.count(name)){
+            throw std::runtime_error("Unknown pointer name");
+         }
+         return static_cast<T*>(sessionPointers.at(name));
+      }
       
       return reinterpret_cast<T*>(sessionPointer + offset);
    }
@@ -479,6 +507,13 @@ struct GPUMemoryManager {
 
       char *sessionPointer = static_cast<char*>(gpuMemoryPointers.at("host_sessionPointer"));
       int offset = sessionPointerOffset.at(name);
+
+      if (offset > host_sessionAllocationSize){
+         if (!sessionPointers.count(name)){
+            throw std::runtime_error("Unknown pointer name");
+         }
+         return static_cast<T*>(sessionPointers.at(name));
+      }
       
       return reinterpret_cast<T*>(sessionPointer + offset);
    }
@@ -498,7 +533,6 @@ extern uint *gpu_cell_indices_to_id;
 extern uint *gpu_block_indices_to_id;
 extern uint *gpu_block_indices_to_probe;
 
-extern Realf** dev_pencilBlockData;
 extern uint* dev_pencilBlocksCount;
 
 extern Real *returnReal[];
