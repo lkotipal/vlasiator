@@ -559,7 +559,7 @@ bool trans_map_1d_amr(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>&
    gpuMemoryManager.sessionAllocate<uint>("dev_pencilBlocksCount", sumOfLengths*nGpuBlocks*numAllocations * BLOCK_ALLOCATION_FACTOR*sizeof(uint));
 
    Realf **dev_pencilBlockData = gpuMemoryManager.getSessionPointer<Realf*>("dev_pencilBlockData"); // Array of pointers into actual block data
-   uint *dev_allPencilsContainers = gpuMemoryManager.getSessionPointer<uint>("dev_pencilBlocksCount");
+   uint *dev_pencilBlocksCount = gpuMemoryManager.getSessionPointer<uint>("dev_pencilBlocksCount");
 
    allocateTimer.stop();
    bufferTimer.stop();
