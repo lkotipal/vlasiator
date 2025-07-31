@@ -284,10 +284,12 @@ struct GPUMemoryManager {
       size_t dev_requiredSessionSize = max(dev_previousSessionSize, dev_bytes);
 
       if (gpuMemoryPointers.count("dev_sessionPointer") == 0) {
-         createPointer("dev_sessionPointer");
+         std::string dev_sessionPointerName = "null";
+         createPointer("dev_sessionPointer", dev_sessionPointerName);
       }
       if (gpuMemoryPointers.count("host_sessionPointer") == 0) {
-         createPointer("host_sessionPointer");
+         std::string host_sessionPointerName = "null";
+         createPointer("host_sessionPointer", host_sessionPointerName);
       }
 
       if(sessionOn){
