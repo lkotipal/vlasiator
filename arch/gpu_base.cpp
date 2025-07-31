@@ -373,7 +373,8 @@ int gpu_reportMemory(const size_t local_cells_capacity, const size_t ghost_cells
    size_t total_byte ;
    CHK_ERR( gpuMemGetInfo( &free_byte, &total_byte) );
    size_t used_mb = (total_byte-free_byte)/(1024*1024);
-   size_t sum_mb = (miniBuffers+batchBuffers+vlasovBuffers+accBuffers+transBuffers+local_cells_capacity+ghost_cells_capacity)/(1024*1024);
+   size_t memoryManagerCapacity = gpuMemoryManager.totalGpuAllocation();
+   size_t sum_mb = (miniBuffers+batchBuffers+vlasovBuffers+accBuffers+transBuffers+local_cells_capacity+ghost_cells_capacity+memoryManagerCapacity)/(1024*1024);
    size_t local_req_mb = local_cells_size/(1024*1024);
    size_t ghost_req_mb = ghost_cells_size/(1024*1024);
    if (myRank==0) {
@@ -386,6 +387,7 @@ int gpu_reportMemory(const size_t local_cells_capacity, const size_t ghost_cells
       logFile<<"     Translation buffers:   "<<transBuffers/(1024*1024)<<" Mbytes"<<std::endl;
       logFile<<"     Local cells:           "<<local_cells_capacity/(1024*1024)<<" Mbytes"<<std::endl;
       logFile<<"     Ghost cells:           "<<ghost_cells_capacity/(1024*1024)<<" Mbytes"<<std::endl;
+      logFile<<"     Memory manager:        "<<memoryManagerCapacity/(1024*1024)<<" Mbytes"<<std::endl;
       if (local_req_mb || ghost_req_mb) {
          logFile<<"     Local cells required:  "<<local_req_mb<<" Mbytes"<<std::endl;
          logFile<<"     Ghost cells required:  "<<ghost_req_mb<<" Mbytes"<<std::endl;

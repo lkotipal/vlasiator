@@ -399,6 +399,7 @@ struct GPUMemoryManager {
          sessionPointerOffset[name] = dev_sessionSize;
          sessionPointers[name] = nullptr;
          pointerDevice[name] = "dev";
+         allocationSizes[name] = bytes;
          CHK_ERR( gpuMalloc(&sessionPointers[name], bytes) );
       }
 
@@ -419,6 +420,7 @@ struct GPUMemoryManager {
          sessionPointerOffset[name] = host_sessionSize;
          sessionPointers[name] = nullptr;
          pointerDevice[name] = "host";
+         allocationSizes[name] = bytes;
          CHK_ERR( gpuMallocHost(&sessionPointers[name], bytes) );
       }
 
@@ -427,8 +429,58 @@ struct GPUMemoryManager {
 
    // Get allocated size for a pointer
    size_t getSize(const std::string& name) const {
-      if (allocationSizes.count(name)) return allocationSizes.at(name);
+      if (allocationSizes.count(name)){
+         return allocationSizes.at(name);
+      }
       return 0;
+   }
+
+   size_t totalGpuAllocation(){
+      size_t total = 0;
+
+      for (auto& pair : gpuMemoryPointers) {
+         if (pair.second != nullptr) {
+            std::string name = pair.first;
+            if (pointerDevice[name] == "dev"){
+               total += allocationSizes[name];
+            }
+         }
+      }
+
+      for (auto& pair : sessionPointers) {
+         if (pair.second != nullptr) {
+            std::string name = pair.first;
+            if (pointerDevice[name] == "dev"){
+               total += allocationSizes[name];
+            }
+         }
+      }
+
+      return total;
+   }
+
+   size_t totalCpuAllocation(){
+      size_t total = 0;
+
+      for (auto& pair : gpuMemoryPointers) {
+         if (pair.second != nullptr) {
+            std::string name = pair.first;
+            if (pointerDevice[name] == "host"){
+               total += allocationSizes[name];
+            }
+         }
+      }
+
+      for (auto& pair : sessionPointers) {
+         if (pair.second != nullptr) {
+            std::string name = pair.first;
+            if (pointerDevice[name] == "host"){
+               total += allocationSizes[name];
+            }
+         }
+      }
+
+      return total;
    }
 
    // Free all allocated GPU memory
@@ -441,6 +493,7 @@ struct GPUMemoryManager {
             }else if (pointerDevice[name] == "host"){
                CHK_ERR( gpuFreeHost(pair.second) );
             }
+            allocationSizes[name] = 0;
             pair.second = nullptr;
          }
       }
