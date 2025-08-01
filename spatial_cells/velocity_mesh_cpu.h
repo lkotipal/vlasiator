@@ -279,7 +279,7 @@ namespace vmesh {
    }
    
    inline Real VelocityMesh::getBlockDx(const vmesh::GlobalID globalID, int idx) const {
-      return vmesh::getMeshWrapper()->at(meshID).getBlockDx(globalID, idx);
+      return vmesh::getMeshWrapper()->at(meshID).getBlockDxFromID(globalID, idx);
    }
 
    //[[deprecated]]
@@ -319,18 +319,24 @@ namespace vmesh {
          return invalidGlobalID();
       }
 
-      uint32_t indices[3] = {
-         static_cast<vmesh::LocalID>(floor((coords[0] - vmesh::getMeshWrapper()->at(meshID).meshMinLimits[0]) / getBlockDx(0))),
-         static_cast<vmesh::LocalID>(floor((coords[1] - vmesh::getMeshWrapper()->at(meshID).meshMinLimits[1]) / getBlockDx(1))),
-         static_cast<vmesh::LocalID>(floor((coords[2] - vmesh::getMeshWrapper()->at(meshID).meshMinLimits[2]) / getBlockDx(2)))
-      };
+      //uint32_t indices[3] = {
+      //   static_cast<vmesh::LocalID>(floor((coords[0] - vmesh::getMeshWrapper()->at(meshID).meshMinLimits[0]) / getBlockDx(0))),
+      //   static_cast<vmesh::LocalID>(floor((coords[1] - vmesh::getMeshWrapper()->at(meshID).meshMinLimits[1]) / getBlockDx(1))),
+      //   static_cast<vmesh::LocalID>(floor((coords[2] - vmesh::getMeshWrapper()->at(meshID).meshMinLimits[2]) / getBlockDx(2)))
+      //};
 
-      //for (int idx = 0; idx < 3; ++idx) {
-      //   Real coord = coords[idx] - vmesh::getMeshWrapper()->at(meshID).meshMinLimits[idx];
-      //   for (int i = 0; i < vmesh::getMeshWrapper()->at(meshID).blockLength[i]) {
-      //      if (coord - )
-      //   }
-      //}
+      uint32_t indices[3] = {0, 0, 0};
+
+      for (int idx = 0; idx < 3; ++idx) {
+         Real coord = coords[idx] - vmesh::getMeshWrapper()->at(meshID).meshMinLimits[idx];
+         for (uint32_t i = 0; i < vmesh::getMeshWrapper()->at(meshID).blockLength[i]; ++i) {
+            coord -= vmesh::getMeshWrapper()->at(meshID).getBlockDx(idx, i);
+            if (coord < 0) {
+               indices[idx] = i; // I think...
+               break;
+            }
+         }
+      }
       
       return getGlobalID(indices);
    }
@@ -363,13 +369,10 @@ namespace vmesh {
    }
 
    inline void VelocityMesh::getIndices(const vmesh::GlobalID& globalID,vmesh::LocalID& i,vmesh::LocalID& j,vmesh::LocalID& k) const {
-      if (globalID >= invalidGlobalID()) {
-         i = j = k = invalidBlockIndex();
-      } else {
-         i = globalID % vmesh::getMeshWrapper()->at(meshID).gridLength[0];
-         j = (globalID / vmesh::getMeshWrapper()->at(meshID).gridLength[0]) % vmesh::getMeshWrapper()->at(meshID).gridLength[1];
-         k = globalID / (vmesh::getMeshWrapper()->at(meshID).gridLength[0] * vmesh::getMeshWrapper()->at(meshID).gridLength[1]);
-      }
+      auto coords = vmesh::getMeshWrapper()->at(meshID).getIndices(globalID);
+      i = coords[0];
+      j = coords[1];
+      k = coords[2];
    }
 
    inline vmesh::LocalID VelocityMesh::getLocalID(const vmesh::GlobalID& globalID) const {

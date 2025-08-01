@@ -71,13 +71,30 @@ namespace vmesh {
 
       MeshParameters(std::string_view name, std::array<Real, 6> meshLimits, std::array<uint32_t, 3> gridLength, std::array<uint32_t, 3> blockLength);
 
+      ARCH_HOSTDEV std::array<uint32_t, 3> getIndices(const vmesh::GlobalID& globalID) const {
+         if (globalID >= INVALID_GLOBALID) {
+            return {INVALID_VEL_BLOCK_INDEX, INVALID_VEL_BLOCK_INDEX, INVALID_VEL_BLOCK_INDEX};
+         }
+
+         return {
+            globalID % gridLength[0],
+            (globalID / gridLength[0]) % gridLength[1],
+            globalID / (gridLength[0] * gridLength[1])
+         };
+      }
+
       //[[deprecated]]
       ARCH_HOSTDEV Real getBlockDx(int idx) const {
          return blockSize[idx];
       }
 
-      ARCH_HOSTDEV Real getBlockDx(const vmesh::GlobalID globalID, int idx) const {
+      // Assumption: cell size in coordinate i only depends on the grid coordinate x_i
+      ARCH_HOSTDEV Real getBlockDx(uint32_t cellIndex, int idx) const {
          return blockSize[idx];
+      }
+
+      ARCH_HOSTDEV Real getBlockDxFromID(const vmesh::GlobalID globalID, int idx) const {
+         return getBlockDx(getIndices(globalID)[idx], idx);
       }
 
       //[[deprecated]]
@@ -85,13 +102,14 @@ namespace vmesh {
          return cellSize[idx];
       }
 
+      // This guy should probably check the cells block and then its dx
       ARCH_HOSTDEV Real getCellDx(const vmesh::GlobalID globalID, int idx) const {
          return cellSize[idx];
       }
 
       ARCH_HOSTDEV bool getBlockSize(const vmesh::GlobalID globalID, Real size[3]) const {
          for (int i = 0; i < 3; ++i) {
-            size[i] = getBlockDx(globalID, i);
+            size[i] = getBlockDxFromID(globalID, i);
          }
          return true;
       }
