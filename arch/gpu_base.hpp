@@ -87,7 +87,6 @@ unsigned int nextPowerOfTwo(unsigned int n);
 void gpu_vlasov_allocate(uint maxBlockCount, uint nCells);
 void gpu_vlasov_deallocate();
 void gpu_vlasov_allocate_perthread(uint cpuThreadID, uint maxBlockCount);
-void gpu_vlasov_deallocate_perthread(uint cpuThreadID);
 uint gpu_vlasov_getSmallestAllocation();
 
 void gpu_batch_allocate(uint nCells=0, uint maxNeighbours=0);
@@ -279,6 +278,31 @@ struct GPUMemoryManager {
       return true;
    }
 
+   // Create a new pointer with a base name and an index
+   bool createSubPointer(const std::string& basePointerName, const uint index) {
+      if (!gpuMemoryPointers.count(basePointerName)){
+         std::cerr << "Error: Pointer name '" << basePointerName << "' not found.\n";
+         return false;
+      }
+
+      std::string pointerName = basePointerName + std::to_string(index);
+
+      if (gpuMemoryPointers.count(pointerName)){
+         return false;
+      }
+
+      std::string uniqueName = "null";
+
+      bool success = createPointer(pointerName, uniqueName);
+      
+      if(pointerName != uniqueName){
+         std::cerr << "Error: Pointer '" << pointerName << "' already exists.\n";
+         return false;
+      }
+
+      return success;
+   }
+
    bool startSession(size_t dev_bytes, size_t host_bytes){
       size_t host_requiredSessionSize = max(host_previousSessionSize, host_bytes);
       size_t dev_requiredSessionSize = max(dev_previousSessionSize, dev_bytes);
@@ -375,6 +399,23 @@ struct GPUMemoryManager {
       allocationSizes[name] = bytes;
       pointerDevice[name] = "host";
       return true;
+   }
+
+   // Allocate memory to a sub pointer by name and index
+   bool subPointerAllocate(const std::string& basePointerName, const uint index, size_t bytes) {
+      if (gpuMemoryPointers.count(basePointerName) == 0) {
+         std::cerr << "Error: Pointer name '" << basePointerName << "' not found.\n";
+         return false;
+      }
+
+      std::string pointerName = basePointerName + std::to_string(index);
+
+      if (!gpuMemoryPointers.count(pointerName)){
+         std::cerr << "Error: Pointer name '" << pointerName << "' not found.\n";
+         return false;
+      }
+
+      return allocate(pointerName, bytes);
    }
 
    template<typename T>
@@ -540,6 +581,16 @@ struct GPUMemoryManager {
       return static_cast<T*>(gpuMemoryPointers.at(name));
    }
 
+   // Get typed subpointer with an index
+   template <typename T>
+   T* getSubPointer(const std::string& basePointerName, const uint index) const {
+      if (!gpuMemoryPointers.count(basePointerName)){
+         throw std::runtime_error("Unknown base pointer name");
+      }
+      std::string pointerName = basePointerName + std::to_string(index);
+      return getPointer<T>(pointerName);
+   }
+
    template <typename T>
    T* getSessionPointer(const std::string& name) const {
       if (!sessionPointerOffset.count(name)){
@@ -582,13 +633,30 @@ struct GPUMemoryManager {
       std::lock_guard<std::mutex> lock(memoryMutex);
       gpuMemoryPointers[name] = newPtr;
    }
+
+   template <typename T>
+   void setSubPointer(const std::string& basePointerName, const uint index){
+      if (!gpuMemoryPointers.count(basePointerName)){
+         throw std::runtime_error("Unknown base pointer name");
+      }
+
+      std::string pointerName = basePointerName + std::to_string(index);
+
+      if (!gpuMemoryPointers.count(pointerName)){
+         throw std::runtime_error("Unknown pointer name");
+      }
+
+      T** basePointer = static_cast<T**>(gpuMemoryPointers[basePointerName]);
+      T* subPointer  = static_cast<T*>(gpuMemoryPointers[pointerName]);
+      basePointer[index] = subPointer;
+   }
 };
 
 extern GPUMemoryManager gpuMemoryManager;
 
 // Device data variables, to be allocated in good time. Made into an array so that each thread has their own pointer.
-extern Realf **host_blockDataOrdered;
-extern Realf **dev_blockDataOrdered;
+extern std::string host_blockDataOrdered;
+extern std::string dev_blockDataOrdered;
 extern uint *gpu_cell_indices_to_id;
 extern uint *gpu_block_indices_to_id;
 extern uint *gpu_block_indices_to_probe;
@@ -608,7 +676,7 @@ extern uint gpu_largest_columnCount;
 // Vector and set for use in translation are declared in vlasovsolver/gpu_trans_map_amr.hpp
 
 // Counters used in allocations
-extern uint gpu_vlasov_allocatedSize[];
+extern std::vector<uint> gpu_vlasov_allocatedSize;
 extern uint gpu_acc_allocatedColumns;
 extern uint gpu_acc_foundColumnsCount;
 

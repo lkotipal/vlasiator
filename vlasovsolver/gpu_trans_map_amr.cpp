@@ -587,7 +587,7 @@ bool trans_map_1d_amr(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>&
       dev_allPencilsMeshes, // Pointers to velocity meshes
       dev_allPencilsContainers, // pointers to BlockContainers
       dev_pencilBlockData, // pointers into cell block data, both written and read
-      dev_blockDataOrdered, // buffer of pointers to ordered buffer data
+      gpuMemoryManager.getPointer<Realf*>(dev_blockDataOrdered), // buffer of pointers to ordered buffer data
       pencilDZ,
       pencilRatios, // buffer tor holding target ratios
       dev_pencilBlocksCount, // store how many non-empty blocks each pencil has for this GID

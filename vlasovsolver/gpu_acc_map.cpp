@@ -1273,7 +1273,7 @@ __host__ bool gpu_acc_map_1d(
       largestNBefore = std::max(largestNBefore, (size_t)SC->get_number_of_velocity_blocks(popID));
       // probe cube and flattened version now re-use gpu_blockDataOrdered[cpuThreadID].
       // Due to alignment, Flattened version is at start of buffer, followed by the cube.
-      vmesh::LocalID* probeFlattened = reinterpret_cast<vmesh::LocalID*>(host_blockDataOrdered[cellIndex]);
+      vmesh::LocalID* probeFlattened = reinterpret_cast<vmesh::LocalID*>(gpuMemoryManager.getPointer<Realf*>(host_blockDataOrdered)[cellIndex]);
       //probeCube = reinterpret_cast<vmesh::LocalID*>(host_blockDataOrdered[cpuThreadID]) + flatExtent*GPU_PROBEFLAT_N;
 
       // Fill probe cube vmesh invalid LID values (in next kernel), flattened array with zeros (here)
@@ -1290,7 +1290,7 @@ __host__ bool gpu_acc_map_1d(
    const dim3 grid_fill_invalid(n_fill_invalid,nLaunchCells,1);
    fill_probe_invalid<<<grid_fill_invalid,Hashinator::defaults::MAX_BLOCKSIZE,0,baseStream>>>(
       dev_vmeshes,
-      dev_blockDataOrdered, // recast to vmesh::LocalID *probeCube
+      gpuMemoryManager.getPointer<Realf*>(dev_blockDataOrdered), // recast to vmesh::LocalID *probeCube
       flatExtent,
       Dacc*Dother,
       invalidLocalID,
@@ -1313,7 +1313,7 @@ __host__ bool gpu_acc_map_1d(
    const dim3 grid_fill_ord(n_fill_ord,nLaunchCells,1);
    fill_probe_ordered<<<grid_fill_ord,Hashinator::defaults::MAX_BLOCKSIZE,0,baseStream>>>(
       dev_vmeshes,
-      dev_blockDataOrdered, // recast to vmesh::LocalID *probeCube
+      gpuMemoryManager.getPointer<Realf*>(dev_blockDataOrdered), // recast to vmesh::LocalID *probeCube
       flatExtent,
       gpu_block_indices_to_probe,
       cumulativeOffset
@@ -1327,7 +1327,7 @@ __host__ bool gpu_acc_map_1d(
    phiprof::Timer flattenTimer {"flatten probe cube"};
    const dim3 grid_cube(n_grid_cube,nLaunchCells,1);
    flatten_probe_cube<<<grid_cube,Hashinator::defaults::MAX_BLOCKSIZE,0,baseStream>>>(
-      dev_blockDataOrdered, // recast to vmesh::LocalID *probeCube, *probeFlattened
+      gpuMemoryManager.getPointer<Realf*>(dev_blockDataOrdered), // recast to vmesh::LocalID *probeCube, *probeFlattened
       Dacc,
       Dother,
       flatExtent,
@@ -1351,7 +1351,7 @@ __host__ bool gpu_acc_map_1d(
    const dim3 grid_scan(1,nLaunchCells,1);
    scan_probe<<<grid_scan,Hashinator::defaults::MAX_BLOCKSIZE,0,baseStream>>>(
       dev_vmeshes,
-      dev_blockDataOrdered, // recast to vmesh::LocalID *probeFlattened
+      gpuMemoryManager.getPointer<Realf*>(dev_blockDataOrdered), // recast to vmesh::LocalID *probeFlattened
       Dacc,
       Dother,
       flatExtent,
@@ -1396,7 +1396,7 @@ __host__ bool gpu_acc_map_1d(
    phiprof::Timer columnsTimer {"build columns"};
    build_column_offsets<<<grid_cube,Hashinator::defaults::MAX_BLOCKSIZE,0,baseStream>>>(
       dev_vmeshes,
-      dev_blockDataOrdered, // recast to vmesh::LocalID *probeCube, *probeFlattened
+      gpuMemoryManager.getPointer<Realf*>(dev_blockDataOrdered), // recast to vmesh::LocalID *probeCube, *probeFlattened
       D0,D1,D2,
       dimension,
       flatExtent,
@@ -1415,7 +1415,7 @@ __host__ bool gpu_acc_map_1d(
    const dim3 block_reorder(WID,WID,WID);
    reorder_blocks_by_dimension_kernel<<<grid_reorder, block_reorder, 0, baseStream>>> (
       dev_VBCs,
-      dev_blockDataOrdered,
+      gpuMemoryManager.getPointer<Realf*>(dev_blockDataOrdered),
       gpu_cell_indices_to_id,
       dev_vbwcl_vec, //dev_velocity_block_with_content_list, // use as LIDlist
       dev_columnOffsetData,
@@ -1630,7 +1630,7 @@ __host__ bool gpu_acc_map_1d(
    acceleration_kernel<<<grid_acc, block_acc, 0, baseStream>>> (
       dev_vmeshes, // indexing: cellOffset
       dev_VBCs, // indexing: cellOffset
-      dev_blockDataOrdered, //indexing: blockIdx.y
+      gpuMemoryManager.getPointer<Realf*>(dev_blockDataOrdered), //indexing: blockIdx.y
       gpu_cell_indices_to_id,
       gpu_block_indices_to_id,
       dev_columnOffsetData, //indexing: blockIdx.y

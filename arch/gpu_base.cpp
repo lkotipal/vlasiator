@@ -65,7 +65,8 @@ uint *gpu_block_indices_to_probe;
 
 // Pointers to buffers used in acceleration
 ColumnOffsets *host_columnOffsetData = NULL, *dev_columnOffsetData = NULL;
-Realf **host_blockDataOrdered = NULL, **dev_blockDataOrdered = NULL;
+std::string host_blockDataOrdered = "null";
+std::string dev_blockDataOrdered = "null";
 
 // Hash map and splitvectors buffers used in batch operations (block adjustment, acceleration)
 vmesh::VelocityMesh** host_vmeshes, **dev_vmeshes;
@@ -102,7 +103,7 @@ GPUMemoryManager gpuMemoryManager;
 // Counter for how many parallel vlasov buffers are allocated
 uint allocationCount = 0;
 // Counter for how large each allocation is
-uint gpu_vlasov_allocatedSize[MAXCPUTHREADS] = {0};
+std::vector<uint> gpu_vlasov_allocatedSize;
 
 // counters for allocated sizes in translation
 uint gpu_allocated_sumOfLengths = 0;
@@ -328,10 +329,8 @@ int gpu_reportMemory(const size_t local_cells_capacity, const size_t ghost_cells
    // DT reduction buffers are deallocated every step (GPUTODO, make persistent)
 
    size_t vlasovBuffers = 0;
-   for (uint i=0; i<allocationCount; ++i) {
-      vlasovBuffers += gpu_vlasov_allocatedSize[i]
-         * WID3 * sizeof(Realf); // gpu_blockDataOrdered[cpuThreadID] // sizes of actual buffers
-      vlasovBuffers += sizeof(Realf*); // dev_blockDataOrdered // buffer of pointers to above
+   while(gpu_vlasov_allocatedSize.size() < allocationCount){ //Make sure the gpu_vlasov_allocatedSize has enough elements
+      gpu_vlasov_allocatedSize.push_back(0);
    }
 
    size_t batchBuffers = gpu_allocated_batch_nCells * (
@@ -410,35 +409,34 @@ __host__ void gpu_vlasov_allocate(
    // Always prepare for at least VLASOV_BUFFER_MINBLOCKS blocks
    const uint maxBlocksPerCell = max(VLASOV_BUFFER_MINBLOCKS, maxBlockCount);
    allocationCount = (nCells == 1) ? 1 : P::GPUallocations;
-   if (host_blockDataOrdered == NULL) {
-      CHK_ERR( gpuMallocHost((void**)&host_blockDataOrdered,allocationCount*sizeof(Realf*)) );
-   }
-   if (dev_blockDataOrdered == NULL) {
-      CHK_ERR( gpuMalloc((void**)&dev_blockDataOrdered,allocationCount*sizeof(Realf*)) );
-   }
+   
+   gpuMemoryManager.createPointer("host_blockDataOrdered", host_blockDataOrdered);
+   gpuMemoryManager.createPointer("dev_blockDataOrdered", dev_blockDataOrdered);
+   gpuMemoryManager.allocate(dev_blockDataOrdered, allocationCount*sizeof(Realf*));
+   gpuMemoryManager.hostAllocate(host_blockDataOrdered, allocationCount*sizeof(Realf*));
+   
    for (uint i=0; i<allocationCount; ++i) {
       gpu_vlasov_allocate_perthread(i, maxBlocksPerCell);
    }
    // Above function stores buffer pointers in host_blockDataOrdered, copy pointers to dev_blockDataOrdered
-   CHK_ERR( gpuMemcpy(dev_blockDataOrdered, host_blockDataOrdered, allocationCount*sizeof(Realf*), gpuMemcpyHostToDevice) );
+   CHK_ERR( gpuMemcpy(gpuMemoryManager.getPointer<Realf*>(dev_blockDataOrdered), gpuMemoryManager.getPointer<Realf*>(host_blockDataOrdered), allocationCount*sizeof(Realf*), gpuMemcpyHostToDevice) );
 }
 
 /* Deallocation at end of simulation */
 __host__ void gpu_vlasov_deallocate() {
+   while(gpu_vlasov_allocatedSize.size() < allocationCount){ //Make sure the gpu_vlasov_allocatedSize has enough elements
+      gpu_vlasov_allocatedSize.push_back(0);
+   }
    for (uint i=0; i<allocationCount; ++i) {
-      gpu_vlasov_deallocate_perthread(i);
+      gpu_vlasov_allocatedSize[i] = 0;
    }
-   if (host_blockDataOrdered != NULL) {
-      CHK_ERR( gpuFreeHost(host_blockDataOrdered));
-   }
-   if (dev_blockDataOrdered != NULL) {
-      CHK_ERR( gpuFree(dev_blockDataOrdered));
-   }
-   host_blockDataOrdered = dev_blockDataOrdered = NULL;
 }
 
 __host__ uint gpu_vlasov_getSmallestAllocation() {
    uint smallestAllocation = std::numeric_limits<uint>::max();
+   while(gpu_vlasov_allocatedSize.size() < allocationCount){ //Make sure the gpu_vlasov_allocatedSize has enough elements
+      gpu_vlasov_allocatedSize.push_back(0);
+   }
    for (uint i=0; i<allocationCount; ++i) {
       smallestAllocation = std::min(smallestAllocation,gpu_vlasov_allocatedSize[i]);
    }
@@ -449,15 +447,11 @@ __host__ void gpu_vlasov_allocate_perthread(
    uint allocID,
    uint blockAllocationCount
    ) {
-   // Check if we already have allocated enough memory?
-   if (gpu_vlasov_allocatedSize[allocID] > blockAllocationCount * BLOCK_ALLOCATION_FACTOR) {
-      return;
+   while(gpu_vlasov_allocatedSize.size() < allocationCount){ //Make sure the gpu_vlasov_allocatedSize has enough elements
+      gpu_vlasov_allocatedSize.push_back(0);
    }
    // Potential new allocation with extra padding (including translation multiplier - GPUTODO get rid of this)
    uint newSize = blockAllocationCount * BLOCK_ALLOCATION_PADDING * TRANSLATION_BUFFER_ALLOCATION_FACTOR;
-   // Deallocate before new allocation
-   gpu_vlasov_deallocate_perthread(allocID);
-   gpuStream_t stream = gpu_getStream();
 
    // Dual use of blockDataOrdered: use also for acceleration probe cube and its flattened version.
    // Calculate required size
@@ -489,20 +483,13 @@ __host__ void gpu_vlasov_allocate_perthread(
      And in fact let's use the block memory size as the stride.
    */
    blockDataAllocation = (1 + ((blockDataAllocation - 1) / (WID3 * sizeof(Realf)))) * (WID3 * sizeof(Realf));
-   CHK_ERR( gpuMallocAsync((void**)&host_blockDataOrdered[allocID], blockDataAllocation, stream) );
+
+   gpuMemoryManager.createSubPointer(host_blockDataOrdered, allocID);
+   gpuMemoryManager.subPointerAllocate(host_blockDataOrdered, allocID, blockDataAllocation);
+   gpuMemoryManager.setSubPointer<Realf>(host_blockDataOrdered, allocID);
+
    // Store size of new allocation (in units blocks)
    gpu_vlasov_allocatedSize[allocID] = blockDataAllocation / (WID3 * sizeof(Realf));
-}
-
-__host__ void gpu_vlasov_deallocate_perthread (
-   uint allocID
-   ) {
-   if (gpu_vlasov_allocatedSize[allocID] == 0) {
-      return;
-   }
-   gpuStream_t stream = gpu_getStream();
-   CHK_ERR( gpuFreeAsync(host_blockDataOrdered[allocID],stream) );
-   gpu_vlasov_allocatedSize[allocID] = 0;
 }
 
 /** Allocation and deallocation for pointers used by batch operations in block adjustment */
