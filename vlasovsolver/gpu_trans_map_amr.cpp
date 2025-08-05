@@ -419,7 +419,7 @@ bool trans_map_1d_amr(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>&
       uint thread_largestFoundMeshSize = 0;
       #pragma omp for
       for(uint celli = 0; celli < nAllCells; celli++){
-         host_vmeshes[celli] = mpiGrid[allCells[celli]]->dev_get_velocity_mesh(popID); // GPU-side vmesh
+         (gpuMemoryManager.getPointer<vmesh::VelocityMesh*>(host_vmeshes))[celli] = mpiGrid[allCells[celli]]->dev_get_velocity_mesh(popID); // GPU-side vmesh
          const uint thisMeshSize = mpiGrid[allCells[celli]]->get_velocity_mesh(popID)->size(); // get cached size from CPU side
          thread_largestFoundMeshSize = thisMeshSize > thread_largestFoundMeshSize ? thisMeshSize : thread_largestFoundMeshSize;
          #ifdef DEBUG_VLASIATOR
@@ -443,7 +443,7 @@ bool trans_map_1d_amr(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>&
 
    allocateTimer.start();
    // Copy vmesh pointers to GPU
-   CHK_ERR( gpuMemcpy(dev_vmeshes, host_vmeshes, nAllCells*sizeof(vmesh::VelocityMesh*), gpuMemcpyHostToDevice) );
+   CHK_ERR( gpuMemcpy(gpuMemoryManager.getPointer<vmesh::VelocityMesh*>(dev_vmeshes), gpuMemoryManager.getPointer<vmesh::VelocityMesh*>(host_vmeshes), nAllCells*sizeof(vmesh::VelocityMesh*), gpuMemcpyHostToDevice) );
    // Reserve size for unionOfBlocksSet
    gpu_trans_allocate(0,0,largestFoundMeshSize,0,0,0);
    allocateTimer.stop();
@@ -475,7 +475,7 @@ bool trans_map_1d_amr(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>&
    gather_union_of_blocks_kernel<<<gatherdims_blocks, gatherdims_threads, 0, bgStream>>> (
 #endif
       dev_unionOfBlocksSet,
-      dev_vmeshes,
+      gpuMemoryManager.getPointer<vmesh::VelocityMesh*>(dev_vmeshes),
       nAllCells
       );
    CHK_ERR( gpuPeekAtLastError() );

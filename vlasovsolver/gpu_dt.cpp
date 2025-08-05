@@ -134,15 +134,15 @@ void reduce_vlasov_dt(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGr
          host_dxdydz[3*celli*nPOP + 3*popID + 0] = cell->parameters[CellParams::DX];
          host_dxdydz[3*celli*nPOP + 3*popID + 1] = cell->parameters[CellParams::DY];
          host_dxdydz[3*celli*nPOP + 3*popID + 2] = cell->parameters[CellParams::DZ];
-         host_vmeshes[celli*nPOP + popID] = cell->dev_get_velocity_mesh(popID); // GPU-side vmesh
+         (gpuMemoryManager.getPointer<vmesh::VelocityMesh*>(host_vmeshes))[celli*nPOP + popID] = cell->dev_get_velocity_mesh(popID); // GPU-side vmesh
       }
    }
    CHK_ERR( gpuMemcpy(dev_dxdydz, host_dxdydz, nAllCells*nPOP*3*sizeof(Real), gpuMemcpyHostToDevice) );
-   CHK_ERR( gpuMemcpy(dev_vmeshes, host_vmeshes, nAllCells*nPOP*sizeof(vmesh::VelocityMesh*), gpuMemcpyHostToDevice) );
+   CHK_ERR( gpuMemcpy(gpuMemoryManager.getPointer<vmesh::VelocityMesh*>(dev_vmeshes), gpuMemoryManager.getPointer<vmesh::VelocityMesh*>(host_vmeshes), nAllCells*nPOP*sizeof(vmesh::VelocityMesh*), gpuMemcpyHostToDevice) );
 
    // Launch kernel gathering largest allowed dt for velocity
    reduce_v_dt_kernel<<<nAllCells, GPUTHREADS*WARPSPERBLOCK, 0, 0>>> (
-      dev_vmeshes,
+      gpuMemoryManager.getPointer<vmesh::VelocityMesh*>(dev_vmeshes),
       dev_max_dt,
       dev_dxdydz,
       nAllCells*nPOP

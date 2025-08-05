@@ -602,7 +602,7 @@ void pitchAngleDiffusion(dccrg::Dccrg<spatial_cell::SpatialCell,dccrg::Cartesian
       host_bulkVY[CellIdx] = cell->parameters[CellParams::VY];
       host_bulkVZ[CellIdx] = cell->parameters[CellParams::VZ];
 
-      host_VBCs[CellIdx] = cell->dev_get_velocity_blocks(popID);
+      (gpuMemoryManager.getPointer<vmesh::VelocityBlockContainer*>(host_VBCs))[CellIdx] = cell->dev_get_velocity_blocks(popID);
    } // End spatial cell loop
 
    // Copy data to device
@@ -612,7 +612,7 @@ void pitchAngleDiffusion(dccrg::Dccrg<spatial_cell::SpatialCell,dccrg::Cartesian
    CHK_ERR( gpuMemcpy(dev_bulkVX, host_bulkVX, numberOfLocalCells*sizeof(Real), gpuMemcpyHostToDevice) );
    CHK_ERR( gpuMemcpy(dev_bulkVY, host_bulkVY, numberOfLocalCells*sizeof(Real), gpuMemcpyHostToDevice) );
    CHK_ERR( gpuMemcpy(dev_bulkVZ, host_bulkVZ, numberOfLocalCells*sizeof(Real), gpuMemcpyHostToDevice) );
-   CHK_ERR( gpuMemcpy(dev_VBCs, host_VBCs, numberOfLocalCells*sizeof(vmesh::VelocityBlockContainer*), gpuMemcpyHostToDevice) );
+   CHK_ERR( gpuMemcpy(gpuMemoryManager.getPointer<vmesh::VelocityBlockContainer*>(dev_VBCs), gpuMemoryManager.getPointer<vmesh::VelocityBlockContainer*>(host_VBCs), numberOfLocalCells*sizeof(vmesh::VelocityBlockContainer*), gpuMemcpyHostToDevice) );
 
    if (getObjectWrapper().particleSpecies[popID].sparse_conserve_mass) {
       dim3 threadsPerBlock_massConservation(WID, WID, WID);
@@ -621,7 +621,7 @@ void pitchAngleDiffusion(dccrg::Dccrg<spatial_cell::SpatialCell,dccrg::Cartesian
       // Ensure mass conservation
       calculateDensity_kernel<<<blocksPerGrid_massConservation, threadsPerBlock_massConservation>>>(
          dev_densityPreAdjust,
-         dev_VBCs
+         gpuMemoryManager.getPointer<vmesh::VelocityBlockContainer*>(dev_VBCs)
       );
       
       CHK_ERR( gpuPeekAtLastError() );
@@ -691,7 +691,7 @@ void pitchAngleDiffusion(dccrg::Dccrg<spatial_cell::SpatialCell,dccrg::Cartesian
       build2dArrayOfFvmu_kernel<<<blocksPerGrid_build2dArrayOfFvmu, threadsPerBlock_build2dArrayOfFvmu>>>(
          dev_cellIdxArray,
          dev_velocityIdxArray,
-         dev_VBCs,
+         gpuMemoryManager.getPointer<vmesh::VelocityBlockContainer*>(dev_VBCs),
          dev_bulkVX,
          dev_bulkVY,
          dev_bulkVZ,
@@ -809,7 +809,7 @@ void pitchAngleDiffusion(dccrg::Dccrg<spatial_cell::SpatialCell,dccrg::Cartesian
          dev_cellIdxArray,
          dev_remappedCellIdxArray,
          dev_velocityIdxArray,
-         dev_VBCs,
+         gpuMemoryManager.getPointer<vmesh::VelocityBlockContainer*>(dev_VBCs),
          dev_bulkVX,
          dev_bulkVY,
          dev_bulkVZ,
@@ -845,7 +845,7 @@ void pitchAngleDiffusion(dccrg::Dccrg<spatial_cell::SpatialCell,dccrg::Cartesian
       // Ensure mass conservation
       calculateDensity_kernel<<<blocksPerGrid_massConservation, threadsPerBlock_massConservation>>>(
          dev_densityPostAdjust,
-         dev_VBCs
+         gpuMemoryManager.getPointer<vmesh::VelocityBlockContainer*>(dev_VBCs)
       );
          
       CHK_ERR( gpuPeekAtLastError() );
@@ -853,7 +853,7 @@ void pitchAngleDiffusion(dccrg::Dccrg<spatial_cell::SpatialCell,dccrg::Cartesian
       conserveMass_kernel<<<blocksPerGrid_massConservation, threadsPerBlock_massConservation>>>(
          dev_densityPreAdjust,
          dev_densityPostAdjust,
-         dev_VBCs
+         gpuMemoryManager.getPointer<vmesh::VelocityBlockContainer*>(dev_VBCs)
       );
          
       CHK_ERR( gpuPeekAtLastError() );

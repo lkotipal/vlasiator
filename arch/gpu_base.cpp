@@ -69,29 +69,16 @@ std::string host_blockDataOrdered = "null";
 std::string dev_blockDataOrdered = "null";
 
 // Hash map and splitvectors buffers used in batch operations (block adjustment, acceleration)
-vmesh::VelocityMesh** host_vmeshes, **dev_vmeshes;
-vmesh::VelocityBlockContainer** host_VBCs, **dev_VBCs;
-Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>** host_allMaps, **dev_allMaps;
-split::SplitVector<vmesh::GlobalID> ** host_vbwcl_vec, **dev_vbwcl_vec;
-split::SplitVector<vmesh::GlobalID> ** host_lists_with_replace_new, **dev_lists_with_replace_new;
-split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>> **host_lists_delete, **dev_lists_delete;
-split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>> **host_lists_to_replace, **dev_lists_to_replace;
-split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>> **host_lists_with_replace_old, **dev_lists_with_replace_old;
-split::SplitVector<vmesh::GlobalID> ** host_vbwcl_neigh, **dev_vbwcl_neigh;
+std::string host_vmeshes = "null", dev_vmeshes = "null", host_VBCs = "null", dev_VBCs = "null", host_allMaps = "null", dev_allMaps = "null";
+std::string host_vbwcl_vec = "null", dev_vbwcl_vec = "null", host_lists_with_replace_new = "null", dev_lists_with_replace_new = "null";
+std::string host_lists_delete = "null", dev_lists_delete = "null", host_lists_to_replace = "null", dev_lists_to_replace = "null";
+std::string host_lists_with_replace_old = "null", dev_lists_with_replace_old = "null";
 
 // Counters used in batch operations (block adjustment, acceleration)
-vmesh::LocalID* host_nWithContent, *dev_nWithContent;
-vmesh::LocalID* host_nBefore, *dev_nBefore;
-vmesh::LocalID* host_nAfter, *dev_nAfter;
-vmesh::LocalID* host_nBlocksToChange, *dev_nBlocksToChange;
-vmesh::LocalID* host_resizeSuccess, *dev_resizeSuccess;
-vmesh::LocalID* host_overflownElements, *dev_overflownElements;
-vmesh::LocalID* host_nColumns, *dev_nColumns;
-vmesh::LocalID* host_nColumnSets, *dev_nColumnSets;
-Real* host_minValues, *dev_minValues;
-Real* host_massLoss, *dev_massLoss;
-Real* host_mass, *dev_mass;
-Realf* host_intersections, *dev_intersections; // acceleration only
+std::string host_nBefore = "null", dev_nBefore = "null", host_nAfter = "null", dev_nAfter = "null", host_nBlocksToChange = "null", dev_nBlocksToChange = "null";
+std::string host_resizeSuccess = "null", dev_resizeSuccess = "null", host_overflownElements = "null", dev_overflownElements = "null";
+std::string host_minValues = "null", dev_minValues = "null", host_massLoss = "null", dev_massLoss = "null";
+std::string host_intersections = "null", dev_intersections = "null"; // acceleration only
 
 // Buffers, Vector and set for use in translation
 split::SplitVector<vmesh::GlobalID> *unionOfBlocks=NULL, *dev_unionOfBlocks=NULL;
@@ -334,15 +321,8 @@ int gpu_reportMemory(const size_t local_cells_capacity, const size_t ghost_cells
    }
 
    size_t batchBuffers = gpu_allocated_batch_nCells * (
-      sizeof(vmesh::VelocityMesh*) // dev_vmeshes
-      + sizeof(vmesh::VelocityBlockContainer*) // dev_VBCs
-      + 2 * sizeof(Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*) // dev_allMaps
-      + 2 * sizeof(split::SplitVector<vmesh::GlobalID>*) // dev_vbwcl_vec, dev_lists_with_replace_new
-      + 3 * sizeof(split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*) // dev_lists_delete, dev_lists_to_replace, dev_lists_with_replace_old
-      + 8 * sizeof(vmesh::LocalID) // dev_nWithContent, dev_nBefore, dev_nAfter, dev_nBlocksToChange, dev_resizeSuccess, dev_overflownElements, dev_nColumns, dev_nColumnSets
-      + 3 * sizeof(Real) // dev_minValue, dev_massLoss, dev_mass
+      0
       );
-   batchBuffers += gpu_allocated_batch_maxNeighbours * sizeof(split::SplitVector<vmesh::GlobalID>*); // dev_vbwcl_neigh
 
    size_t accBuffers = 0;
    for (uint i=0; i<allocationCount; ++i) {
@@ -498,104 +478,86 @@ __host__ void gpu_batch_allocate(uint nCells, uint maxNeighbours) {
       gpu_batch_deallocate(true, false);
       gpu_allocated_batch_nCells = nCells * BLOCK_ALLOCATION_FACTOR;
 
-      CHK_ERR( gpuMallocHost((void**)&host_vmeshes,gpu_allocated_batch_nCells*sizeof(vmesh::VelocityMesh*)) );
-      CHK_ERR( gpuMallocHost((void**)&host_VBCs,gpu_allocated_batch_nCells*sizeof(vmesh::VelocityBlockContainer*)) );
-      CHK_ERR( gpuMallocHost((void**)&host_allMaps, 2*gpu_allocated_batch_nCells*sizeof(Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*)) ); // note double size
-      CHK_ERR( gpuMallocHost((void**)&host_vbwcl_vec, gpu_allocated_batch_nCells*sizeof(split::SplitVector<vmesh::GlobalID>*)) );
-      CHK_ERR( gpuMallocHost((void**)&host_lists_with_replace_new, gpu_allocated_batch_nCells*sizeof(split::SplitVector<vmesh::GlobalID>*)) );
-      CHK_ERR( gpuMallocHost((void**)&host_lists_delete, gpu_allocated_batch_nCells*sizeof(split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*)) );
-      CHK_ERR( gpuMallocHost((void**)&host_lists_to_replace, gpu_allocated_batch_nCells*sizeof(split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*)) );
-      CHK_ERR( gpuMallocHost((void**)&host_lists_with_replace_old, gpu_allocated_batch_nCells*sizeof(split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*)) );
-      CHK_ERR( gpuMallocHost((void**)&host_nWithContent,gpu_allocated_batch_nCells*sizeof(vmesh::LocalID)) );
-      CHK_ERR( gpuMallocHost((void**)&host_nBefore,gpu_allocated_batch_nCells*sizeof(vmesh::LocalID)) );
-      CHK_ERR( gpuMallocHost((void**)&host_nAfter,gpu_allocated_batch_nCells*sizeof(vmesh::LocalID)) );
-      CHK_ERR( gpuMallocHost((void**)&host_nBlocksToChange,gpu_allocated_batch_nCells*sizeof(vmesh::LocalID)) );
-      CHK_ERR( gpuMallocHost((void**)&host_resizeSuccess,gpu_allocated_batch_nCells*sizeof(vmesh::LocalID)) );
-      CHK_ERR( gpuMallocHost((void**)&host_overflownElements,gpu_allocated_batch_nCells*sizeof(vmesh::LocalID)) );
-      CHK_ERR( gpuMallocHost((void**)&host_nColumns,gpu_allocated_batch_nCells*sizeof(vmesh::LocalID)) );
-      CHK_ERR( gpuMallocHost((void**)&host_nColumnSets,gpu_allocated_batch_nCells*sizeof(vmesh::LocalID)) );
-      CHK_ERR( gpuMallocHost((void**)&host_minValues, gpu_allocated_batch_nCells*sizeof(Real)) );
-      CHK_ERR( gpuMallocHost((void**)&host_massLoss, gpu_allocated_batch_nCells*sizeof(Real)) );
-      CHK_ERR( gpuMallocHost((void**)&host_mass, gpu_allocated_batch_nCells*sizeof(Real)) );
-      CHK_ERR( gpuMallocHost((void**)&host_intersections, gpu_allocated_batch_nCells*4*sizeof(Realf)) );
+      gpuMemoryManager.createPointer("host_vmeshes", host_vmeshes);
+      gpuMemoryManager.createPointer("host_VBCs", host_VBCs);
+      gpuMemoryManager.createPointer("host_allMaps", host_allMaps);
+      gpuMemoryManager.createPointer("host_vbwcl_vec", host_vbwcl_vec);
+      gpuMemoryManager.createPointer("host_lists_with_replace_new", host_lists_with_replace_new);
+      gpuMemoryManager.createPointer("host_lists_delete", host_lists_delete);
+      gpuMemoryManager.createPointer("host_lists_to_replace", host_lists_to_replace);
+      gpuMemoryManager.createPointer("host_lists_with_replace_old", host_lists_with_replace_old);
+      gpuMemoryManager.createPointer("host_nBefore", host_nBefore);
+      gpuMemoryManager.createPointer("host_nAfter", host_nAfter);
+      gpuMemoryManager.createPointer("host_nBlocksToChange", host_nBlocksToChange);
+      gpuMemoryManager.createPointer("host_resizeSuccess", host_resizeSuccess);
+      gpuMemoryManager.createPointer("host_overflownElements", host_overflownElements);
+      gpuMemoryManager.createPointer("host_minValues", host_minValues);
+      gpuMemoryManager.createPointer("host_massLoss", host_massLoss);
+      gpuMemoryManager.createPointer("host_intersections", host_intersections);
 
-      CHK_ERR( gpuMalloc((void**)&dev_vmeshes,gpu_allocated_batch_nCells*sizeof(vmesh::VelocityMesh*)) );
-      CHK_ERR( gpuMalloc((void**)&dev_VBCs,gpu_allocated_batch_nCells*sizeof(vmesh::VelocityBlockContainer*)) );
-      CHK_ERR( gpuMalloc((void**)&dev_allMaps, 2*gpu_allocated_batch_nCells*sizeof(Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*)) );
-      CHK_ERR( gpuMalloc((void**)&dev_vbwcl_vec, gpu_allocated_batch_nCells*sizeof(split::SplitVector<vmesh::GlobalID>*)) );
-      CHK_ERR( gpuMalloc((void**)&dev_lists_with_replace_new, gpu_allocated_batch_nCells*sizeof(split::SplitVector<vmesh::GlobalID>*)) );
-      CHK_ERR( gpuMalloc((void**)&dev_lists_delete, gpu_allocated_batch_nCells*sizeof(split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*)) );
-      CHK_ERR( gpuMalloc((void**)&dev_lists_to_replace, gpu_allocated_batch_nCells*sizeof(split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*)) );
-      CHK_ERR( gpuMalloc((void**)&dev_lists_with_replace_old, gpu_allocated_batch_nCells*sizeof(split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*)) );
-      CHK_ERR( gpuMalloc((void**)&dev_nWithContent,gpu_allocated_batch_nCells*sizeof(vmesh::LocalID)) );
-      CHK_ERR( gpuMalloc((void**)&dev_nBefore,gpu_allocated_batch_nCells*sizeof(vmesh::LocalID)) );
-      CHK_ERR( gpuMalloc((void**)&dev_nAfter,gpu_allocated_batch_nCells*sizeof(vmesh::LocalID)) );
-      CHK_ERR( gpuMalloc((void**)&dev_nBlocksToChange,gpu_allocated_batch_nCells*sizeof(vmesh::LocalID)) );
-      CHK_ERR( gpuMalloc((void**)&dev_resizeSuccess,gpu_allocated_batch_nCells*sizeof(vmesh::LocalID)) );
-      CHK_ERR( gpuMalloc((void**)&dev_overflownElements,gpu_allocated_batch_nCells*sizeof(vmesh::LocalID)) );
-      CHK_ERR( gpuMalloc((void**)&dev_nColumns,gpu_allocated_batch_nCells*sizeof(vmesh::LocalID)) );
-      CHK_ERR( gpuMalloc((void**)&dev_nColumnSets,gpu_allocated_batch_nCells*sizeof(vmesh::LocalID)) );
-      CHK_ERR( gpuMalloc((void**)&dev_minValues,gpu_allocated_batch_nCells*sizeof(Real)) );
-      CHK_ERR( gpuMalloc((void**)&dev_massLoss, gpu_allocated_batch_nCells*sizeof(Real)) );
-      CHK_ERR( gpuMalloc((void**)&dev_mass, gpu_allocated_batch_nCells*sizeof(Real)) );
-      CHK_ERR( gpuMalloc((void**)&dev_intersections, gpu_allocated_batch_nCells*4*sizeof(Realf)) );
+      gpuMemoryManager.hostAllocate(host_vmeshes, gpu_allocated_batch_nCells*sizeof(vmesh::VelocityMesh*));
+      gpuMemoryManager.hostAllocate(host_VBCs, gpu_allocated_batch_nCells*sizeof(vmesh::VelocityBlockContainer*));
+      gpuMemoryManager.hostAllocate(host_allMaps, 2*gpu_allocated_batch_nCells*sizeof(Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*)); // note double size
+      gpuMemoryManager.hostAllocate(host_vbwcl_vec, gpu_allocated_batch_nCells*sizeof(split::SplitVector<vmesh::GlobalID>*));
+      gpuMemoryManager.hostAllocate(host_lists_with_replace_new, gpu_allocated_batch_nCells*sizeof(split::SplitVector<vmesh::GlobalID>*));
+      gpuMemoryManager.hostAllocate(host_lists_delete, gpu_allocated_batch_nCells*sizeof(split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*));
+      gpuMemoryManager.hostAllocate(host_lists_to_replace, gpu_allocated_batch_nCells*sizeof(split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*));
+      gpuMemoryManager.hostAllocate(host_lists_with_replace_old, gpu_allocated_batch_nCells*sizeof(split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*));
+      gpuMemoryManager.hostAllocate(host_nBefore, gpu_allocated_batch_nCells*sizeof(vmesh::LocalID));
+      gpuMemoryManager.hostAllocate(host_nAfter, gpu_allocated_batch_nCells*sizeof(vmesh::LocalID));
+      gpuMemoryManager.hostAllocate(host_nBlocksToChange, gpu_allocated_batch_nCells*sizeof(vmesh::LocalID));
+      gpuMemoryManager.hostAllocate(host_resizeSuccess, gpu_allocated_batch_nCells*sizeof(vmesh::LocalID));
+      gpuMemoryManager.hostAllocate(host_overflownElements, gpu_allocated_batch_nCells*sizeof(vmesh::LocalID));
+      gpuMemoryManager.hostAllocate(host_minValues, gpu_allocated_batch_nCells*sizeof(Real));
+      gpuMemoryManager.hostAllocate(host_massLoss, gpu_allocated_batch_nCells*sizeof(Real));
+      gpuMemoryManager.hostAllocate(host_intersections, gpu_allocated_batch_nCells*4*sizeof(Realf));
+
+      gpuMemoryManager.createPointer("dev_vmeshes", dev_vmeshes);
+      gpuMemoryManager.createPointer("dev_VBCs", dev_VBCs);
+      gpuMemoryManager.createPointer("dev_allMaps", dev_allMaps);
+      gpuMemoryManager.createPointer("dev_vbwcl_vec", dev_vbwcl_vec);
+      gpuMemoryManager.createPointer("dev_lists_with_replace_new", dev_lists_with_replace_new);
+      gpuMemoryManager.createPointer("dev_lists_delete", dev_lists_delete);
+      gpuMemoryManager.createPointer("dev_lists_to_replace", dev_lists_to_replace);
+      gpuMemoryManager.createPointer("dev_lists_with_replace_old", dev_lists_with_replace_old);
+      gpuMemoryManager.createPointer("dev_nBefore", dev_nBefore);
+      gpuMemoryManager.createPointer("dev_nAfter", dev_nAfter);
+      gpuMemoryManager.createPointer("dev_nBlocksToChange", dev_nBlocksToChange);
+      gpuMemoryManager.createPointer("dev_resizeSuccess", dev_resizeSuccess);
+      gpuMemoryManager.createPointer("dev_overflownElements", dev_overflownElements);
+      gpuMemoryManager.createPointer("dev_minValues", dev_minValues);
+      gpuMemoryManager.createPointer("dev_massLoss", dev_massLoss);
+      gpuMemoryManager.createPointer("dev_intersections", dev_intersections);
+
+      gpuMemoryManager.allocate(dev_vmeshes, gpu_allocated_batch_nCells*sizeof(vmesh::VelocityMesh*));
+      gpuMemoryManager.allocate(dev_VBCs, gpu_allocated_batch_nCells*sizeof(vmesh::VelocityBlockContainer*));
+      gpuMemoryManager.allocate(dev_allMaps, 2*gpu_allocated_batch_nCells*sizeof(Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*));
+      gpuMemoryManager.allocate(dev_vbwcl_vec, gpu_allocated_batch_nCells*sizeof(split::SplitVector<vmesh::GlobalID>*));
+      gpuMemoryManager.allocate(dev_lists_with_replace_new, gpu_allocated_batch_nCells*sizeof(split::SplitVector<vmesh::GlobalID>*));
+      gpuMemoryManager.allocate(dev_lists_delete, gpu_allocated_batch_nCells*sizeof(split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*));
+      gpuMemoryManager.allocate(dev_lists_to_replace, gpu_allocated_batch_nCells*sizeof(split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*));
+      gpuMemoryManager.allocate(dev_lists_with_replace_old, gpu_allocated_batch_nCells*sizeof(split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*));
+      gpuMemoryManager.allocate(dev_nBefore, gpu_allocated_batch_nCells*sizeof(vmesh::LocalID));
+      gpuMemoryManager.allocate(dev_nAfter, gpu_allocated_batch_nCells*sizeof(vmesh::LocalID));
+      gpuMemoryManager.allocate(dev_nBlocksToChange, gpu_allocated_batch_nCells*sizeof(vmesh::LocalID));
+      gpuMemoryManager.allocate(dev_resizeSuccess, gpu_allocated_batch_nCells*sizeof(vmesh::LocalID));
+      gpuMemoryManager.allocate(dev_overflownElements, gpu_allocated_batch_nCells*sizeof(vmesh::LocalID));
+      gpuMemoryManager.allocate(dev_minValues, gpu_allocated_batch_nCells*sizeof(Real));
+      gpuMemoryManager.allocate(dev_massLoss, gpu_allocated_batch_nCells*sizeof(Real));
+      gpuMemoryManager.allocate(dev_intersections, gpu_allocated_batch_nCells*4*sizeof(Realf));
    }
 
    if (maxNeighbours*gpu_allocated_batch_nCells > gpu_allocated_batch_maxNeighbours) {
       gpu_batch_deallocate(false, true);
       gpu_allocated_batch_maxNeighbours = maxNeighbours * gpu_allocated_batch_nCells * BLOCK_ALLOCATION_FACTOR;
-      CHK_ERR( gpuMallocHost((void**)&host_vbwcl_neigh, gpu_allocated_batch_maxNeighbours*sizeof(split::SplitVector<vmesh::GlobalID>*)) );
-      CHK_ERR( gpuMalloc((void**)&dev_vbwcl_neigh, gpu_allocated_batch_maxNeighbours*sizeof(split::SplitVector<vmesh::GlobalID>*)) );
    }
 }
 __host__ void gpu_batch_deallocate(bool first, bool second) {
    if (gpu_allocated_batch_nCells != 0 && first) {
       gpu_allocated_batch_nCells = 0;
-      CHK_ERR( gpuFreeHost(host_vmeshes));
-      CHK_ERR( gpuFreeHost(host_VBCs));
-      CHK_ERR( gpuFreeHost(host_allMaps));
-      CHK_ERR( gpuFreeHost(host_vbwcl_vec));
-      CHK_ERR( gpuFreeHost(host_lists_with_replace_new));
-      CHK_ERR( gpuFreeHost(host_lists_delete));
-      CHK_ERR( gpuFreeHost(host_lists_to_replace));
-      CHK_ERR( gpuFreeHost(host_lists_with_replace_old));
-      CHK_ERR( gpuFreeHost(host_nWithContent));
-      CHK_ERR( gpuFreeHost(host_nBefore));
-      CHK_ERR( gpuFreeHost(host_nAfter));
-      CHK_ERR( gpuFreeHost(host_nBlocksToChange));
-      CHK_ERR( gpuFreeHost(host_resizeSuccess));
-      CHK_ERR( gpuFreeHost(host_overflownElements));
-      CHK_ERR( gpuFreeHost(host_nColumns));
-      CHK_ERR( gpuFreeHost(host_nColumnSets));
-      CHK_ERR( gpuFreeHost(host_minValues));
-      CHK_ERR( gpuFreeHost(host_massLoss));
-      CHK_ERR( gpuFreeHost(host_mass));
-      CHK_ERR( gpuFreeHost(host_intersections));
-      CHK_ERR( gpuFree(dev_vmeshes));
-      CHK_ERR( gpuFree(dev_VBCs));
-      CHK_ERR( gpuFree(dev_allMaps));
-      CHK_ERR( gpuFree(dev_vbwcl_vec));
-      CHK_ERR( gpuFree(dev_lists_with_replace_new));
-      CHK_ERR( gpuFree(dev_lists_delete));
-      CHK_ERR( gpuFree(dev_lists_to_replace));
-      CHK_ERR( gpuFree(dev_lists_with_replace_old));
-      CHK_ERR( gpuFree(dev_nWithContent));
-      CHK_ERR( gpuFree(dev_nBefore));
-      CHK_ERR( gpuFree(dev_nAfter));
-      CHK_ERR( gpuFree(dev_nBlocksToChange));
-      CHK_ERR( gpuFree(dev_resizeSuccess));
-      CHK_ERR( gpuFree(dev_overflownElements));
-      CHK_ERR( gpuFree(dev_nColumns));
-      CHK_ERR( gpuFree(dev_nColumnSets));
-      CHK_ERR( gpuFree(dev_minValues));
-      CHK_ERR( gpuFree(dev_massLoss));
-      CHK_ERR( gpuFree(dev_mass));
-      CHK_ERR( gpuFree(dev_intersections));
    }
    if (gpu_allocated_batch_maxNeighbours != 0 && second) {
       gpu_allocated_batch_maxNeighbours = 0;
-      CHK_ERR( gpuFreeHost(host_vbwcl_neigh));
-      CHK_ERR( gpuFree(dev_vbwcl_neigh));
    }
 }
 

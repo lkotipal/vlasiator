@@ -51,6 +51,13 @@ void update_velocity_block_content_lists(
    // Allocate buffers for GPU operations
    phiprof::Timer mallocTimer {"allocate buffers for content list analysis"};
    gpu_batch_allocate(nCells,0);
+
+   gpuMemoryManager.startSession(0,0);
+   gpuMemoryManager.sessionHostAllocate<vmesh::LocalID>("host_nWithContent", nCells * BLOCK_ALLOCATION_FACTOR*sizeof(vmesh::LocalID));
+   gpuMemoryManager.sessionHostAllocate<Real>("host_mass", nCells * BLOCK_ALLOCATION_FACTOR*sizeof(Real));
+   gpuMemoryManager.sessionAllocate<vmesh::LocalID>("dev_nWithContent", nCells * BLOCK_ALLOCATION_FACTOR*sizeof(vmesh::LocalID));
+   gpuMemoryManager.sessionAllocate<Real>("dev_mass", nCells * BLOCK_ALLOCATION_FACTOR*sizeof(Real));
+
    mallocTimer.stop();
 
    phiprof::Timer sparsityTimer {"update Sparsity values, apply memory reservations"};
@@ -75,12 +82,12 @@ void update_velocity_block_content_lists(
 
          // might be better to apply reservation *after* clearing maps, but pointers might change.
          // Store values and pointers
-         host_vmeshes[i] = SC->dev_get_velocity_mesh(popID);
-         host_VBCs[i] = SC->dev_get_velocity_blocks(popID);
-         host_minValues[i] = SC->getVelocityBlockMinValue(popID);
-         host_allMaps[2*i] = SC->dev_velocity_block_with_content_map;
-         host_allMaps[2*i+1] = SC->dev_velocity_block_with_no_content_map;
-         host_vbwcl_vec[i] = SC->dev_velocity_block_with_content_list;
+         (gpuMemoryManager.getPointer<vmesh::VelocityMesh*>(host_vmeshes))[i] = SC->dev_get_velocity_mesh(popID);
+         (gpuMemoryManager.getPointer<vmesh::VelocityBlockContainer*>(host_VBCs))[i] = SC->dev_get_velocity_blocks(popID);
+         (gpuMemoryManager.getPointer<Real>(host_minValues))[i] = SC->getVelocityBlockMinValue(popID);
+         (gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>(host_allMaps))[2*i] = SC->dev_velocity_block_with_content_map;
+         (gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>(host_allMaps))[2*i+1] = SC->dev_velocity_block_with_no_content_map;
+         (gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>(host_vbwcl_vec))[i] = SC->dev_velocity_block_with_content_list;
 
          // Gather largest values
          threadLargestVelMesh = std::max(threadLargestVelMesh, mySize);
@@ -97,13 +104,13 @@ void update_velocity_block_content_lists(
 
    phiprof::Timer copyTimer {"copy values to device"};
    // Copy pointers and counters over to device
-   CHK_ERR( gpuMemcpyAsync(dev_allMaps, host_allMaps, 2*nCells*sizeof(Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*), gpuMemcpyHostToDevice, baseStream) );
-   CHK_ERR( gpuMemcpyAsync(dev_vbwcl_vec, host_vbwcl_vec, nCells*sizeof(split::SplitVector<vmesh::GlobalID>*), gpuMemcpyHostToDevice, baseStream) );
-   CHK_ERR( gpuMemcpyAsync(dev_minValues, host_minValues, nCells*sizeof(Real), gpuMemcpyHostToDevice, baseStream) );
-   CHK_ERR( gpuMemcpyAsync(dev_vmeshes, host_vmeshes, nCells*sizeof(vmesh::VelocityMesh*), gpuMemcpyHostToDevice, baseStream) );
-   CHK_ERR( gpuMemcpyAsync(dev_VBCs, host_VBCs, nCells*sizeof(vmesh::VelocityBlockContainer*), gpuMemcpyHostToDevice, baseStream) );
+   CHK_ERR( gpuMemcpyAsync(gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>(dev_allMaps), gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>(host_allMaps), 2*nCells*sizeof(Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*), gpuMemcpyHostToDevice, baseStream) );
+   CHK_ERR( gpuMemcpyAsync(gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>(dev_vbwcl_vec), gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>(host_vbwcl_vec), nCells*sizeof(split::SplitVector<vmesh::GlobalID>*), gpuMemcpyHostToDevice, baseStream) );
+   CHK_ERR( gpuMemcpyAsync(gpuMemoryManager.getPointer<Real>(dev_minValues), gpuMemoryManager.getPointer<Real>(host_minValues), nCells*sizeof(Real), gpuMemcpyHostToDevice, baseStream) );
+   CHK_ERR( gpuMemcpyAsync(gpuMemoryManager.getPointer<vmesh::VelocityMesh*>(dev_vmeshes), gpuMemoryManager.getPointer<vmesh::VelocityMesh*>(host_vmeshes), nCells*sizeof(vmesh::VelocityMesh*), gpuMemcpyHostToDevice, baseStream) );
+   CHK_ERR( gpuMemcpyAsync(gpuMemoryManager.getPointer<vmesh::VelocityBlockContainer*>(dev_VBCs), gpuMemoryManager.getPointer<vmesh::VelocityBlockContainer*>(host_VBCs), nCells*sizeof(vmesh::VelocityBlockContainer*), gpuMemcpyHostToDevice, baseStream) );
    if (gatherMass) {
-      CHK_ERR( gpuMemsetAsync(dev_mass, 0, nCells*sizeof(Real), baseStream) );
+      CHK_ERR( gpuMemsetAsync(gpuMemoryManager.getSessionPointer<Real>("dev_mass"), 0, nCells*sizeof(Real), baseStream) );
    }
    CHK_ERR( gpuStreamSynchronize(baseStream) );
    copyTimer.stop();
@@ -118,12 +125,12 @@ void update_velocity_block_content_lists(
    phiprof::Timer blockKernelTimer {"update content lists kernel"};
    const dim3 grid2(largestVelMesh,nCells,1);
    batch_update_velocity_block_content_lists_kernel<<<grid2, WID3, 0, baseStream>>> (
-      dev_vmeshes,
-      dev_VBCs,
-      dev_allMaps,
-      dev_minValues,
+      gpuMemoryManager.getPointer<vmesh::VelocityMesh*>(dev_vmeshes),
+      gpuMemoryManager.getPointer<vmesh::VelocityBlockContainer*>(dev_VBCs),
+      gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>(dev_allMaps),
+      gpuMemoryManager.getPointer<Real>(dev_minValues),
       gatherMass, // Also gathers total mass?
-      dev_mass
+      gpuMemoryManager.getSessionPointer<Real>("dev_mass")
       );
    CHK_ERR( gpuPeekAtLastError() );
    CHK_ERR( gpuStreamSynchronize(baseStream) );
@@ -144,13 +151,13 @@ void update_velocity_block_content_lists(
                };
    // Go via launcher due to templating
    extract_GIDs_kernel_launcher<decltype(rule),vmesh::GlobalID,true>(
-      dev_allMaps, // points to has_content maps
-      dev_vbwcl_vec, // content list vectors, output value
-      dev_nWithContent, // content list vector sizes, output value
+      gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>(dev_allMaps), // points to has_content maps
+      gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>(dev_vbwcl_vec), // content list vectors, output value
+      gpuMemoryManager.getSessionPointer<vmesh::LocalID>("dev_nWithContent"), // content list vector sizes, output value
       rule,
-      dev_vmeshes, // rule_meshes, not used in this call
-      dev_allMaps, // rule_maps, not used in this call
-      dev_vbwcl_vec, // rule_vectors, not used in this call
+      gpuMemoryManager.getPointer<vmesh::VelocityMesh*>(dev_vmeshes), // rule_meshes, not used in this call
+      gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>(dev_allMaps), // rule_maps, not used in this call
+      gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>(dev_vbwcl_vec), // rule_vectors, not used in this call
       nCells,
       baseStream
       );
@@ -159,14 +166,15 @@ void update_velocity_block_content_lists(
 
    // Update host-side size values
    phiprof::Timer blocklistTimer {"update content lists extract"};
-   CHK_ERR( gpuMemcpy(host_nWithContent, dev_nWithContent, nCells*sizeof(vmesh::LocalID), gpuMemcpyDeviceToHost) );
-   CHK_ERR( gpuMemcpy(host_mass, dev_mass, nCells*sizeof(Real), gpuMemcpyDeviceToHost) );
+   CHK_ERR( gpuMemcpy(gpuMemoryManager.getSessionHostPointer<vmesh::LocalID>("host_nWithContent"), gpuMemoryManager.getSessionPointer<vmesh::LocalID>("dev_nWithContent"), nCells*sizeof(vmesh::LocalID), gpuMemcpyDeviceToHost) );
+   CHK_ERR( gpuMemcpy(gpuMemoryManager.getSessionHostPointer<Real>("host_mass"), gpuMemoryManager.getSessionPointer<Real>("dev_mass"), nCells*sizeof(Real), gpuMemcpyDeviceToHost) );
    #pragma omp parallel for schedule(static)
    for (uint i=0; i<nCells; ++i) {
-      mpiGrid[cells[i]]->velocity_block_with_content_list_size = host_nWithContent[i];
-      mpiGrid[cells[i]]->density_pre_adjust = host_mass[i]; // Only one counter per cell, but both this and adjustment are done per-pop before moving to next population.
+      mpiGrid[cells[i]]->velocity_block_with_content_list_size = (gpuMemoryManager.getSessionHostPointer<vmesh::LocalID>("host_nWithContent"))[i];
+      mpiGrid[cells[i]]->density_pre_adjust = (gpuMemoryManager.getSessionHostPointer<Real>("host_mass"))[i]; // Only one counter per cell, but both this and adjustment are done per-pop before moving to next population.
    }
    blocklistTimer.stop();
+   gpuMemoryManager.endSession();
 }
 
 void adjust_velocity_blocks_in_cells(
@@ -237,6 +245,11 @@ void adjust_velocity_blocks_in_cells(
    //    return;
    // }
    gpu_batch_allocate(nCells,maxNeighbors);
+
+   gpuMemoryManager.startSession(0,0);
+   gpuMemoryManager.sessionHostAllocate<split::SplitVector<vmesh::GlobalID>*>("host_vbwcl_neigh", maxNeighbors * nCells * BLOCK_ALLOCATION_FACTOR*sizeof(split::SplitVector<vmesh::GlobalID>*));
+   gpuMemoryManager.sessionAllocate<split::SplitVector<vmesh::GlobalID>*>("dev_vbwcl_neigh", maxNeighbors * nCells * BLOCK_ALLOCATION_FACTOR*sizeof(split::SplitVector<vmesh::GlobalID>*));
+
    mallocTimer.stop();
 
    size_t largestVelMesh = 0;
@@ -249,11 +262,11 @@ void adjust_velocity_blocks_in_cells(
          CellID cell_id=cellsToAdjust[i];
          SpatialCell* SC = mpiGrid[cell_id];
          if (SC->sysBoundaryFlag == sysboundarytype::DO_NOT_COMPUTE) {
-            host_vmeshes[i]=0;
-            host_allMaps[2*i]=0;
-            host_allMaps[2*i+1]=0;
-            host_vbwcl_vec[i]=0;
-            host_lists_with_replace_new[i]=0;
+            (gpuMemoryManager.getPointer<vmesh::VelocityMesh*>(host_vmeshes))[i]=0;
+            (gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>(host_allMaps))[2*i]=0;
+            (gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>(host_allMaps))[2*i+1]=0;
+            (gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>(host_vbwcl_vec))[i]=0;
+            (gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>(host_lists_with_replace_new))[i]=0;
             continue;
          }
 
@@ -279,29 +292,29 @@ void adjust_velocity_blocks_in_cells(
          const uint nNeighbors = reducedNeighbors.size();
          for (uint iN = 0; iN < maxNeighbors; ++iN) {
             if (iN >= nNeighbors) {
-               host_vbwcl_neigh[i*maxNeighbors + iN] = 0; // no neighbor at this index
+               (gpuMemoryManager.getSessionHostPointer<split::SplitVector<vmesh::GlobalID>*>("host_vbwcl_neigh"))[i*maxNeighbors + iN] = 0; // no neighbor at this index
                continue;
             }
             CellID neighbor_id = reducedNeighbors.at(iN);
             // store pointer to neighbor content list
             SpatialCell* NC = mpiGrid[neighbor_id];
             if (NC->sysBoundaryFlag == sysboundarytype::DO_NOT_COMPUTE) {
-               host_vbwcl_neigh[i*maxNeighbors + iN] = 0;
+               (gpuMemoryManager.getSessionHostPointer<split::SplitVector<vmesh::GlobalID>*>("host_vbwcl_neigh"))[i*maxNeighbors + iN] = 0;
             } else {
-               host_vbwcl_neigh[i*maxNeighbors + iN] = mpiGrid[neighbor_id]->dev_velocity_block_with_content_list;
+               (gpuMemoryManager.getSessionHostPointer<split::SplitVector<vmesh::GlobalID>*>("host_vbwcl_neigh"))[i*maxNeighbors + iN] = mpiGrid[neighbor_id]->dev_velocity_block_with_content_list;
             }
          }
 
          // Store values and pointers
-         host_vmeshes[i] = SC->dev_get_velocity_mesh(popID);
-         host_VBCs[i] = SC->dev_get_velocity_blocks(popID);
-         host_allMaps[2*i] = SC->dev_velocity_block_with_content_map;
-         host_allMaps[2*i+1] = SC->dev_velocity_block_with_no_content_map;
-         host_vbwcl_vec[i] = SC->dev_velocity_block_with_content_list;
-         host_lists_with_replace_new[i] = SC->dev_list_with_replace_new;
-         host_lists_delete[i] = SC->dev_list_delete;
-         host_lists_to_replace[i] = SC->dev_list_to_replace;
-         host_lists_with_replace_old[i] = SC->dev_list_with_replace_old;
+         (gpuMemoryManager.getPointer<vmesh::VelocityMesh*>(host_vmeshes))[i] = SC->dev_get_velocity_mesh(popID);
+         (gpuMemoryManager.getPointer<vmesh::VelocityBlockContainer*>(host_VBCs))[i] = SC->dev_get_velocity_blocks(popID);
+         (gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>(host_allMaps))[2*i] = SC->dev_velocity_block_with_content_map;
+         (gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>(host_allMaps))[2*i+1] = SC->dev_velocity_block_with_no_content_map;
+         (gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>(host_vbwcl_vec))[i] = SC->dev_velocity_block_with_content_list;
+         (gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>(host_lists_with_replace_new))[i] = SC->dev_list_with_replace_new;
+         (gpuMemoryManager.getPointer<split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*>(host_lists_delete))[i] = SC->dev_list_delete;
+         (gpuMemoryManager.getPointer<split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*>(host_lists_to_replace))[i] = SC->dev_list_to_replace;
+         (gpuMemoryManager.getPointer<split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*>(host_lists_with_replace_old))[i] = SC->dev_list_with_replace_old;
       }
       timer.stop();
 #pragma omp critical
@@ -315,22 +328,22 @@ void adjust_velocity_blocks_in_cells(
     * */
    phiprof::Timer copyTimer {"copy values to device"};
    // Copy pointers and counters over to device
-   CHK_ERR( gpuMemcpyAsync(dev_allMaps, host_allMaps, 2*nCells*sizeof(Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*), gpuMemcpyHostToDevice, baseStream) );
-   CHK_ERR( gpuMemcpyAsync(dev_vbwcl_vec, host_vbwcl_vec, nCells*sizeof(split::SplitVector<vmesh::GlobalID>*), gpuMemcpyHostToDevice, baseStream) );
-   CHK_ERR( gpuMemcpyAsync(dev_vmeshes, host_vmeshes, nCells*sizeof(vmesh::VelocityMesh*), gpuMemcpyHostToDevice, baseStream) );
+   CHK_ERR( gpuMemcpyAsync(gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>(dev_allMaps), gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>(host_allMaps), 2*nCells*sizeof(Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*), gpuMemcpyHostToDevice, baseStream) );
+   CHK_ERR( gpuMemcpyAsync(gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>(dev_vbwcl_vec), gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>(host_vbwcl_vec), nCells*sizeof(split::SplitVector<vmesh::GlobalID>*), gpuMemcpyHostToDevice, baseStream) );
+   CHK_ERR( gpuMemcpyAsync(gpuMemoryManager.getPointer<vmesh::VelocityMesh*>(dev_vmeshes), gpuMemoryManager.getPointer<vmesh::VelocityMesh*>(host_vmeshes), nCells*sizeof(vmesh::VelocityMesh*), gpuMemcpyHostToDevice, baseStream) );
    if (maxNeighbors>0) {
-      CHK_ERR( gpuMemcpyAsync(dev_vbwcl_neigh, host_vbwcl_neigh, nCells*maxNeighbors*sizeof(split::SplitVector<vmesh::GlobalID>*), gpuMemcpyHostToDevice, baseStream) );
+      CHK_ERR( gpuMemcpyAsync(gpuMemoryManager.getSessionPointer<split::SplitVector<vmesh::GlobalID>*>("dev_vbwcl_neigh"), gpuMemoryManager.getSessionHostPointer<split::SplitVector<vmesh::GlobalID>*>("host_vbwcl_neigh"), nCells*maxNeighbors*sizeof(split::SplitVector<vmesh::GlobalID>*), gpuMemcpyHostToDevice, baseStream) );
    }
-   CHK_ERR( gpuMemsetAsync(dev_nBefore, 0, nCells*sizeof(vmesh::LocalID), baseStream) );
-   CHK_ERR( gpuMemsetAsync(dev_nAfter, 0, nCells*sizeof(vmesh::LocalID), baseStream) );
-   CHK_ERR( gpuMemsetAsync(dev_nBlocksToChange, 0, nCells*sizeof(vmesh::LocalID), baseStream) );
-   CHK_ERR( gpuMemsetAsync(dev_resizeSuccess, 0, nCells*sizeof(vmesh::LocalID), baseStream) );
-   CHK_ERR( gpuMemsetAsync(dev_overflownElements, 0, nCells*sizeof(vmesh::LocalID), baseStream) );
-   CHK_ERR( gpuMemcpyAsync(dev_lists_with_replace_new, host_lists_with_replace_new, nCells*sizeof(split::SplitVector<vmesh::GlobalID>*), gpuMemcpyHostToDevice, baseStream) );
-   CHK_ERR( gpuMemcpyAsync(dev_lists_delete, host_lists_delete, nCells*sizeof(split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*), gpuMemcpyHostToDevice, baseStream) );
-   CHK_ERR( gpuMemcpyAsync(dev_lists_to_replace, host_lists_to_replace, nCells*sizeof(split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*), gpuMemcpyHostToDevice, baseStream) );
-   CHK_ERR( gpuMemcpyAsync(dev_lists_with_replace_old, host_lists_with_replace_old, nCells*sizeof(split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*), gpuMemcpyHostToDevice, baseStream) );
-   CHK_ERR( gpuMemcpyAsync(dev_VBCs, host_VBCs, nCells*sizeof(vmesh::VelocityBlockContainer*), gpuMemcpyHostToDevice, baseStream) );
+   CHK_ERR( gpuMemsetAsync(gpuMemoryManager.getPointer<vmesh::LocalID>(dev_nBefore), 0, nCells*sizeof(vmesh::LocalID), baseStream) );
+   CHK_ERR( gpuMemsetAsync(gpuMemoryManager.getPointer<vmesh::LocalID>(dev_nAfter), 0, nCells*sizeof(vmesh::LocalID), baseStream) );
+   CHK_ERR( gpuMemsetAsync(gpuMemoryManager.getPointer<vmesh::LocalID>(dev_nBlocksToChange), 0, nCells*sizeof(vmesh::LocalID), baseStream) );
+   CHK_ERR( gpuMemsetAsync(gpuMemoryManager.getPointer<vmesh::LocalID>(dev_resizeSuccess), 0, nCells*sizeof(vmesh::LocalID), baseStream) );
+   CHK_ERR( gpuMemsetAsync(gpuMemoryManager.getPointer<vmesh::LocalID>(dev_overflownElements), 0, nCells*sizeof(vmesh::LocalID), baseStream) );
+   CHK_ERR( gpuMemcpyAsync(gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>(dev_lists_with_replace_new), gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>(host_lists_with_replace_new), nCells*sizeof(split::SplitVector<vmesh::GlobalID>*), gpuMemcpyHostToDevice, baseStream) );
+   CHK_ERR( gpuMemcpyAsync(gpuMemoryManager.getPointer<split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*>(dev_lists_delete), gpuMemoryManager.getPointer<split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*>(host_lists_delete), nCells*sizeof(split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*), gpuMemcpyHostToDevice, baseStream) );
+   CHK_ERR( gpuMemcpyAsync(gpuMemoryManager.getPointer<split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*>(dev_lists_to_replace), gpuMemoryManager.getPointer<split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*>(host_lists_to_replace), nCells*sizeof(split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*), gpuMemcpyHostToDevice, baseStream) );
+   CHK_ERR( gpuMemcpyAsync(gpuMemoryManager.getPointer<split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*>(dev_lists_with_replace_old), gpuMemoryManager.getPointer<split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*>(host_lists_with_replace_old), nCells*sizeof(split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*), gpuMemcpyHostToDevice, baseStream) );
+   CHK_ERR( gpuMemcpyAsync(gpuMemoryManager.getPointer<vmesh::VelocityBlockContainer*>(dev_VBCs), gpuMemoryManager.getPointer<vmesh::VelocityBlockContainer*>(host_VBCs), nCells*sizeof(vmesh::VelocityBlockContainer*), gpuMemcpyHostToDevice, baseStream) );
    CHK_ERR( gpuStreamSynchronize(baseStream) );
    copyTimer.stop();
 
@@ -354,9 +367,9 @@ void adjust_velocity_blocks_in_cells(
       // into largestContentList
       dim3 grid_vel_halo(largestContentList,nCells,1);
       batch_update_velocity_halo_kernel<<<grid_vel_halo, 26*32, 0, priorityStream>>> (
-         dev_vmeshes,
-         dev_vbwcl_vec,
-         dev_allMaps // Needs both content and no content maps
+         gpuMemoryManager.getPointer<vmesh::VelocityMesh*>(dev_vmeshes),
+         gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>(dev_vbwcl_vec),
+         gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>(dev_allMaps) // Needs both content and no content maps
          );
       CHK_ERR( gpuPeekAtLastError() );
       #else
@@ -365,9 +378,9 @@ void adjust_velocity_blocks_in_cells(
       dim3 block_vel_halo(GPUTHREADS, warpsPerBlockBatchHalo, 1);
       // We do 26 (launch with GPUTHREADS) neighbors in a single block at a time.
       batch_update_velocity_halo_kernel<<<grid_vel_halo, block_vel_halo, 0, priorityStream>>> (
-         dev_vmeshes,
-         dev_vbwcl_vec,
-         dev_allMaps, // Needs both content and no content maps
+         gpuMemoryManager.getPointer<vmesh::VelocityMesh*>(dev_vmeshes),
+         gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>(dev_vbwcl_vec),
+         gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>(dev_allMaps), // Needs both content and no content maps
          warpsPerBlockBatchHalo
          );
       CHK_ERR( gpuPeekAtLastError() );
@@ -385,9 +398,9 @@ void adjust_velocity_blocks_in_cells(
       // For AMD/HIP, we can do 16 neighbor GIDs and 64 threads per warp in a single block
       // This is handled in-kernel.
       batch_update_neighbour_halo_kernel<<<grid_neigh_halo, WARPSPERBLOCK*GPUTHREADS, 0, baseStream>>> (
-         dev_vmeshes,
-         dev_allMaps, // Needs both has_content and has_no_content maps
-         dev_vbwcl_neigh
+         gpuMemoryManager.getPointer<vmesh::VelocityMesh*>(dev_vmeshes),
+         dev_allMgpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>(dev_allMaps)aps, // Needs both has_content and has_no_content maps
+         gpuMemoryManager.getSessionPointer<split::SplitVector<vmesh::GlobalID>*>("dev_vbwcl_neigh")
          );
       CHK_ERR( gpuPeekAtLastError() );
       #else
@@ -396,9 +409,9 @@ void adjust_velocity_blocks_in_cells(
       dim3 grid_neigh_halo(blocksNeeded_neigh,nCells,maxNeighbors);
       // Each threads manages a single GID from the neighbour at hand
       batch_update_neighbour_halo_kernel<<<grid_neigh_halo, WARPSPERBLOCK*GPUTHREADS, 0, baseStream>>> (
-         dev_vmeshes,
-         dev_allMaps, // Needs both has_content and has_no_content maps
-         dev_vbwcl_neigh
+         gpuMemoryManager.getPointer<vmesh::VelocityMesh*>(dev_vmeshes),
+         gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>(dev_allMaps), // Needs both has_content and has_no_content maps
+         gpuMemoryManager.getSessionPointer<split::SplitVector<vmesh::GlobalID>*>("dev_vbwcl_neigh")
          );
       CHK_ERR( gpuPeekAtLastError() );
       #endif
@@ -408,6 +421,7 @@ void adjust_velocity_blocks_in_cells(
    CHK_ERR( gpuStreamSynchronize(baseStream) );
    //CHK_ERR( gpuDeviceSynchronize() );
    blockHaloTimer.stop();
+   gpuMemoryManager.endSession();
 
    /**
        Now extract vectors to be used in actual block adjustment.
@@ -430,45 +444,45 @@ void adjust_velocity_blocks_in_cells(
    // Finds new Blocks (GID,LID) needing to be added
    // Note:list_with_replace_new then contains both new GIDs to use for replacements and new GIDs to place at end of vmesh
    extract_to_add_caller(
-      dev_allMaps+0, // input maps: this is has_content_maps
-      dev_lists_with_replace_new, // output vecs
+      gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>(dev_allMaps)+0, // input maps: this is has_content_maps
+      gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>(dev_lists_with_replace_new), // output vecs
       NULL, // pass null to not store vector lengths
-      dev_vmeshes, // rule_meshes, not used in this call
-      dev_allMaps+1, // rule_maps, not used in this call
-      dev_vbwcl_vec, // rule_vectors, not used in this call
+      gpuMemoryManager.getPointer<vmesh::VelocityMesh*>(dev_vmeshes), // rule_meshes, not used in this call
+      gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>(dev_allMaps)+1, // rule_maps, not used in this call
+      gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>(dev_vbwcl_vec), // rule_vectors, not used in this call
       nCells,
       baseStream
       ); // This needs to complete before the next 3 extractions
    // Finds Blocks (GID,LID) to be rescued from end of v-space
    extract_to_delete_or_move_caller(
-      dev_allMaps+0, // input maps: this is has_content_maps
-      dev_lists_with_replace_old, // output vecs
+      gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>(dev_allMaps)+0, // input maps: this is has_content_maps
+      gpuMemoryManager.getPointer<split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*>(dev_lists_with_replace_old), // output vecs
       NULL, // pass null to not store vector lengths
-      dev_vmeshes, // rule_meshes
-      dev_allMaps+1, // rule_maps: this is has_no_content_maps
-      dev_lists_with_replace_new, // rule_vectors
+      gpuMemoryManager.getPointer<vmesh::VelocityMesh*>(dev_vmeshes), // rule_meshes
+      gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>(dev_allMaps)+1, // rule_maps: this is has_no_content_maps
+      gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>(dev_lists_with_replace_new), // rule_vectors
       nCells,
       baseStream
       );
    // Find Blocks (GID,LID) to be outright deleted
    extract_to_delete_or_move_caller(
-      dev_allMaps+1, // input maps: this is has_no_content_maps
-      dev_lists_delete, // output vecs
+      gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>(dev_allMaps)+1, // input maps: this is has_no_content_maps
+      gpuMemoryManager.getPointer<split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*>(dev_lists_delete), // output vecs
       NULL, // pass null to not store vector lengths
-      dev_vmeshes, // rule_meshes
-      dev_allMaps+1, // rule_maps: this is has_no_content_maps
-      dev_lists_with_replace_new, // rule_vectors
+      gpuMemoryManager.getPointer<vmesh::VelocityMesh*>(dev_vmeshes), // rule_meshes
+      gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>(dev_allMaps)+1, // rule_maps: this is has_no_content_maps
+      gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>(dev_lists_with_replace_new), // rule_vectors
       nCells,
       baseStream
       );
    // Find Blocks (GID,LID) to be replaced with new ones
    extract_to_replace_caller(
-      dev_allMaps+1, // input maps: this is has_no_content_maps
-      dev_lists_to_replace, // output vecs
+      gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>(dev_allMaps)+1, // input maps: this is has_no_content_maps
+      gpuMemoryManager.getPointer<split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*>(dev_lists_to_replace), // output vecs
       NULL, // pass null to not store vector lengths
-      dev_vmeshes, // rule_meshes
-      dev_allMaps+1, // rule_maps: this is has_no_content_maps
-      dev_lists_with_replace_new, // rule_vectors
+      gpuMemoryManager.getPointer<vmesh::VelocityMesh*>(dev_vmeshes), // rule_meshes
+      gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>(dev_allMaps)+1, // rule_maps: this is has_no_content_maps
+      gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>(dev_lists_with_replace_new), // rule_vectors
       nCells,
       baseStream
       );
@@ -519,16 +533,16 @@ void adjust_velocity_blocks_in_cells(
                             return isOverflown;
                          };
    clean_tombstones_launcher<decltype(rule_overflown)>(
-      dev_vmeshes, // velocity meshes which include the hash maps to clean
-      dev_lists_with_replace_old, // use this for storing overflown elements
-      dev_overflownElements, // return values: n_overflown_elements
+      gpuMemoryManager.getPointer<vmesh::VelocityMesh*>(dev_vmeshes), // velocity meshes which include the hash maps to clean
+      gpuMemoryManager.getPointer<split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*>(dev_lists_with_replace_old), // use this for storing overflown elements
+      gpuMemoryManager.getPointer<vmesh::LocalID>(dev_overflownElements), // return values: n_overflown_elements
       rule_overflown,
       nCells,
       baseStream
       );
    // Re-insert overflown elements back in vmeshes. First calculate
    // Launch parameters after using blocking memcpy to get overflow counts
-   CHK_ERR( gpuMemcpyAsync(host_overflownElements, dev_overflownElements, nCells*sizeof(vmesh::LocalID), gpuMemcpyDeviceToHost, baseStream) );
+   CHK_ERR( gpuMemcpyAsync(gpuMemoryManager.getPointer<vmesh::LocalID>(host_overflownElements), gpuMemoryManager.getPointer<vmesh::LocalID>(dev_overflownElements), nCells*sizeof(vmesh::LocalID), gpuMemcpyDeviceToHost, baseStream) );
    CHK_ERR( gpuStreamSynchronize(baseStream) );
    uint largestOverflow = 0;
 #pragma omp parallel
@@ -536,7 +550,7 @@ void adjust_velocity_blocks_in_cells(
       uint thread_largestOverflow = 0;
 #pragma omp for schedule(static)
       for (size_t i=0; i<nCells; ++i) {
-         thread_largestOverflow = std::max(thread_largestOverflow, host_overflownElements[i]);
+         thread_largestOverflow = std::max(thread_largestOverflow, (gpuMemoryManager.getPointer<vmesh::LocalID>(host_overflownElements))[i]);
       }
 #pragma omp critical
       {
@@ -546,8 +560,8 @@ void adjust_velocity_blocks_in_cells(
    if (largestOverflow > 0) {
       dim3 grid_reinsert(largestOverflow,nCells,1);
       batch_insert_kernel<<<grid_reinsert, GPUTHREADS, 0, baseStream>>>(
-         dev_vmeshes, // velocity meshes which include the hash maps to clean
-         dev_lists_with_replace_old // use this for storing overflown elements
+         gpuMemoryManager.getPointer<vmesh::VelocityMesh*>(dev_vmeshes), // velocity meshes which include the hash maps to clean
+         gpuMemoryManager.getPointer<split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*>(dev_lists_with_replace_old) // use this for storing overflown elements
          );
       CHK_ERR( gpuPeekAtLastError() );
       CHK_ERR( gpuStreamSynchronize(baseStream) );
@@ -583,15 +597,15 @@ void adjust_velocity_blocks_in_cells(
          if (getObjectWrapper().particleSpecies[popID].sparse_conserve_mass) {
             // Block adjustment can only add empty blocks or delete existing blocks,
             // So post_adjust density must be equal to pre_adjust density minus mass loss.
-            SC->density_post_adjust = SC->density_pre_adjust - host_massLoss[i];
-            if ( (SC->density_post_adjust > 0.0) && (host_massLoss[i] != 0) ) {
+            SC->density_post_adjust = SC->density_pre_adjust - (gpuMemoryManager.getPointer<Real>(host_massLoss))[i];
+            if ( (SC->density_post_adjust > 0.0) && ((gpuMemoryManager.getPointer<Real>(host_massLoss))[i] != 0) ) {
                //SC->scale_population(SC->density_pre_adjust/SC->density_post_adjust, popID);
                // Now use the massloss buffer for the scaling value
                const Real mass_scaling = SC->density_pre_adjust/SC->density_post_adjust;
-               host_massLoss[i] = mass_scaling;
+               (gpuMemoryManager.getPointer<Real>(host_massLoss))[i] = mass_scaling;
             } else {
                // Skip scaling this cell
-               host_massLoss[i] = 0;
+               (gpuMemoryManager.getPointer<Real>(host_massLoss))[i] = 0;
             }
          } // end if conserve mass
          postTimer.stop();
@@ -601,7 +615,7 @@ void adjust_velocity_blocks_in_cells(
    if ( (getObjectWrapper().particleSpecies[popID].sparse_conserve_mass)
         && (largestBlocksToChange > 0) ) {
       phiprof::Timer massConservationTimer {"GPU batch conserve mass"};
-      CHK_ERR( gpuMemcpyAsync(dev_massLoss, host_massLoss, nCells*sizeof(Real), gpuMemcpyHostToDevice, baseStream) );
+      CHK_ERR( gpuMemcpyAsync(gpuMemoryManager.getPointer<Real>(dev_massLoss), gpuMemoryManager.getPointer<Real>(host_massLoss), nCells*sizeof(Real), gpuMemcpyHostToDevice, baseStream) );
       // Launch parameters: Although post-adjustment, some VBCs can have more blocks than when entering
       // block adjustment, any new blocks will be empty and thus do not need to be scaled. Thus, we can use
       // The count which is the gathered max value over all cells of a counter which is either blocksBeforeAdjust
@@ -611,8 +625,8 @@ void adjust_velocity_blocks_in_cells(
       // dynamically allocated per block for this call in addition to the statically allocated memory.
       dim3 grid_mass_conservation(largestBlocksBeforeOrAfter,nCells,1);
       batch_population_scale_kernel<<<grid_mass_conservation, WID3, 0, baseStream>>> (
-         dev_VBCs,
-         dev_massLoss // used now for scaling parameter
+         gpuMemoryManager.getPointer<vmesh::VelocityBlockContainer*>(dev_VBCs),
+         gpuMemoryManager.getPointer<Real>(dev_massLoss) // used now for scaling parameter
          );
       CHK_ERR( gpuPeekAtLastError() );
       CHK_ERR( gpuStreamSynchronize(baseStream) );
@@ -631,7 +645,7 @@ void clear_maps_caller(const uint nCells,
    blocksNeeded = std::max((size_t)1, blocksNeeded);
    dim3 grid1(blocksNeeded,2*nCells,1);
    batch_reset_all_to_empty<<<grid1, Hashinator::defaults::MAX_BLOCKSIZE, 0, stream>>>(
-      dev_allMaps+2*offset
+      gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>(dev_allMaps)+2*offset
       );
    CHK_ERR( gpuPeekAtLastError() );
    CHK_ERR( gpuStreamSynchronize(stream) );
@@ -656,23 +670,23 @@ void batch_adjust_blocks_caller(
    // Resizes are faster this way with larger grid and single thread per block.
    phiprof::Timer deviceResizeTimer {"GPU resize mesh on-device"};
    batch_resize_vbc_kernel_pre<<<nCells, 1, 0, baseStream>>> (
-      dev_vmeshes+cellOffset,
-      dev_VBCs+cellOffset,
-      dev_lists_with_replace_new+cellOffset,
-      dev_lists_delete+cellOffset,
-      dev_lists_to_replace+cellOffset,
-      dev_lists_with_replace_old+cellOffset,
-      dev_nBefore+cellOffset,
-      dev_nAfter+cellOffset,
-      dev_nBlocksToChange+cellOffset,
-      dev_resizeSuccess+cellOffset,
-      dev_massLoss+cellOffset // mass loss, set to zero
+      gpuMemoryManager.getPointer<vmesh::VelocityMesh*>(dev_vmeshes)+cellOffset,
+      gpuMemoryManager.getPointer<vmesh::VelocityBlockContainer*>(dev_VBCs)+cellOffset,
+      gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>(dev_lists_with_replace_new)+cellOffset,
+      gpuMemoryManager.getPointer<split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*>(dev_lists_delete)+cellOffset,
+      gpuMemoryManager.getPointer<split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*>(dev_lists_to_replace)+cellOffset,
+      gpuMemoryManager.getPointer<split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*>(dev_lists_with_replace_old)+cellOffset,
+      gpuMemoryManager.getPointer<vmesh::LocalID>(dev_nBefore)+cellOffset,
+      gpuMemoryManager.getPointer<vmesh::LocalID>(dev_nAfter)+cellOffset,
+      gpuMemoryManager.getPointer<vmesh::LocalID>(dev_nBlocksToChange)+cellOffset,
+      gpuMemoryManager.getPointer<vmesh::LocalID>(dev_resizeSuccess)+cellOffset,
+      gpuMemoryManager.getPointer<Real>(dev_massLoss)+cellOffset // mass loss, set to zero
       );
    CHK_ERR( gpuPeekAtLastError() );
-   CHK_ERR( gpuMemcpyAsync(host_nBefore+cellOffset, dev_nBefore+cellOffset, nCells*sizeof(vmesh::LocalID), gpuMemcpyDeviceToHost, baseStream) );
-   CHK_ERR( gpuMemcpyAsync(host_nAfter+cellOffset, dev_nAfter+cellOffset, nCells*sizeof(vmesh::LocalID), gpuMemcpyDeviceToHost, baseStream) );
-   CHK_ERR( gpuMemcpyAsync(host_nBlocksToChange+cellOffset, dev_nBlocksToChange+cellOffset, nCells*sizeof(vmesh::LocalID), gpuMemcpyDeviceToHost, baseStream) );
-   CHK_ERR( gpuMemcpyAsync(host_resizeSuccess+cellOffset, dev_resizeSuccess+cellOffset, nCells*sizeof(vmesh::LocalID), gpuMemcpyDeviceToHost, baseStream) );
+   CHK_ERR( gpuMemcpyAsync(gpuMemoryManager.getPointer<vmesh::LocalID>(host_nBefore)+cellOffset, gpuMemoryManager.getPointer<vmesh::LocalID>(dev_nBefore)+cellOffset, nCells*sizeof(vmesh::LocalID), gpuMemcpyDeviceToHost, baseStream) );
+   CHK_ERR( gpuMemcpyAsync(gpuMemoryManager.getPointer<vmesh::LocalID>(host_nAfter)+cellOffset, gpuMemoryManager.getPointer<vmesh::LocalID>(dev_nAfter)+cellOffset, nCells*sizeof(vmesh::LocalID), gpuMemcpyDeviceToHost, baseStream) );
+   CHK_ERR( gpuMemcpyAsync(gpuMemoryManager.getPointer<vmesh::LocalID>(host_nBlocksToChange)+cellOffset, gpuMemoryManager.getPointer<vmesh::LocalID>(dev_nBlocksToChange)+cellOffset, nCells*sizeof(vmesh::LocalID), gpuMemcpyDeviceToHost, baseStream) );
+   CHK_ERR( gpuMemcpyAsync(gpuMemoryManager.getPointer<vmesh::LocalID>(host_resizeSuccess)+cellOffset, gpuMemoryManager.getPointer<vmesh::LocalID>(dev_resizeSuccess)+cellOffset, nCells*sizeof(vmesh::LocalID), gpuMemcpyDeviceToHost, baseStream) );
    CHK_ERR( gpuStreamSynchronize(baseStream) );
    deviceResizeTimer.stop();
 
@@ -690,10 +704,10 @@ void batch_adjust_blocks_caller(
             continue;
          }
          // Grow mesh if necessary and on-device resize did not work??
-         const vmesh::LocalID nBlocksBeforeAdjust = host_nBefore[i+cellOffset];
-         const vmesh::LocalID nBlocksAfterAdjust  = host_nAfter[i+cellOffset];
-         const vmesh::LocalID nBlocksToChange     = host_nBlocksToChange[i+cellOffset];
-         const vmesh::LocalID resizeDevSuccess    = host_resizeSuccess[i+cellOffset];
+         const vmesh::LocalID nBlocksBeforeAdjust = (gpuMemoryManager.getPointer<vmesh::LocalID>(host_nBefore))[i+cellOffset];
+         const vmesh::LocalID nBlocksAfterAdjust  = (gpuMemoryManager.getPointer<vmesh::LocalID>(host_nAfter))[i+cellOffset];
+         const vmesh::LocalID nBlocksToChange     = (gpuMemoryManager.getPointer<vmesh::LocalID>(host_nBlocksToChange))[i+cellOffset];
+         const vmesh::LocalID resizeDevSuccess    = (gpuMemoryManager.getPointer<vmesh::LocalID>(host_resizeSuccess))[i+cellOffset];
          thread_largestBlocksToChange = std::max(thread_largestBlocksToChange, nBlocksToChange);
          // This is gathered for mass loss correction: for each cell, we want the smaller of either blocks before or after. Then,
          // we want to gather the largest of those values.
@@ -732,20 +746,20 @@ void batch_adjust_blocks_caller(
       // Launch grid is sized so that for all spatial cells, we launch up to the maximum number of required
       // operations (add a block, delete a block, replace a block with a new one, replace a block with an existing one)
       batch_update_velocity_blocks_kernel<<<grid_addremove, WID3, 0, baseStream>>> (
-         dev_vmeshes+cellOffset,
-         dev_VBCs+cellOffset,
-         dev_lists_with_replace_new+cellOffset,
-         dev_lists_delete+cellOffset,
-         dev_lists_to_replace+cellOffset,
-         dev_lists_with_replace_old+cellOffset,
-         dev_nBefore+cellOffset,
-         dev_nAfter+cellOffset,
-         dev_nBlocksToChange+cellOffset,
-         dev_massLoss+cellOffset
+         gpuMemoryManager.getPointer<vmesh::VelocityMesh*>(dev_vmeshes)+cellOffset,
+         gpuMemoryManager.getPointer<vmesh::VelocityBlockContainer*>(dev_VBCs)+cellOffset,
+         gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>(dev_lists_with_replace_new)+cellOffset,
+         gpuMemoryManager.getPointer<split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*>(dev_lists_delete)+cellOffset,
+         gpuMemoryManager.getPointer<split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*>(dev_lists_to_replace)+cellOffset,
+         gpuMemoryManager.getPointer<split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*>(dev_lists_with_replace_old)+cellOffset,
+         gpuMemoryManager.getPointer<vmesh::LocalID>(dev_nBefore)+cellOffset,
+         gpuMemoryManager.getPointer<vmesh::LocalID>(dev_nAfter)+cellOffset,
+         gpuMemoryManager.getPointer<vmesh::LocalID>(dev_nBlocksToChange)+cellOffset,
+         gpuMemoryManager.getPointer<Real>(dev_massLoss)+cellOffset
          );
       CHK_ERR( gpuPeekAtLastError() );
       // Pull mass loss values to host
-      CHK_ERR( gpuMemcpyAsync(host_massLoss+cellOffset, dev_massLoss+cellOffset, nCells*sizeof(Real), gpuMemcpyDeviceToHost, baseStream) );
+      CHK_ERR( gpuMemcpyAsync(gpuMemoryManager.getPointer<Real>(host_massLoss)+cellOffset, gpuMemoryManager.getPointer<Real>(dev_massLoss)+cellOffset, nCells*sizeof(Real), gpuMemcpyDeviceToHost, baseStream) );
       CHK_ERR( gpuStreamSynchronize(baseStream) );
       // Update mass Loss
       #pragma omp parallel for schedule(static)
@@ -754,7 +768,7 @@ void batch_adjust_blocks_caller(
          if (SC->sysBoundaryFlag == sysboundarytype::DO_NOT_COMPUTE) {
             continue;
          }
-         SC->increment_mass_loss(popID, host_massLoss[i]);
+         SC->increment_mass_loss(popID, (gpuMemoryManager.getPointer<Real>(host_massLoss))[i]);
       }
       addRemoveKernelTimer.stop();
 
@@ -762,9 +776,9 @@ void batch_adjust_blocks_caller(
       phiprof::Timer deviceResizePostTimer {"GPU resize mesh on-device post"};
       // Resizes are faster this way with larger grid and single thread
       batch_resize_vbc_kernel_post<<<nCells, 1, 0, baseStream>>> (
-         dev_vmeshes+cellOffset,
-         dev_VBCs+cellOffset,
-         dev_nAfter+cellOffset
+         gpuMemoryManager.getPointer<vmesh::VelocityMesh*>(dev_vmeshes)+cellOffset,
+         gpuMemoryManager.getPointer<vmesh::VelocityBlockContainer*>(dev_VBCs)+cellOffset,
+         gpuMemoryManager.getPointer<vmesh::LocalID>(dev_nAfter)+cellOffset
          );
       CHK_ERR( gpuPeekAtLastError() );
       CHK_ERR( gpuStreamSynchronize(baseStream) );
