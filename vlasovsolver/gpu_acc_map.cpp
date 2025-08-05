@@ -1364,7 +1364,7 @@ __host__ bool gpu_acc_map_1d(
       gpuMemoryManager.getSessionPointer<vmesh::LocalID>("dev_nColumns"),
       gpuMemoryManager.getSessionPointer<vmesh::LocalID>("dev_nColumnSets"),
       gpuMemoryManager.getPointer<vmesh::LocalID>(dev_resizeSuccess),
-      dev_columnOffsetData,
+      gpuMemoryManager.getPointer<ColumnOffsets>(dev_columnOffsetData),
       cumulativeOffset
       );
    CHK_ERR( gpuPeekAtLastError() );
@@ -1407,7 +1407,7 @@ __host__ bool gpu_acc_map_1d(
       dimension,
       flatExtent,
       invalidLocalID,
-      dev_columnOffsetData,
+      gpuMemoryManager.getPointer<ColumnOffsets>(dev_columnOffsetData),
       gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>(dev_vbwcl_vec), //dev_velocity_block_with_content_list, // use as LIDlist
       cumulativeOffset
       );
@@ -1424,7 +1424,7 @@ __host__ bool gpu_acc_map_1d(
       gpuMemoryManager.getPointer<Realf*>(dev_blockDataOrdered),
       gpu_cell_indices_to_id,
       gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>(dev_vbwcl_vec), //dev_velocity_block_with_content_list, // use as LIDlist
-      dev_columnOffsetData,
+      gpuMemoryManager.getPointer<ColumnOffsets>(dev_columnOffsetData),
       gpuMemoryManager.getSessionPointer<vmesh::LocalID>("dev_nColumns"),
       cumulativeOffset
       );
@@ -1444,7 +1444,7 @@ __host__ bool gpu_acc_map_1d(
    evaluate_column_extents_kernel<<<grid_column_extents, GPUTHREADS, 0, baseStream>>> (
       dimension,
       gpuMemoryManager.getPointer<vmesh::VelocityMesh*>(dev_vmeshes),
-      dev_columnOffsetData,
+      gpuMemoryManager.getPointer<ColumnOffsets>(dev_columnOffsetData),
       gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>(dev_lists_with_replace_new),
       gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>(dev_allMaps),
       gpu_block_indices_to_id,
@@ -1490,7 +1490,7 @@ __host__ bool gpu_acc_map_1d(
       evaluate_column_extents_kernel<<<grid_column_extents, GPUTHREADS, 0, baseStream>>> (
          dimension,
          gpuMemoryManager.getPointer<vmesh::VelocityMesh*>(dev_vmeshes),
-         dev_columnOffsetData,
+         gpuMemoryManager.getPointer<ColumnOffsets>(dev_columnOffsetData),
          gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>(dev_lists_with_replace_new),
          gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>(dev_allMaps),
          gpu_block_indices_to_id,
@@ -1641,7 +1641,7 @@ __host__ bool gpu_acc_map_1d(
       gpuMemoryManager.getPointer<Realf*>(dev_blockDataOrdered), //indexing: blockIdx.y
       gpu_cell_indices_to_id,
       gpu_block_indices_to_id,
-      dev_columnOffsetData, //indexing: blockIdx.y
+      gpuMemoryManager.getPointer<ColumnOffsets>(dev_columnOffsetData), //indexing: blockIdx.y
       gpuMemoryManager.getPointer<Realf>(dev_intersections), // indexing: cellOffset
       v_min,
       i_dv,

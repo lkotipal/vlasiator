@@ -669,7 +669,7 @@ extern Realf *host_returnRealf[];
 extern vmesh::LocalID *host_returnLID[];
 
 extern ColumnOffsets *host_columnOffsetData;
-extern ColumnOffsets *dev_columnOffsetData;
+extern std::string dev_columnOffsetData;
 extern uint gpu_largest_columnCount;
 
 // Hash map and splitvectors buffers used in block adjustment are declared in block_adjust_gpu.hpp

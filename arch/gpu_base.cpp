@@ -64,7 +64,8 @@ uint *gpu_block_indices_to_id;
 uint *gpu_block_indices_to_probe;
 
 // Pointers to buffers used in acceleration
-ColumnOffsets *host_columnOffsetData = NULL, *dev_columnOffsetData = NULL;
+ColumnOffsets *host_columnOffsetData = NULL;
+std::string dev_columnOffsetData = "null";
 std::string host_blockDataOrdered = "null";
 std::string dev_blockDataOrdered = "null";
 
@@ -326,7 +327,6 @@ int gpu_reportMemory(const size_t local_cells_capacity, const size_t ghost_cells
 
    size_t accBuffers = 0;
    for (uint i=0; i<allocationCount; ++i) {
-      accBuffers += sizeof(ColumnOffsets); // dev_columnOffsetData[cpuThreadID]
       if (host_columnOffsetData) {
          accBuffers += host_columnOffsetData[i].capacityInBytes(); // struct contents
       }
@@ -577,14 +577,13 @@ __host__ void gpu_acc_allocate(
       host_columnOffsetData = new (buf) ColumnOffsets[allocationCount];
       // host_columnOffsetData = new ColumnOffsets[allocationCount];
    }
-   if (dev_columnOffsetData == NULL) {
-      CHK_ERR( gpuMalloc((void**)&dev_columnOffsetData,allocationCount*sizeof(ColumnOffsets)) );
-   }
+   gpuMemoryManager.createPointer("dev_columnOffsetData", dev_columnOffsetData);
+   gpuMemoryManager.allocate(dev_columnOffsetData, allocationCount*sizeof(ColumnOffsets));
    for (uint i=0; i<allocationCount; ++i) {
       gpu_acc_allocate_perthread(i,maxBlockCount);
    }
    // Above function stores buffer pointers in host_blockDataOrdered, copy pointers to dev_blockDataOrdered
-   CHK_ERR( gpuMemcpy(dev_columnOffsetData, host_columnOffsetData, allocationCount*sizeof(ColumnOffsets), gpuMemcpyHostToDevice) );
+   CHK_ERR( gpuMemcpy(gpuMemoryManager.getPointer<ColumnOffsets>(dev_columnOffsetData), host_columnOffsetData, allocationCount*sizeof(ColumnOffsets), gpuMemcpyHostToDevice) );
 }
 
 /* Deallocation at end of simulation */
@@ -592,10 +591,7 @@ __host__ void gpu_acc_deallocate() {
    if (host_columnOffsetData != NULL) {
       // delete[] host_columnOffsetData;
    }
-   if (dev_columnOffsetData != NULL) {
-      CHK_ERR( gpuFree(dev_columnOffsetData));
-   }
-   host_columnOffsetData = dev_columnOffsetData = NULL;
+   host_columnOffsetData = NULL;
 }
 
 /*
@@ -634,7 +630,7 @@ __host__ void gpu_acc_allocate_perthread(
         (columnSetAllocationCount > host_columnOffsetData[allocID].capacityColSets()) ) {
       // Also set size to match input
       host_columnOffsetData[allocID].setSizes(columnAllocationCount*BLOCK_ALLOCATION_PADDING, columnSetAllocationCount*BLOCK_ALLOCATION_PADDING);
-      CHK_ERR( gpuMemcpyAsync(dev_columnOffsetData+allocID, host_columnOffsetData+allocID, sizeof(ColumnOffsets), gpuMemcpyHostToDevice, stream));
+      CHK_ERR( gpuMemcpyAsync(gpuMemoryManager.getPointer<ColumnOffsets>(dev_columnOffsetData)+allocID, host_columnOffsetData+allocID, sizeof(ColumnOffsets), gpuMemcpyHostToDevice, stream));
    }
 }
 
