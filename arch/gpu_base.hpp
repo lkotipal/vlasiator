@@ -418,6 +418,23 @@ struct GPUMemoryManager {
       return allocate(pointerName, bytes);
    }
 
+   // Allocate memory to a sub pointer by name and index
+   bool subPointerHostAllocate(const std::string& basePointerName, const uint index, size_t bytes) {
+      if (gpuMemoryPointers.count(basePointerName) == 0) {
+         std::cerr << "Error: Pointer name '" << basePointerName << "' not found.\n";
+         return false;
+      }
+
+      std::string pointerName = basePointerName + std::to_string(index);
+
+      if (!gpuMemoryPointers.count(pointerName)){
+         std::cerr << "Error: Pointer name '" << pointerName << "' not found.\n";
+         return false;
+      }
+
+      return hostAllocate(pointerName, bytes);
+   }
+
    template<typename T>
    size_t alignOffset(void* base, size_t offset) {
       uintptr_t fullAddress = reinterpret_cast<uintptr_t>(base) + offset;
@@ -657,16 +674,10 @@ extern GPUMemoryManager gpuMemoryManager;
 // Device data variables, to be allocated in good time. Made into an array so that each thread has their own pointer.
 extern std::string host_blockDataOrdered;
 extern std::string dev_blockDataOrdered;
-extern uint *gpu_cell_indices_to_id;
-extern uint *gpu_block_indices_to_id;
-extern uint *gpu_block_indices_to_probe;
+extern std::string gpu_cell_indices_to_id, gpu_block_indices_to_id, gpu_block_indices_to_probe;
 
-extern Real *returnReal[];
-extern Realf *returnRealf[];
-extern vmesh::LocalID *returnLID[];
-extern Real *host_returnReal[];
-extern Realf *host_returnRealf[];
-extern vmesh::LocalID *host_returnLID[];
+extern std::string returnReal, returnRealf, host_returnReal, host_returnRealf;
+extern std::string returnLID, host_returnLID;
 
 extern ColumnOffsets *host_columnOffsetData;
 extern std::string dev_columnOffsetData;

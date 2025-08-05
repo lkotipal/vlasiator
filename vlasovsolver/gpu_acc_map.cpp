@@ -1315,7 +1315,7 @@ __host__ bool gpu_acc_map_1d(
       gpuMemoryManager.getPointer<vmesh::VelocityMesh*>(dev_vmeshes),
       gpuMemoryManager.getPointer<Realf*>(dev_blockDataOrdered), // recast to vmesh::LocalID *probeCube
       flatExtent,
-      gpu_block_indices_to_probe,
+      gpuMemoryManager.getPointer<uint>(gpu_block_indices_to_probe),
       cumulativeOffset
       );
    CHK_ERR( gpuPeekAtLastError() );
@@ -1422,7 +1422,7 @@ __host__ bool gpu_acc_map_1d(
    reorder_blocks_by_dimension_kernel<<<grid_reorder, block_reorder, 0, baseStream>>> (
       gpuMemoryManager.getPointer<vmesh::VelocityBlockContainer*>(dev_VBCs),
       gpuMemoryManager.getPointer<Realf*>(dev_blockDataOrdered),
-      gpu_cell_indices_to_id,
+      gpuMemoryManager.getPointer<uint>(gpu_cell_indices_to_id),
       gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>(dev_vbwcl_vec), //dev_velocity_block_with_content_list, // use as LIDlist
       gpuMemoryManager.getPointer<ColumnOffsets>(dev_columnOffsetData),
       gpuMemoryManager.getSessionPointer<vmesh::LocalID>("dev_nColumns"),
@@ -1447,7 +1447,7 @@ __host__ bool gpu_acc_map_1d(
       gpuMemoryManager.getPointer<ColumnOffsets>(dev_columnOffsetData),
       gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>(dev_lists_with_replace_new),
       gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>(dev_allMaps),
-      gpu_block_indices_to_id,
+      gpuMemoryManager.getPointer<uint>(gpu_block_indices_to_id),
       gpuMemoryManager.getPointer<Realf>(dev_intersections),
       Parameters::bailout_velocity_space_wall_margin,
       max_v_length,
@@ -1493,7 +1493,7 @@ __host__ bool gpu_acc_map_1d(
          gpuMemoryManager.getPointer<ColumnOffsets>(dev_columnOffsetData),
          gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>(dev_lists_with_replace_new),
          gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>(dev_allMaps),
-         gpu_block_indices_to_id,
+         gpuMemoryManager.getPointer<uint>(gpu_block_indices_to_id),
          gpuMemoryManager.getPointer<Realf>(dev_intersections),
          Parameters::bailout_velocity_space_wall_margin,
          max_v_length,
@@ -1639,8 +1639,8 @@ __host__ bool gpu_acc_map_1d(
       gpuMemoryManager.getPointer<vmesh::VelocityMesh*>(dev_vmeshes), // indexing: cellOffset
       gpuMemoryManager.getPointer<vmesh::VelocityBlockContainer*>(dev_VBCs), // indexing: cellOffset
       gpuMemoryManager.getPointer<Realf*>(dev_blockDataOrdered), //indexing: blockIdx.y
-      gpu_cell_indices_to_id,
-      gpu_block_indices_to_id,
+      gpuMemoryManager.getPointer<uint>(gpu_cell_indices_to_id),
+      gpuMemoryManager.getPointer<uint>(gpu_block_indices_to_id),
       gpuMemoryManager.getPointer<ColumnOffsets>(dev_columnOffsetData), //indexing: blockIdx.y
       gpuMemoryManager.getPointer<Realf>(dev_intersections), // indexing: cellOffset
       v_min,

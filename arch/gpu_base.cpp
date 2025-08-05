@@ -51,17 +51,11 @@ int myRank;
 gpuStream_t gpuStreamList[MAXCPUTHREADS];
 gpuStream_t gpuPriorityStreamList[MAXCPUTHREADS];
 // Return parameters from kernels, only used for single-cell operations
-Real *returnReal[MAXCPUTHREADS];
-Realf *returnRealf[MAXCPUTHREADS];
-vmesh::LocalID *returnLID[MAXCPUTHREADS];
-Real *host_returnReal[MAXCPUTHREADS];
-Realf *host_returnRealf[MAXCPUTHREADS];
-vmesh::LocalID *host_returnLID[MAXCPUTHREADS];
+std::string returnReal = "null", returnRealf = "null", host_returnReal = "null", host_returnRealf = "null";
+std::string returnLID = "null", host_returnLID = "null";
 
 // Transpose indices for solvers
-uint *gpu_cell_indices_to_id;
-uint *gpu_block_indices_to_id;
-uint *gpu_block_indices_to_probe;
+std::string gpu_cell_indices_to_id = "null", gpu_block_indices_to_id = "null", gpu_block_indices_to_probe = "null";
 
 // Pointers to buffers used in acceleration
 ColumnOffsets *host_columnOffsetData = NULL;
@@ -223,6 +217,13 @@ __host__ void gpu_init_device() {
    #endif
 
    // Pre-generate streams, allocate return pointers
+   gpuMemoryManager.createPointer("returnReal", returnReal);
+   gpuMemoryManager.createPointer("returnRealf", returnRealf);
+   gpuMemoryManager.createPointer("returnLID", returnLID);
+   gpuMemoryManager.createPointer("host_returnReal", host_returnReal);
+   gpuMemoryManager.createPointer("host_returnRealf", host_returnRealf);
+   gpuMemoryManager.createPointer("host_returnLID", host_returnLID);
+
    int *leastPriority = new int; // likely 0
    int *greatestPriority = new int; // likely -1
    CHK_ERR( gpuDeviceGetStreamPriorityRange (leastPriority, greatestPriority) );
@@ -232,17 +233,30 @@ __host__ void gpu_init_device() {
    for (uint i=0; i<maxNThreads; ++i) {
       CHK_ERR( gpuStreamCreateWithPriority(&(gpuStreamList[i]), gpuStreamDefault, *leastPriority) );
       CHK_ERR( gpuStreamCreateWithPriority(&(gpuPriorityStreamList[i]), gpuStreamDefault, *greatestPriority) );
-      CHK_ERR( gpuMalloc((void**)&returnReal[i], 8*sizeof(Real)) );
-      CHK_ERR( gpuMalloc((void**)&returnRealf[i], 8*sizeof(Realf)) );
-      CHK_ERR( gpuMalloc((void**)&returnLID[i], 8*sizeof(vmesh::LocalID)) );
-      CHK_ERR( gpuMallocHost((void **) &host_returnReal[i], 8*sizeof(Real)) );
-      CHK_ERR( gpuMallocHost((void **) &host_returnRealf[i], 8*sizeof(Realf)) );
-      CHK_ERR( gpuMallocHost((void **) &host_returnLID[i], 8*sizeof(vmesh::LocalID)) );
+
+      gpuMemoryManager.createSubPointer(host_returnReal, i);
+      gpuMemoryManager.createSubPointer(host_returnRealf, i);
+      gpuMemoryManager.createSubPointer(host_returnLID, i);
+      gpuMemoryManager.createSubPointer(returnReal, i);
+      gpuMemoryManager.createSubPointer(returnRealf, i);
+      gpuMemoryManager.createSubPointer(returnLID, i);
+
+      gpuMemoryManager.subPointerHostAllocate(host_returnReal, i, 8*sizeof(Real));
+      gpuMemoryManager.subPointerHostAllocate(host_returnRealf, i, 8*sizeof(Realf));
+      gpuMemoryManager.subPointerHostAllocate(host_returnLID, i, 8*sizeof(vmesh::LocalID));
+
+      gpuMemoryManager.subPointerAllocate(returnReal, i, 8*sizeof(Real));
+      gpuMemoryManager.subPointerAllocate(returnRealf, i, 8*sizeof(Realf));
+      gpuMemoryManager.subPointerAllocate(returnLID, i, 8*sizeof(vmesh::LocalID));
    }
 
-   CHK_ERR( gpuMalloc((void**)&gpu_cell_indices_to_id, 3*sizeof(uint)) );
-   CHK_ERR( gpuMalloc((void**)&gpu_block_indices_to_id, 3*sizeof(uint)) );
-   CHK_ERR( gpuMalloc((void**)&gpu_block_indices_to_probe, 3*sizeof(uint)) );
+   gpuMemoryManager.createPointer("gpu_cell_indices_to_id", gpu_cell_indices_to_id);
+   gpuMemoryManager.createPointer("gpu_block_indices_to_id", gpu_block_indices_to_id);
+   gpuMemoryManager.createPointer("gpu_block_indices_to_probe", gpu_block_indices_to_probe);
+
+   gpuMemoryManager.allocate(gpu_cell_indices_to_id, 3*sizeof(uint));
+   gpuMemoryManager.allocate(gpu_block_indices_to_id, 3*sizeof(uint));
+   gpuMemoryManager.allocate(gpu_block_indices_to_probe, 3*sizeof(uint));
    CHK_ERR( gpuDeviceSynchronize() );
 
    // Using just a single context for whole MPI task
@@ -260,16 +274,7 @@ __host__ void gpu_clear_device() {
    for (uint i=0; i<maxNThreads; ++i) {
       CHK_ERR( gpuStreamDestroy(gpuStreamList[i]) );
       CHK_ERR( gpuStreamDestroy(gpuPriorityStreamList[i]) );
-      CHK_ERR( gpuFree(returnReal[i]) );
-      CHK_ERR( gpuFree(returnRealf[i]) );
-      CHK_ERR( gpuFree(returnLID[i]) );
-      CHK_ERR( gpuFreeHost(host_returnReal[i]) );
-      CHK_ERR( gpuFreeHost(host_returnRealf[i]) );
-      CHK_ERR( gpuFreeHost(host_returnLID[i]) );
    }
-   CHK_ERR( gpuFree(gpu_cell_indices_to_id) );
-   CHK_ERR( gpuFree(gpu_block_indices_to_id) );
-   CHK_ERR( gpuFree(gpu_block_indices_to_probe) );
    CHK_ERR( gpuDeviceSynchronize() );
    gpuMemoryManager.freeAll();
 }
@@ -303,13 +308,8 @@ int gpu_reportMemory(const size_t local_cells_capacity, const size_t ghost_cells
    */
    uint maxNThreads = gpu_getMaxThreads();
 
-   size_t miniBuffers = maxNThreads * (
-      8*sizeof(Real) // returnReal
-      + 8*sizeof(Realf) // returnRealf
-      + 8*sizeof(vmesh::LocalID) // returnLID
-      )
-      + 9*sizeof(uint) // gpu_cell_indices_to_id, gpu_cell_indices_to_probe, gpu_block_indices_to_id
-      + sizeof(std::array<vmesh::MeshParameters,MAX_VMESH_PARAMETERS_COUNT>) // velocityMeshes_upload
+   size_t miniBuffers = 
+      sizeof(std::array<vmesh::MeshParameters,MAX_VMESH_PARAMETERS_COUNT>) // velocityMeshes_upload
       + sizeof(vmesh::MeshWrapper) // MWdev
       + gpu_allocated_moments*sizeof(vmesh::VelocityBlockContainer*) // gpu_moments dev_VBC
       + gpu_allocated_moments*4*sizeof(Real)  // gpu_moments dev_moments1

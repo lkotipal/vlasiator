@@ -228,9 +228,9 @@ void gpu_accelerate_cells(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& m
 
       // Copy indexing information to device. To be tested: might be faster to pass a single
       // device-side struct or just 9 plain arguments?
-      CHK_ERR( gpuMemcpy(gpu_cell_indices_to_id, cell_indices_to_id, 3*sizeof(uint), gpuMemcpyHostToDevice) );
-      CHK_ERR( gpuMemcpy(gpu_block_indices_to_id, block_indices_to_id, 3*sizeof(uint), gpuMemcpyHostToDevice) );
-      CHK_ERR( gpuMemcpy(gpu_block_indices_to_probe, block_indices_to_probe, 3*sizeof(uint), gpuMemcpyHostToDevice) );
+      CHK_ERR( gpuMemcpy(gpuMemoryManager.getPointer<uint>(gpu_cell_indices_to_id), cell_indices_to_id, 3*sizeof(uint), gpuMemcpyHostToDevice) );
+      CHK_ERR( gpuMemcpy(gpuMemoryManager.getPointer<uint>(gpu_block_indices_to_id), block_indices_to_id, 3*sizeof(uint), gpuMemcpyHostToDevice) );
+      CHK_ERR( gpuMemcpy(gpuMemoryManager.getPointer<uint>(gpu_block_indices_to_probe), block_indices_to_probe, 3*sizeof(uint), gpuMemcpyHostToDevice) );
 
       // Select correct intersections for each mapping order
       #pragma omp parallel for
