@@ -1,6 +1,6 @@
 # Suggested modules
 #
-# ml openmpi; ml boost
+# ml openmpi
 #
 # Build libraries with ./build_libraries.sh leonardo_booster
 
