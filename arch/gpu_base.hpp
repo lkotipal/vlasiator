@@ -278,6 +278,21 @@ struct GPUMemoryManager {
       return true;
    }
 
+   // Create a new pointer, ensure that there aren't duplicates
+   bool createUniquePointer(const std::string& name) {
+      std::lock_guard<std::mutex> lock(memoryMutex);
+
+      if (gpuMemoryPointers.count(name)) {
+         return false;
+      }
+
+      nameCounters[name] = 0;
+      gpuMemoryPointers[name] = nullptr;
+      allocationSizes[name] = (size_t)(0);
+      pointerDevice[name] = "None";
+      return true;
+   }
+
    // Create a new pointer with a base name and an index
    bool createSubPointer(const std::string& basePointerName, const uint index) {
       if (!gpuMemoryPointers.count(basePointerName)){
@@ -308,12 +323,10 @@ struct GPUMemoryManager {
       size_t dev_requiredSessionSize = max(dev_previousSessionSize, dev_bytes);
 
       if (gpuMemoryPointers.count("dev_sessionPointer") == 0) {
-         std::string dev_sessionPointerName = "null";
-         createPointer("dev_sessionPointer", dev_sessionPointerName);
+         createUniquePointer("dev_sessionPointer");
       }
       if (gpuMemoryPointers.count("host_sessionPointer") == 0) {
-         std::string host_sessionPointerName = "null";
-         createPointer("host_sessionPointer", host_sessionPointerName);
+         createUniquePointer("host_sessionPointer");
       }
 
       if(sessionOn){
@@ -671,16 +684,7 @@ struct GPUMemoryManager {
 
 extern GPUMemoryManager gpuMemoryManager;
 
-// Device data variables, to be allocated in good time. Made into an array so that each thread has their own pointer.
-extern std::string host_blockDataOrdered;
-extern std::string dev_blockDataOrdered;
-extern std::string gpu_cell_indices_to_id, gpu_block_indices_to_id, gpu_block_indices_to_probe;
-
-extern std::string returnReal, returnRealf, host_returnReal, host_returnRealf;
-extern std::string returnLID, host_returnLID;
-
 extern ColumnOffsets *host_columnOffsetData;
-extern std::string dev_columnOffsetData;
 extern uint gpu_largest_columnCount;
 
 // Hash map and splitvectors buffers used in block adjustment are declared in block_adjust_gpu.hpp

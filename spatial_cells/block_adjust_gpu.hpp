@@ -103,16 +103,4 @@ namespace spatial_cell {
 
 } // namespaces
 
-// Host-device buffers, allocated in arch/gpu_base.cpp
-extern std::string host_vmeshes, dev_vmeshes, host_VBCs, dev_VBCs, host_allMaps, dev_allMaps;
-extern std::string host_vbwcl_vec, dev_vbwcl_vec, host_lists_with_replace_new, dev_lists_with_replace_new;
-extern std::string host_lists_delete, dev_lists_delete, host_lists_to_replace, dev_lists_to_replace;
-extern std::string host_lists_with_replace_old, dev_lists_with_replace_old;
-extern std::string host_nBefore, dev_nBefore, host_nAfter, dev_nAfter, host_nBlocksToChange, dev_nBlocksToChange;
-extern std::string host_resizeSuccess, dev_resizeSuccess, host_overflownElements, dev_overflownElements;
-extern std::string host_minValues, dev_minValues, host_massLoss, dev_massLoss;
-
-// Only used for acceleration
-extern std::string host_intersections, dev_intersections;
-
 #endif
