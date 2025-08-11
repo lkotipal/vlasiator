@@ -1348,10 +1348,10 @@ __host__ bool gpu_acc_map_1d(
      Not as efficient but simpler, and will be parallelized over spatial cells.
    */
    gpuMemoryManager.startSession(0,0);
-   gpuMemoryManager.sessionHostAllocate<vmesh::LocalID>("host_nColumns", nLaunchCells*BLOCK_ALLOCATION_FACTOR*sizeof(vmesh::LocalID));
-   gpuMemoryManager.sessionHostAllocate<vmesh::LocalID>("host_nColumnSets", nLaunchCells*BLOCK_ALLOCATION_FACTOR*sizeof(vmesh::LocalID));
-   gpuMemoryManager.sessionAllocate<vmesh::LocalID>("dev_nColumns", nLaunchCells*BLOCK_ALLOCATION_FACTOR*sizeof(vmesh::LocalID));
-   gpuMemoryManager.sessionAllocate<vmesh::LocalID>("dev_nColumnSets", nLaunchCells*BLOCK_ALLOCATION_FACTOR*sizeof(vmesh::LocalID));
+   gpuMemoryManager.sessionHostAllocate<vmesh::LocalID>("host_nColumns", nLaunchCells*sizeof(vmesh::LocalID));
+   gpuMemoryManager.sessionHostAllocate<vmesh::LocalID>("host_nColumnSets", nLaunchCells*sizeof(vmesh::LocalID));
+   gpuMemoryManager.sessionAllocate<vmesh::LocalID>("dev_nColumns", nLaunchCells*sizeof(vmesh::LocalID));
+   gpuMemoryManager.sessionAllocate<vmesh::LocalID>("dev_nColumnSets", nLaunchCells*sizeof(vmesh::LocalID));
 
    phiprof::Timer scanTimer {"scan probe cube"};
    const dim3 grid_scan(1,nLaunchCells,1);

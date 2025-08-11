@@ -111,7 +111,7 @@ void reduce_vlasov_dt(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGr
    const uint nPOP = getObjectWrapper().particleSpecies.size();
 
    // Resize dev_vmeshes, one for each cell and each pop
-   gpu_trans_allocate(nAllCells*nPOP,0,0,0);
+   gpu_trans_allocate(nAllCells*nPOP,0);
 
    Real* host_max_dt;
    Real* host_dxdydz;

@@ -53,10 +53,10 @@ void update_velocity_block_content_lists(
    gpu_batch_allocate(nCells,0);
 
    gpuMemoryManager.startSession(0,0);
-   gpuMemoryManager.sessionHostAllocate<vmesh::LocalID>("host_nWithContent", nCells * BLOCK_ALLOCATION_FACTOR*sizeof(vmesh::LocalID));
-   gpuMemoryManager.sessionHostAllocate<Real>("host_mass", nCells * BLOCK_ALLOCATION_FACTOR*sizeof(Real));
-   gpuMemoryManager.sessionAllocate<vmesh::LocalID>("dev_nWithContent", nCells * BLOCK_ALLOCATION_FACTOR*sizeof(vmesh::LocalID));
-   gpuMemoryManager.sessionAllocate<Real>("dev_mass", nCells * BLOCK_ALLOCATION_FACTOR*sizeof(Real));
+   gpuMemoryManager.sessionHostAllocate<vmesh::LocalID>("host_nWithContent", nCells * sizeof(vmesh::LocalID));
+   gpuMemoryManager.sessionHostAllocate<Real>("host_mass", nCells * sizeof(Real));
+   gpuMemoryManager.sessionAllocate<vmesh::LocalID>("dev_nWithContent", nCells * sizeof(vmesh::LocalID));
+   gpuMemoryManager.sessionAllocate<Real>("dev_mass", nCells * sizeof(Real));
 
    mallocTimer.stop();
 
@@ -247,8 +247,8 @@ void adjust_velocity_blocks_in_cells(
    gpu_batch_allocate(nCells,maxNeighbors);
 
    gpuMemoryManager.startSession(0,0);
-   gpuMemoryManager.sessionHostAllocate<split::SplitVector<vmesh::GlobalID>*>("host_vbwcl_neigh", maxNeighbors * nCells * BLOCK_ALLOCATION_FACTOR*sizeof(split::SplitVector<vmesh::GlobalID>*));
-   gpuMemoryManager.sessionAllocate<split::SplitVector<vmesh::GlobalID>*>("dev_vbwcl_neigh", maxNeighbors * nCells * BLOCK_ALLOCATION_FACTOR*sizeof(split::SplitVector<vmesh::GlobalID>*));
+   gpuMemoryManager.sessionHostAllocate<split::SplitVector<vmesh::GlobalID>*>("host_vbwcl_neigh", maxNeighbors * nCells * sizeof(split::SplitVector<vmesh::GlobalID>*));
+   gpuMemoryManager.sessionAllocate<split::SplitVector<vmesh::GlobalID>*>("dev_vbwcl_neigh", maxNeighbors * nCells * sizeof(split::SplitVector<vmesh::GlobalID>*));
 
    mallocTimer.stop();
 

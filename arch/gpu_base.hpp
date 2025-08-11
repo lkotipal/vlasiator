@@ -90,7 +90,6 @@ void gpu_vlasov_allocate_perthread(uint cpuThreadID, uint maxBlockCount);
 uint gpu_vlasov_getSmallestAllocation();
 
 void gpu_batch_allocate(uint nCells=0, uint maxNeighbours=0);
-void gpu_batch_deallocate(bool first=true, bool second=true);
 
 void gpu_acc_allocate(uint maxBlockCount, uint nCells);
 void gpu_acc_allocate_perthread(uint cpuThreadID, uint firstAllocationCount, uint columnSetAllocationCount=0);
@@ -99,9 +98,7 @@ void gpu_acc_deallocate();
 void gpu_trans_allocate(cuint nAllCells=0,
                         cuint sumOfLengths=0,
                         cuint largestVmesh=0,
-                        cuint unionSetSize=0,
-                        cuint transGpuBlocks=0,
-                        cuint nPencils=0);
+                        cuint unionSetSize=0);
 void gpu_trans_deallocate();
 
 extern gpuStream_t gpuStreamList[];
@@ -391,6 +388,29 @@ struct GPUMemoryManager {
       return true;
    }
 
+   // Allocate memory to a pointer by name
+   bool allocateWithBuffer(const std::string& name, size_t bytes, size_t buffer) {
+      std::lock_guard<std::mutex> lock(memoryMutex);
+      if (gpuMemoryPointers.count(name) == 0) {
+         std::cerr << "Error: Pointer name '" << name << "' not found.\n";
+         return false;
+      }
+
+      if (allocationSizes[name] >= bytes) {
+         //No need to reallocate
+         return false;
+      }
+      
+      if (gpuMemoryPointers[name] != nullptr) {
+         CHK_ERR( gpuFree(gpuMemoryPointers[name]) );
+      }
+
+      CHK_ERR( gpuMalloc(&gpuMemoryPointers[name], bytes*buffer) );
+      allocationSizes[name] = bytes*buffer;
+      pointerDevice[name] = "dev";
+      return true;
+   }
+
    // Allocate pinned host memory to a pointer by name
    bool hostAllocate(const std::string& name, size_t bytes) {
       std::lock_guard<std::mutex> lock(memoryMutex);
@@ -414,6 +434,29 @@ struct GPUMemoryManager {
       return true;
    }
 
+   // Allocate pinned host memory to a pointer by name
+   bool hostAllocateWithBuffer(const std::string& name, size_t bytes, size_t buffer) {
+      std::lock_guard<std::mutex> lock(memoryMutex);
+      if (gpuMemoryPointers.count(name) == 0) {
+         std::cerr << "Error: Pointer name '" << name << "' not found.\n";
+         return false;
+      }
+
+      if (allocationSizes[name] >= bytes) {
+         //No need to reallocate
+         return false;
+      }
+
+      if (gpuMemoryPointers[name] != nullptr) {
+         CHK_ERR( gpuFreeHost(gpuMemoryPointers[name]) );
+      }
+
+      CHK_ERR( gpuMallocHost(&gpuMemoryPointers[name], bytes*buffer) );
+      allocationSizes[name] = bytes*buffer;
+      pointerDevice[name] = "host";
+      return true;
+   }
+
    // Allocate memory to a sub pointer by name and index
    bool subPointerAllocate(const std::string& basePointerName, const uint index, size_t bytes) {
       if (gpuMemoryPointers.count(basePointerName) == 0) {
@@ -429,6 +472,23 @@ struct GPUMemoryManager {
       }
 
       return allocate(pointerName, bytes);
+   }
+
+   // Allocate memory to a sub pointer by name and index
+   bool subPointerAllocateWithBuffer(const std::string& basePointerName, const uint index, size_t bytes, size_t buffer) {
+      if (gpuMemoryPointers.count(basePointerName) == 0) {
+         std::cerr << "Error: Pointer name '" << basePointerName << "' not found.\n";
+         return false;
+      }
+
+      std::string pointerName = basePointerName + std::to_string(index);
+
+      if (!gpuMemoryPointers.count(pointerName)){
+         std::cerr << "Error: Pointer name '" << pointerName << "' not found.\n";
+         return false;
+      }
+
+      return allocateWithBuffer(pointerName, bytes, buffer);
    }
 
    // Allocate memory to a sub pointer by name and index

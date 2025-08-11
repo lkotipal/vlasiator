@@ -407,7 +407,7 @@ bool trans_map_1d_amr(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>&
    vmesh::VelocityMesh **dev_allPencilsMeshes = gpuMemoryManager.getSessionPointer<vmesh::VelocityMesh*>("dev_allPencilsMeshes");
    vmesh::VelocityBlockContainer **dev_allPencilsContainers = gpuMemoryManager.getSessionPointer<vmesh::VelocityBlockContainer*>("dev_allPencilsContainers");
 
-   gpu_trans_allocate(nAllCells,sumOfLengths,0,0,0,0);
+   gpu_trans_allocate(nAllCells,sumOfLengths,0,0);
    allocateTimer.stop();
 
    // Find maximum mesh size.
@@ -445,7 +445,7 @@ bool trans_map_1d_amr(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>&
    // Copy vmesh pointers to GPU
    CHK_ERR( gpuMemcpy(gpuMemoryManager.getPointer<vmesh::VelocityMesh*>("dev_vmeshes"), gpuMemoryManager.getPointer<vmesh::VelocityMesh*>("host_vmeshes"), nAllCells*sizeof(vmesh::VelocityMesh*), gpuMemcpyHostToDevice) );
    // Reserve size for unionOfBlocksSet
-   gpu_trans_allocate(0,0,largestFoundMeshSize,0,0,0);
+   gpu_trans_allocate(0,0,largestFoundMeshSize,0);
    allocateTimer.stop();
 
    // Gather cell weights for load balancing
@@ -516,7 +516,7 @@ bool trans_map_1d_amr(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>&
    unionOfBlocksSet->copyMetadata(&mapInfo, bgStream);
    CHK_ERR( gpuStreamSynchronize(bgStream) );
    const vmesh::LocalID unionOfBlocksSetSize = mapInfo.fill;
-   gpu_trans_allocate(0,0,0,unionOfBlocksSetSize,0,0);
+   gpu_trans_allocate(0,0,0,unionOfBlocksSetSize);
    allocateTimer.stop();
 
    phiprof::Timer buildTimer2 {"trans-amr-buildBlockList-2"};
@@ -553,10 +553,10 @@ bool trans_map_1d_amr(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>&
    // Two temporary buffers, used in-kernel for both reading and writing
    // (dev_pencilBlockData and dev_pencilBlocksCount)
    allocateTimer.start();
-   gpu_trans_allocate(0,sumOfLengths,0,0,nGpuBlocks,nPencils);
+   gpu_trans_allocate(0,sumOfLengths,0,0);
 
-   gpuMemoryManager.sessionAllocate<Realf*>("dev_pencilBlockData", sumOfLengths*nGpuBlocks*numAllocations * BLOCK_ALLOCATION_FACTOR*sizeof(Realf*));
-   gpuMemoryManager.sessionAllocate<uint>("dev_pencilBlocksCount", sumOfLengths*nGpuBlocks*numAllocations * BLOCK_ALLOCATION_FACTOR*sizeof(uint));
+   gpuMemoryManager.sessionAllocate<Realf*>("dev_pencilBlockData", sumOfLengths*nGpuBlocks*numAllocations * sizeof(Realf*));
+   gpuMemoryManager.sessionAllocate<uint>("dev_pencilBlocksCount", sumOfLengths*nGpuBlocks*numAllocations * sizeof(uint));
 
    Realf **dev_pencilBlockData = gpuMemoryManager.getSessionPointer<Realf*>("dev_pencilBlockData"); // Array of pointers into actual block data
    uint *dev_pencilBlocksCount = gpuMemoryManager.getSessionPointer<uint>("dev_pencilBlocksCount");
