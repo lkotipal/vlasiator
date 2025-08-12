@@ -474,6 +474,39 @@ struct GPUMemoryManager {
       return allocate(pointerName, bytes);
    }
 
+   // Allocate memory to a sub pointer by name and index and copy data from old pointer
+   bool subPointerCopyAndReallocate(const std::string& basePointerName, const uint index, size_t bytes) {
+      if (gpuMemoryPointers.count(basePointerName) == 0) {
+         std::cerr << "Error: Pointer name '" << basePointerName << "' not found.\n";
+         return false;
+      }
+
+      std::string pointerName = basePointerName + std::to_string(index);
+
+      if (!gpuMemoryPointers.count(pointerName)){
+         std::cerr << "Error: Pointer name '" << pointerName << "' not found.\n";
+         return false;
+      }
+
+      if (allocationSizes[pointerName] == 0) {
+         return allocate(pointerName, bytes);
+      }
+
+      if (allocationSizes[pointerName] >= bytes) {
+         return false;
+      }
+
+      void *newPointer;
+      CHK_ERR( gpuMalloc((void**)&newPointer, bytes) );
+      CHK_ERR( gpuMemcpy(newPointer, gpuMemoryPointers[pointerName], allocationSizes[pointerName], gpuMemcpyDeviceToDevice) );
+      CHK_ERR( gpuFree(gpuMemoryPointers[pointerName]) );
+      updatePointer(pointerName, newPointer);
+
+      allocationSizes[pointerName] = bytes;
+
+      return true;
+   }
+
    // Allocate memory to a sub pointer by name and index
    bool subPointerAllocateWithBuffer(const std::string& basePointerName, const uint index, size_t bytes, size_t buffer) {
       if (gpuMemoryPointers.count(basePointerName) == 0) {

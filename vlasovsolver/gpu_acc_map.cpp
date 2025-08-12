@@ -1415,6 +1415,25 @@ __host__ bool gpu_acc_map_1d(
    CHK_ERR( gpuStreamSynchronize(baseStream) );
    columnsTimer.stop();
 
+   phiprof::Timer allocTimer2 {"ensure vlasov allocations"};
+   // Ensure allocations
+   for (size_t cellIndex = 0; cellIndex < nLaunchCells; cellIndex++) {
+      uint cellOffset = cellIndex + cumulativeOffset;
+      // Read count of columns and columnsets, calculate required size of buffers
+      vmesh::LocalID host_totalColumns = (gpuMemoryManager.getSessionHostPointer<vmesh::LocalID>("host_nColumns"))[cellOffset];
+
+      const CellID cid = launchCells[cellIndex];
+      SpatialCell *SC = mpiGrid[cid];
+      const vmesh::VelocityMesh *thisVmesh = SC->get_velocity_mesh(popID);
+      const vmesh::LocalID nBlocks = thisVmesh->size();
+      gpu_vlasov_allocate_perthread(cellIndex, 2*host_totalColumns+nBlocks);
+   } // end parallel region
+
+   CHK_ERR( gpuMemcpy(gpuMemoryManager.getPointer<Realf*>("dev_blockDataOrdered"), gpuMemoryManager.getPointer<Realf*>("host_blockDataOrdered"), gpu_getAllocationCount()*sizeof(Realf*), gpuMemcpyHostToDevice) );
+   
+   allocTimer2.stop();
+
+
    // Launch kernels for transposing and ordering velocity space data into columns
    phiprof::Timer reorderTimer {"reorder blocks"};
    const dim3 grid_reorder(largest_totalColumns,nLaunchCells,1);

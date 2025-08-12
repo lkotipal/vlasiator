@@ -403,7 +403,7 @@ __host__ void gpu_vlasov_allocate_perthread(
 
    // Dual use of blockDataOrdered: use also for acceleration probe cube and its flattened version.
    // Calculate required size
-   size_t blockDataAllocation = blockAllocationCount * WID3 * sizeof(Realf) * BLOCK_ALLOCATION_PADDING * TRANSLATION_BUFFER_ALLOCATION_FACTOR;
+   size_t blockDataAllocation = blockAllocationCount * WID3 * sizeof(Realf);
    // minimum allocation size:
    for (uint popID=0; popID<getObjectWrapper().particleSpecies.size(); ++popID) {
       const uint c0 = (*vmesh::getMeshWrapper()->velocityMeshes)[popID].gridLength[0];
@@ -433,11 +433,13 @@ __host__ void gpu_vlasov_allocate_perthread(
    blockDataAllocation = (1 + ((blockDataAllocation - 1) / (WID3 * sizeof(Realf)))) * (WID3 * sizeof(Realf));
 
    gpuMemoryManager.createSubPointer("host_blockDataOrdered", allocID);
-   gpuMemoryManager.subPointerAllocate("host_blockDataOrdered", allocID, blockDataAllocation);
+   bool reAllocated = gpuMemoryManager.subPointerAllocate("host_blockDataOrdered", allocID, blockDataAllocation);
    gpuMemoryManager.setSubPointer<Realf>("host_blockDataOrdered", allocID);
 
    // Store size of new allocation (in units blocks)
-   gpu_vlasov_allocatedSize[allocID] = blockDataAllocation / (WID3 * sizeof(Realf));
+   if (reAllocated) {
+      gpu_vlasov_allocatedSize[allocID] = blockDataAllocation / (WID3 * sizeof(Realf));
+   }
 }
 
 /** Allocation and deallocation for pointers used by batch operations in block adjustment */
