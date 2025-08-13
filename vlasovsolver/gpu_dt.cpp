@@ -113,16 +113,17 @@ void reduce_vlasov_dt(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGr
    // Resize dev_vmeshes, one for each cell and each pop
    gpu_trans_allocate(nAllCells*nPOP,0,0);
 
-   Real* host_max_dt;
-   Real* host_dxdydz;
-   Real* dev_max_dt;
-   Real* dev_dxdydz;
+   gpuMemoryManager.startSession(0,0);
 
-   // Host memory will be pinned
-   CHK_ERR( gpuMallocHost((void**)&host_max_dt, nAllCells*nPOP*sizeof(Real)) );
-   CHK_ERR( gpuMallocHost((void**)&host_dxdydz, nAllCells*nPOP*3*sizeof(Real)) );
-   CHK_ERR( gpuMalloc((void**)&dev_max_dt, nAllCells*nPOP*sizeof(Real)) );
-   CHK_ERR( gpuMalloc((void**)&dev_dxdydz, nAllCells*nPOP*3*sizeof(Real)) );
+   gpuMemoryManager.sessionHostAllocate<vmesh::LocalID>("host_max_dt", nAllCells*nPOP*sizeof(Real));
+   gpuMemoryManager.sessionHostAllocate<vmesh::LocalID>("host_dxdydz", nAllCells*nPOP*3*sizeof(Real));
+   gpuMemoryManager.sessionAllocate<vmesh::LocalID>("dev_max_dt", nAllCells*nPOP*sizeof(Real));
+   gpuMemoryManager.sessionAllocate<vmesh::LocalID>("dev_dxdydz", nAllCells*nPOP*3*sizeof(Real));
+
+   Real* host_max_dt = gpuMemoryManager.getSessionHostPointer<Real>("host_max_dt");
+   Real* host_dxdydz = gpuMemoryManager.getSessionHostPointer<Real>("host_dxdydz");
+   Real* dev_max_dt = gpuMemoryManager.getSessionPointer<Real>("dev_max_dt");
+   Real* dev_dxdydz = gpuMemoryManager.getSessionPointer<Real>("dev_dxdydz");
 
    // Gather vmeshes
    #pragma omp parallel for schedule(static)
@@ -161,10 +162,7 @@ void reduce_vlasov_dt(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGr
    }
    computeGpuTimestepTimer.stop();
 
-   CHK_ERR( gpuFreeHost(host_max_dt) );
-   CHK_ERR( gpuFreeHost(host_dxdydz) );
-   CHK_ERR( gpuFree(dev_max_dt) );
-   CHK_ERR( gpuFree(dev_dxdydz) );
+   gpuMemoryManager.endSession();
 
    // GPUTODO thread this?
    phiprof::Timer computeRestTimestepTimer {"compute-vlasov-rest-timestep"};
