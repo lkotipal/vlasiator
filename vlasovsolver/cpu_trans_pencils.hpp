@@ -51,13 +51,11 @@ struct setOfPencils {
 
    //GPUTODO: move gpu buffers and their upload to separate gpu_trans_pencils .hpp and .cpp files
 #ifdef USE_GPU
-   uint gpu_allocated_N = 0;
-   uint gpu_allocated_sumOfLengths = 0;
    // Pointers to GPU copies of vectors
-   uint *gpu_lengthOfPencils;
-   uint *gpu_idsStart;
-   Realf *gpu_sourceDZ;
-   Realf *gpu_targetRatios;
+   std::string gpu_lengthOfPencils = "null";
+   std::string gpu_idsStart = "null";
+   std::string gpu_sourceDZ = "null";
+   std::string gpu_targetRatios = "null";
    std::string dev_pencilsInBin = "null";
    std::string host_binStart = "null";
    std::string host_binSize = "null";

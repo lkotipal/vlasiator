@@ -96,7 +96,6 @@ void gpu_acc_allocate_perthread(uint cpuThreadID, uint firstAllocationCount, uin
 void gpu_acc_deallocate();
 
 void gpu_trans_allocate(cuint nAllCells=0,
-                        cuint sumOfLengths=0,
                         cuint largestVmesh=0,
                         cuint unionSetSize=0);
 void gpu_trans_deallocate();

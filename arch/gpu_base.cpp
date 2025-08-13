@@ -67,7 +67,6 @@ uint allocationCount = 0;
 std::vector<uint> gpu_vlasov_allocatedSize;
 
 // counters for allocated sizes in translation
-uint gpu_allocated_sumOfLengths = 0;
 uint gpu_allocated_largestVmeshSizePower = 0;
 uint gpu_allocated_unionSetSize = 0;
 uint gpu_largest_columnCount = 0;
@@ -310,11 +309,6 @@ int gpu_reportMemory(const size_t local_cells_capacity, const size_t ghost_cells
    if (unionOfBlocks) {
       transBuffers += sizeof(split::SplitVector<vmesh::GlobalID>);
       transBuffers += unionOfBlocks->capacity() * sizeof(vmesh::GlobalID);
-   }
-   // Pencils:
-   for (uint dimension=0; dimension<3; ++dimension) {
-      transBuffers += DimensionPencils[dimension].gpu_allocated_sumOfLengths * 2 * sizeof(Realf); // gpu_lengthOfPencils, gpu_idsStart
-      transBuffers += DimensionPencils[dimension].gpu_allocated_N * 2 * sizeof(uint); // gpu_sourceDZ, gpu_targetRatios
    }
    // Remote neighbor contribution buffers are in unified memory but deallocated after each use
 
@@ -593,7 +587,6 @@ __host__ void gpu_acc_allocate_perthread(
  */
 __host__ void gpu_trans_allocate(
    cuint nAllCells,
-   cuint sumOfLengths,
    cuint largestVmesh,
    cuint unionSetSize
    ) {
@@ -603,15 +596,6 @@ __host__ void gpu_trans_allocate(
       // Use batch allocation
       gpu_batch_allocate(nAllCells);
       allocationCount = (nAllCells == 1) ? 1 : P::GPUallocations;
-   }
-   // Vectors with one entry per pencil cell (prefetch to host)
-   if (sumOfLengths > 0) {
-      if (gpu_allocated_sumOfLengths == 0) {
-         // New allocations
-         gpu_allocated_sumOfLengths = sumOfLengths;
-      } else if (sumOfLengths > gpu_allocated_sumOfLengths) {
-         gpu_allocated_sumOfLengths = sumOfLengths;
-      }
    }
    // Set for collecting union of blocks (prefetched to device)
    if (largestVmesh > 0) {
@@ -660,9 +644,6 @@ __host__ void gpu_trans_allocate(
 /* Deallocation at end of simulation */
 __host__ void gpu_trans_deallocate() {
    // Deallocate any translation vectors or sets which exist
-   if (gpu_allocated_sumOfLengths != 0) {
-      gpu_allocated_sumOfLengths = 0;
-   }
    if (gpu_allocated_largestVmeshSizePower != 0) {
       ::delete unionOfBlocksSet;
       gpu_allocated_largestVmeshSizePower = 0;
@@ -670,18 +651,5 @@ __host__ void gpu_trans_deallocate() {
    if (gpu_allocated_unionSetSize != 0) {
       ::delete unionOfBlocks;
       gpu_allocated_unionSetSize = 0;
-   }
-   // Delete also the vectors for pencils for each dimension
-   for (uint dimension=0; dimension<3; dimension++) {
-      if (DimensionPencils[dimension].gpu_allocated_N) {
-         CHK_ERR( gpuFree(DimensionPencils[dimension].gpu_lengthOfPencils) );
-         CHK_ERR( gpuFree(DimensionPencils[dimension].gpu_idsStart) );
-         DimensionPencils[dimension].gpu_allocated_N = 0;
-      }
-      if (DimensionPencils[dimension].gpu_allocated_sumOfLengths) {
-         CHK_ERR( gpuFree(DimensionPencils[dimension].gpu_sourceDZ) );
-         CHK_ERR( gpuFree(DimensionPencils[dimension].gpu_targetRatios) );
-         DimensionPencils[dimension].gpu_allocated_sumOfLengths = 0;
-      }
    }
 }
