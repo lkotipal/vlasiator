@@ -115,10 +115,10 @@ void reduce_vlasov_dt(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGr
 
    gpuMemoryManager.startSession(0,0);
 
-   gpuMemoryManager.sessionHostAllocate<vmesh::LocalID>("host_max_dt", nAllCells*nPOP*sizeof(Real));
-   gpuMemoryManager.sessionHostAllocate<vmesh::LocalID>("host_dxdydz", nAllCells*nPOP*3*sizeof(Real));
-   gpuMemoryManager.sessionAllocate<vmesh::LocalID>("dev_max_dt", nAllCells*nPOP*sizeof(Real));
-   gpuMemoryManager.sessionAllocate<vmesh::LocalID>("dev_dxdydz", nAllCells*nPOP*3*sizeof(Real));
+   gpuMemoryManager.sessionHostAllocate<Real>("host_max_dt", nAllCells*nPOP*sizeof(Real));
+   gpuMemoryManager.sessionHostAllocate<Real>("host_dxdydz", nAllCells*nPOP*3*sizeof(Real));
+   gpuMemoryManager.sessionAllocate<Real>("dev_max_dt", nAllCells*nPOP*sizeof(Real));
+   gpuMemoryManager.sessionAllocate<Real>("dev_dxdydz", nAllCells*nPOP*3*sizeof(Real));
 
    Real* host_max_dt = gpuMemoryManager.getSessionHostPointer<Real>("host_max_dt");
    Real* host_dxdydz = gpuMemoryManager.getSessionHostPointer<Real>("host_dxdydz");
