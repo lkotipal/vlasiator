@@ -239,7 +239,6 @@ __host__ void gpu_clear_device() {
    gpu_acc_deallocate();
    gpu_vlasov_deallocate();
    gpu_trans_deallocate();
-   gpu_moments_deallocate();
    // Destroy streams
    const uint maxNThreads = gpu_getMaxThreads();
    for (uint i=0; i<maxNThreads; ++i) {
@@ -281,17 +280,10 @@ int gpu_reportMemory(const size_t local_cells_capacity, const size_t ghost_cells
 
    size_t miniBuffers = 
       sizeof(std::array<vmesh::MeshParameters,MAX_VMESH_PARAMETERS_COUNT>) // velocityMeshes_upload
-      + sizeof(vmesh::MeshWrapper) // MWdev
-      + gpu_allocated_moments*sizeof(vmesh::VelocityBlockContainer*) // gpu_moments dev_VBC
-      + gpu_allocated_moments*4*sizeof(Real)  // gpu_moments dev_moments1
-      + gpu_allocated_moments*3*sizeof(Real); // gpu_moments dev_moments2
+      + sizeof(vmesh::MeshWrapper); // MWdev
    // DT reduction buffers are deallocated every step (GPUTODO, make persistent)
 
    size_t vlasovBuffers = 0;
-   while(gpu_vlasov_allocatedSize.size() < allocationCount){ //Make sure the gpu_vlasov_allocatedSize has enough elements
-      gpu_vlasov_allocatedSize.push_back(0);
-   }
-
    size_t batchBuffers = 0;
 
    size_t accBuffers = 0;
@@ -312,11 +304,12 @@ int gpu_reportMemory(const size_t local_cells_capacity, const size_t ghost_cells
    }
    // Remote neighbor contribution buffers are in unified memory but deallocated after each use
 
+   size_t memoryManagerCapacity = gpuMemoryManager.totalGpuAllocation();
+
    size_t free_byte ;
    size_t total_byte ;
    CHK_ERR( gpuMemGetInfo( &free_byte, &total_byte) );
    size_t used_mb = (total_byte-free_byte)/(1024*1024);
-   size_t memoryManagerCapacity = gpuMemoryManager.totalGpuAllocation();
    size_t sum_mb = (miniBuffers+batchBuffers+vlasovBuffers+accBuffers+transBuffers+local_cells_capacity+ghost_cells_capacity+memoryManagerCapacity)/(1024*1024);
    size_t local_req_mb = local_cells_size/(1024*1024);
    size_t ghost_req_mb = ghost_cells_size/(1024*1024);
