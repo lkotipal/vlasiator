@@ -55,7 +55,7 @@ void gpu_accelerate_cells(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& m
                           const uint map_order
    ) {
 
-
+   CHK_ERR( gpuDeviceSynchronize() );
    phiprof::Timer verificationTimer {"gpu ACC allocation verifications"};
    const uint nCells = (uint)acceleratedCells.size();
    gpu_batch_allocate(nCells,0);
@@ -78,48 +78,12 @@ void gpu_accelerate_cells(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& m
          const vmesh::VelocityMesh* vmesh = SC->get_velocity_mesh(popID);
          const uint blockCount = vmesh->size();
          threadGpuMaxBlockCount = std::max(threadGpuMaxBlockCount,blockCount);
-
-         // Store pointers in batch buffers
-         (gpuMemoryManager.getPointer<vmesh::VelocityMesh*>("host_vmeshes"))[cellIndex] = SC->dev_get_velocity_mesh(popID);
-         (gpuMemoryManager.getPointer<vmesh::VelocityBlockContainer*>("host_VBCs"))[cellIndex] = SC->dev_get_velocity_blocks(popID);
-         (gpuMemoryManager.getPointer<Real>("host_minValues"))[cellIndex] = SC->getVelocityBlockMinValue(popID);
-         (gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>("host_vbwcl_vec"))[cellIndex] = SC->dev_velocity_block_with_content_list;
-         (gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>("host_lists_with_replace_new"))[cellIndex] = SC->dev_list_with_replace_new;
-         (gpuMemoryManager.getPointer<split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*>("host_lists_delete"))[cellIndex] = SC->dev_list_delete;
-         (gpuMemoryManager.getPointer<split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*>("host_lists_to_replace"))[cellIndex] = SC->dev_list_to_replace;
-         (gpuMemoryManager.getPointer<split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*>("host_lists_with_replace_old"))[cellIndex] = SC->dev_list_with_replace_old;
-         (gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>("host_allMaps"))[2*cellIndex] = SC->dev_velocity_block_with_content_map;
-         (gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>("host_allMaps"))[2*cellIndex+1] = SC->dev_velocity_block_with_no_content_map;
       }
       #pragma omp critical
       {
          gpuMaxBlockCount = std::max(gpuMaxBlockCount,threadGpuMaxBlockCount);
       }
    }
-
-   // Ensure accelerator has enough temporary memory allocated
-   verificationTimer.start();
-   gpu_vlasov_allocate(gpuMaxBlockCount,nCells);
-   gpu_acc_allocate(gpuMaxBlockCount,nCells);
-   verificationTimer.stop();
-
-   // Copy pointers and counters over to device
-   phiprof::Timer copyTimer {"copy pointer addresses to device"};
-   CHK_ERR( gpuMemset(gpuMemoryManager.getPointer<vmesh::LocalID>("dev_nBefore"), 0, nCells*sizeof(vmesh::LocalID)) );
-   CHK_ERR( gpuMemset(gpuMemoryManager.getPointer<vmesh::LocalID>("dev_nAfter"), 0, nCells*sizeof(vmesh::LocalID)) );
-   CHK_ERR( gpuMemset(gpuMemoryManager.getPointer<vmesh::LocalID>("dev_nBlocksToChange"), 0, nCells*sizeof(vmesh::LocalID)) );
-   CHK_ERR( gpuMemset(gpuMemoryManager.getPointer<vmesh::LocalID>("dev_resizeSuccess"), 0, nCells*sizeof(vmesh::LocalID)) );
-
-   CHK_ERR( gpuMemcpy(gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>("dev_allMaps"), gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>("host_allMaps"), 2*nCells*sizeof(Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*), gpuMemcpyHostToDevice) );
-   CHK_ERR( gpuMemcpy(gpuMemoryManager.getPointer<vmesh::VelocityMesh*>("dev_vmeshes"), gpuMemoryManager.getPointer<vmesh::VelocityMesh*>("host_vmeshes"), nCells*sizeof(vmesh::VelocityMesh*), gpuMemcpyHostToDevice) );
-   CHK_ERR( gpuMemcpy(gpuMemoryManager.getPointer<Real>("dev_minValues"), gpuMemoryManager.getPointer<Real>("host_minValues"), nCells*sizeof(Real), gpuMemcpyHostToDevice) );
-   CHK_ERR( gpuMemcpy(gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>("dev_vbwcl_vec"), gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>("host_vbwcl_vec"), nCells*sizeof(split::SplitVector<vmesh::GlobalID>*), gpuMemcpyHostToDevice) );
-   CHK_ERR( gpuMemcpy(gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>("dev_lists_with_replace_new"), gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>("host_lists_with_replace_new"), nCells*sizeof(split::SplitVector<vmesh::GlobalID>*), gpuMemcpyHostToDevice) );
-   CHK_ERR( gpuMemcpy(gpuMemoryManager.getPointer<split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*>("dev_lists_delete"), gpuMemoryManager.getPointer<split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*>("host_lists_delete"), nCells*sizeof(split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*), gpuMemcpyHostToDevice) );
-   CHK_ERR( gpuMemcpy(gpuMemoryManager.getPointer<split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*>("dev_lists_to_replace"), gpuMemoryManager.getPointer<split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*>("host_lists_to_replace"), nCells*sizeof(split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*), gpuMemcpyHostToDevice) );
-   CHK_ERR( gpuMemcpy(gpuMemoryManager.getPointer<split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*>("dev_lists_with_replace_old"), gpuMemoryManager.getPointer<split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*>("host_lists_with_replace_old"), nCells*sizeof(split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*), gpuMemcpyHostToDevice) );
-   CHK_ERR( gpuMemcpy(gpuMemoryManager.getPointer<vmesh::VelocityBlockContainer*>("dev_VBCs"), gpuMemoryManager.getPointer<vmesh::VelocityBlockContainer*>("host_VBCs"), nCells*sizeof(vmesh::VelocityBlockContainer*), gpuMemcpyHostToDevice) );
-   copyTimer.stop();
 
    // Do some overall preparation regarding dimensions and acceleration order
    const uint D0 = (*vmesh::getMeshWrapper()->velocityMeshes)[popID].gridLength[0];
@@ -151,7 +115,63 @@ void gpu_accelerate_cells(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& m
    */
    for (int dimIndex = 0; dimIndex<3; ++dimIndex) {
       int dimension = dimOrder[dimIndex];
-      
+
+      // Gather up-to-date pointers for cell contents
+      uint gpuMaxBlockCount = 0;
+      #pragma omp parallel
+      {
+         uint threadGpuMaxBlockCount = 0;
+         #pragma omp for schedule(static)
+         for (size_t cellIndex=0; cellIndex<acceleratedCells.size(); ++cellIndex) {
+            const CellID cid = acceleratedCells[cellIndex];
+            SpatialCell* SC = mpiGrid[cid];
+            const uint blockCount = SC->get_velocity_mesh(popID)->size();
+            // Ensure per-cell allocations
+            SC->setReservation(popID,blockCount);
+            SC->applyReservation(popID);
+
+            threadGpuMaxBlockCount = std::max(threadGpuMaxBlockCount,blockCount);
+            // Store pointers in batch buffers
+            (gpuMemoryManager.getPointer<vmesh::VelocityMesh*>("host_vmeshes"))[cellIndex] = SC->dev_get_velocity_mesh(popID);
+            (gpuMemoryManager.getPointer<vmesh::VelocityBlockContainer*>("host_VBCs"))[cellIndex] = SC->dev_get_velocity_blocks(popID);
+            (gpuMemoryManager.getPointer<Real>("host_minValues"))[cellIndex] = SC->getVelocityBlockMinValue(popID);
+            (gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>("host_vbwcl_vec"))[cellIndex] = SC->dev_velocity_block_with_content_list;
+            (gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>("host_lists_with_replace_new"))[cellIndex] = SC->dev_list_with_replace_new;
+            (gpuMemoryManager.getPointer<split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*>("host_lists_delete"))[cellIndex] = SC->dev_list_delete;
+            (gpuMemoryManager.getPointer<split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*>("host_lists_to_replace"))[cellIndex] = SC->dev_list_to_replace;
+            (gpuMemoryManager.getPointer<split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*>("host_lists_with_replace_old"))[cellIndex] = SC->dev_list_with_replace_old;
+            (gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>("host_allMaps"))[2*cellIndex] = SC->dev_velocity_block_with_content_map;
+            (gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>("host_allMaps"))[2*cellIndex+1] = SC->dev_velocity_block_with_no_content_map;
+         }
+         #pragma omp critical
+         {
+            gpuMaxBlockCount = std::max(gpuMaxBlockCount,threadGpuMaxBlockCount);
+         }
+      }
+      // Ensure accelerator has enough temporary memory allocated
+      verificationTimer.start();
+      gpu_vlasov_allocate(gpuMaxBlockCount);
+      gpu_acc_allocate(gpuMaxBlockCount);
+      verificationTimer.stop();
+
+      // Copy pointers and counters over to device
+      phiprof::Timer copyTimer {"copy pointer addresses to device"};
+      CHK_ERR( gpuMemset(gpuMemoryManager.getPointer<vmesh::LocalID>("dev_nBefore"), 0, nCells*sizeof(vmesh::LocalID)) );
+      CHK_ERR( gpuMemset(gpuMemoryManager.getPointer<vmesh::LocalID>("dev_nAfter"), 0, nCells*sizeof(vmesh::LocalID)) );
+      CHK_ERR( gpuMemset(gpuMemoryManager.getPointer<vmesh::LocalID>("dev_nBlocksToChange"), 0, nCells*sizeof(vmesh::LocalID)) );
+      CHK_ERR( gpuMemset(gpuMemoryManager.getPointer<vmesh::LocalID>("dev_resizeSuccess"), 0, nCells*sizeof(vmesh::LocalID)) );
+
+      CHK_ERR( gpuMemcpy(gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>("dev_allMaps"), gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>("host_allMaps"), 2*nCells*sizeof(Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*), gpuMemcpyHostToDevice) );
+      CHK_ERR( gpuMemcpy(gpuMemoryManager.getPointer<vmesh::VelocityMesh*>("dev_vmeshes"), gpuMemoryManager.getPointer<vmesh::VelocityMesh*>("host_vmeshes"), nCells*sizeof(vmesh::VelocityMesh*), gpuMemcpyHostToDevice) );
+      CHK_ERR( gpuMemcpy(gpuMemoryManager.getPointer<Real>("dev_minValues"), gpuMemoryManager.getPointer<Real>("host_minValues"), nCells*sizeof(Real), gpuMemcpyHostToDevice) );
+      CHK_ERR( gpuMemcpy(gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>("dev_vbwcl_vec"), gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>("host_vbwcl_vec"), nCells*sizeof(split::SplitVector<vmesh::GlobalID>*), gpuMemcpyHostToDevice) );
+      CHK_ERR( gpuMemcpy(gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>("dev_lists_with_replace_new"), gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>("host_lists_with_replace_new"), nCells*sizeof(split::SplitVector<vmesh::GlobalID>*), gpuMemcpyHostToDevice) );
+      CHK_ERR( gpuMemcpy(gpuMemoryManager.getPointer<split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*>("dev_lists_delete"), gpuMemoryManager.getPointer<split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*>("host_lists_delete"), nCells*sizeof(split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*), gpuMemcpyHostToDevice) );
+      CHK_ERR( gpuMemcpy(gpuMemoryManager.getPointer<split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*>("dev_lists_to_replace"), gpuMemoryManager.getPointer<split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*>("host_lists_to_replace"), nCells*sizeof(split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*), gpuMemcpyHostToDevice) );
+      CHK_ERR( gpuMemcpy(gpuMemoryManager.getPointer<split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*>("dev_lists_with_replace_old"), gpuMemoryManager.getPointer<split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*>("host_lists_with_replace_old"), nCells*sizeof(split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*), gpuMemcpyHostToDevice) );
+      CHK_ERR( gpuMemcpy(gpuMemoryManager.getPointer<vmesh::VelocityBlockContainer*>("dev_VBCs"), gpuMemoryManager.getPointer<vmesh::VelocityBlockContainer*>("host_VBCs"), nCells*sizeof(vmesh::VelocityBlockContainer*), gpuMemcpyHostToDevice) );
+      copyTimer.stop();
+
       string profName = "accelerate "+getObjectWrapper().particleSpecies[popID].name;
       phiprof::Timer accTimer {profName};
 
@@ -282,8 +302,6 @@ void gpu_accelerate_cells(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& m
          CellID cid = acceleratedCells[cellIndex];
          SpatialCell* SC = mpiGrid[cid];
          const uint blockCount = SC->get_velocity_mesh(popID)->size();
-         SC->setReservation(popID, blockCount);
-         SC->applyReservation(popID);
 
          if (blockCount > 0) {
             // Only accelerate non-empty cells

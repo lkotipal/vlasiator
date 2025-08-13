@@ -327,11 +327,11 @@ bool P::addParameters() {
        "Manual FsGridDecomposition for field solver grid stored in a restart file.", 0);
 
    RP::add("gridbuilder.x_min", "Minimum value of the x-coordinate.", NAN);
-   RP::add("gridbuilder.x_max", "Minimum value of the x-coordinate.", NAN);
+   RP::add("gridbuilder.x_max", "Maximum value of the x-coordinate.", NAN);
    RP::add("gridbuilder.y_min", "Minimum value of the y-coordinate.", NAN);
-   RP::add("gridbuilder.y_max", "Minimum value of the y-coordinate.", NAN);
+   RP::add("gridbuilder.y_max", "Maximum value of the y-coordinate.", NAN);
    RP::add("gridbuilder.z_min", "Minimum value of the z-coordinate.", NAN);
-   RP::add("gridbuilder.z_max", "Minimum value of the z-coordinate.", NAN);
+   RP::add("gridbuilder.z_max", "Maximum value of the z-coordinate.", NAN);
    RP::add("gridbuilder.x_length", "Number of cells in x-direction in initial grid.", 0);
    RP::add("gridbuilder.y_length", "Number of cells in y-direction in initial grid.", 0);
    RP::add("gridbuilder.z_length", "Number of cells in z-direction in initial grid.", 0);
@@ -978,11 +978,6 @@ void Parameters::getParameters() {
       cerr << "Box domain error!" << endl;
       MPI_Abort(MPI_COMM_WORLD, 1);
    }
-
-   #ifdef USE_GPU
-   // Ensure GPU allocation count figure is at least equal to max threads
-   P::GPUallocations = std::max(P::GPUallocations,gpu_getMaxThreads());
-   #endif
 
    // Set some parameter values.
    P::dx_ini = (P::xmax - P::xmin) / P::xcells_ini;

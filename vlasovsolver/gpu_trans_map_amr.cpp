@@ -393,7 +393,7 @@ bool trans_map_1d_amr(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>&
    phiprof::Timer allocateTimer {"trans-amr-allocs"};
    // Ensure GPU data has sufficient allocations/sizes
    const uint sumOfLengths = DimensionPencils[dimension].sumOfLengths;
-   gpu_vlasov_allocate(sumOfLengths,nAllCells);
+   gpu_vlasov_allocate(sumOfLengths);
    // Ensure allocation for allPencilsMeshes, allPencilsContainers
    gpuMemoryManager.startSession(0,0);
 

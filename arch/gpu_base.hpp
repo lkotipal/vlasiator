@@ -84,14 +84,14 @@ int gpu_reportMemory(const size_t local_cap=0, const size_t ghost_cap=0, const s
 
 unsigned int nextPowerOfTwo(unsigned int n);
 
-void gpu_vlasov_allocate(uint maxBlockCount, uint nCells);
+void gpu_vlasov_allocate(uint maxBlockCount);
 void gpu_vlasov_deallocate();
 void gpu_vlasov_allocate_perthread(uint cpuThreadID, uint maxBlockCount);
 uint gpu_vlasov_getSmallestAllocation();
 
 void gpu_batch_allocate(uint nCells=0, uint maxNeighbours=0);
 
-void gpu_acc_allocate(uint maxBlockCount, uint nCells);
+void gpu_acc_allocate(uint maxBlockCount);
 void gpu_acc_allocate_perthread(uint cpuThreadID, uint firstAllocationCount, uint columnSetAllocationCount=0);
 void gpu_acc_deallocate();
 
@@ -778,6 +778,7 @@ extern GPUMemoryManager gpuMemoryManager;
 
 extern ColumnOffsets *host_columnOffsetData;
 extern uint gpu_largest_columnCount;
+extern size_t gpu_probeFullSize, gpu_probeFlattenedSize;
 
 // Hash map and splitvectors buffers used in block adjustment are declared in block_adjust_gpu.hpp
 // Vector and set for use in translation are declared in vlasovsolver/gpu_trans_map_amr.hpp
