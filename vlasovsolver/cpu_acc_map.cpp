@@ -120,7 +120,6 @@ bool calculate_intersections (
    int intersections_id
 ) {
    Population& pop = spatial_cell->get_population(popID);
-   // TODO pass intersections_id here
    compute_cell_intersections(spatial_cell, block, popID, map_order, pop.subcycleDt, intersections_id);
    switch(dimension){
       case 0:
@@ -601,7 +600,10 @@ bool map_1d(SpatialCell* spatial_cell,
                Vec v_l = v_r;
                v_r += dv;
 
-               calculate_intersections(spatial_cell, cblocks[k], popID, map_order, dimension, intersection, intersection_di, intersection_dj, intersection_dk, 0);
+               // I think...
+               if (k % WID == 0) {
+                  calculate_intersections(spatial_cell, cblocks[k/WID], popID, map_order, dimension, intersection, intersection_di, intersection_dj, intersection_dk, 0);
+               }
 
                // left(l) and right(r) k values (global index) in the target
                // Lagrangian grid, the intersecting cells. Again old right is new left.
