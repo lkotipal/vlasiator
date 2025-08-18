@@ -29,6 +29,8 @@
 #include "cpu_acc_intersections.hpp"
 #include "cpu_acc_map.hpp"
 
+#include "cpu_acc_transform.hpp"
+
 #ifdef _OPENMP
 #include <omp.h>
 #endif
@@ -58,6 +60,10 @@ void cpu_accelerate_cells(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& m
          const CellID cellID = acceleratedCells[c];
          SpatialCell* SC = mpiGrid[cellID];
          Population& pop = SC->get_population(popID);
+
+         // compute transform, forward in time and backward in time, performed in this acceleration
+         pop.fwd_transform = compute_acceleration_transformation(SC, popID, pop.subcycleDt);
+         pop.bwd_transform = pop.fwd_transform.inverse();
          // compute_cell_intersections(SC, popID, map_order, pop.subcycleDt, intersections_id);
       }
       #pragma omp barrier

@@ -50,6 +50,8 @@ Spatial cell class for Vlasiator that supports a variable number of velocity blo
 #include "velocity_mesh_cpu.h"
 #include "velocity_block_container.h"
 
+#include <Eigen/Geometry>
+
 #ifdef DEBUG_VLASIATOR
    #ifndef DEBUG_SPATIAL_CELL
    #define DEBUG_SPATIAL_CELL
@@ -90,6 +92,9 @@ namespace spatial_cell {
       Real intersection_x,intersection_x_di,intersection_x_dj,intersection_x_dk;
       Real intersection_y,intersection_y_di,intersection_y_dj,intersection_y_dk;
       Real subcycleDt;
+
+      Eigen::Transform<Real,3, Eigen::Affine> fwd_transform;
+      Eigen::Transform<Real,3, Eigen::Affine> bwd_transform;
 
       // Constructor, destructor
       Population() {

@@ -52,51 +52,28 @@ void compute_cell_intersections(
    vmesh::VelocityMesh* vmesh    = spatial_cell->get_velocity_mesh(popID);
    spatial_cell::Population& pop = spatial_cell->get_population(popID);
 
-   // compute transform, forward in time and backward in time, performed in this acceleration
-   // TODO cache this
-   Transform<Real,3,Affine> fwd_transform= compute_acceleration_transformation(spatial_cell,popID,dt);
-   Transform<Real,3,Affine> bwd_transform= fwd_transform.inverse();
-
    //phiprof::Timer intersectionsTimer {intersections_id};
 
    switch(map_order){
       case 0: {
          //Map order XYZ
-         compute_intersections_1st(vmesh, block, bwd_transform, fwd_transform, 0,
-                                   pop.intersection_x,pop.intersection_x_di,
-                                   pop.intersection_x_dj,pop.intersection_x_dk);
-         compute_intersections_2nd(vmesh, block,bwd_transform, fwd_transform, 1,
-                                   pop.intersection_y,pop.intersection_y_di,
-                                   pop.intersection_y_dj,pop.intersection_y_dk);
-         compute_intersections_3rd(vmesh, block,bwd_transform, fwd_transform, 2,
-                                   pop.intersection_z,pop.intersection_z_di,
-                                   pop.intersection_z_dj,pop.intersection_z_dk);
+         compute_intersections_1st(vmesh, block, pop.bwd_transform, pop.fwd_transform, 0, pop.intersection_x,pop.intersection_x_di, pop.intersection_x_dj,pop.intersection_x_dk);
+         compute_intersections_2nd(vmesh, block, pop.bwd_transform, pop.fwd_transform, 1, pop.intersection_y,pop.intersection_y_di, pop.intersection_y_dj,pop.intersection_y_dk);
+         compute_intersections_3rd(vmesh, block, pop.bwd_transform, pop.fwd_transform, 2, pop.intersection_z,pop.intersection_z_di, pop.intersection_z_dj,pop.intersection_z_dk);
          break;
       }
       case 1: {
          //Map order YZX
-         compute_intersections_1st(vmesh, block, bwd_transform, fwd_transform, 1,
-                                   pop.intersection_y,pop.intersection_y_di,
-                                   pop.intersection_y_dj,pop.intersection_y_dk);
-         compute_intersections_2nd(vmesh, block, bwd_transform, fwd_transform, 2,
-                                   pop.intersection_z,pop.intersection_z_di,
-                                   pop.intersection_z_dj,pop.intersection_z_dk);
-         compute_intersections_3rd(vmesh, block, bwd_transform, fwd_transform, 0,
-                                   pop.intersection_x,pop.intersection_x_di,
-                                   pop.intersection_x_dj,pop.intersection_x_dk);
+         compute_intersections_1st(vmesh, block, pop.bwd_transform, pop.fwd_transform, 1, pop.intersection_y,pop.intersection_y_di, pop.intersection_y_dj,pop.intersection_y_dk);
+         compute_intersections_2nd(vmesh, block, pop.bwd_transform, pop.fwd_transform, 2, pop.intersection_z,pop.intersection_z_di, pop.intersection_z_dj,pop.intersection_z_dk);
+         compute_intersections_3rd(vmesh, block, pop.bwd_transform, pop.fwd_transform, 0, pop.intersection_x,pop.intersection_x_di, pop.intersection_x_dj,pop.intersection_x_dk);
          break;
       }
       case 2: {
          //Map order Z X Y
-         compute_intersections_1st(vmesh, block, bwd_transform, fwd_transform, 2,
-                                   pop.intersection_z,pop.intersection_z_di,
-                                   pop.intersection_z_dj,pop.intersection_z_dk);
-         compute_intersections_2nd(vmesh, block, bwd_transform, fwd_transform, 0,
-                                   pop.intersection_x,pop.intersection_x_di,
-                                   pop.intersection_x_dj,pop.intersection_x_dk);
-         compute_intersections_3rd(vmesh, block, bwd_transform, fwd_transform, 1,
-                                   pop.intersection_y,pop.intersection_y_di,
-                                   pop.intersection_y_dj,pop.intersection_y_dk);
+         compute_intersections_1st(vmesh, block, pop.bwd_transform, pop.fwd_transform, 2, pop.intersection_z,pop.intersection_z_di, pop.intersection_z_dj,pop.intersection_z_dk);
+         compute_intersections_2nd(vmesh, block, pop.bwd_transform, pop.fwd_transform, 0, pop.intersection_x,pop.intersection_x_di, pop.intersection_x_dj,pop.intersection_x_dk);
+         compute_intersections_3rd(vmesh, block, pop.bwd_transform, pop.fwd_transform, 1, pop.intersection_y,pop.intersection_y_di, pop.intersection_y_dj,pop.intersection_y_dk);
          break;
       }
    }
