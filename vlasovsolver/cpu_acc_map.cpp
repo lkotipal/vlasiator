@@ -33,6 +33,7 @@
 #include "cpu_1d_ppm.hpp"
 #include "cpu_1d_plm.hpp"
 #include "cpu_acc_map.hpp"
+#include "cpu_acc_intersections.hpp"
 
 using namespace std;
 using namespace spatial_cell;
@@ -105,7 +106,45 @@ void inline swapBlockIndices(velocity_block_indices_t &blockIndices, const uint 
    }
 }
 
+// oh my god bruh
+bool calculate_intersections (
+   SpatialCell* spatial_cell,
+   vmesh::GlobalID block,
+   const uint popID,
+   const uint map_order,
+   const uint dimension,
+   Realf& intersection, 
+   Realf& intersection_di, 
+   Realf& intersection_dj, 
+   Realf& intersection_dk,
+   int intersections_id
+) {
+   Population& pop = spatial_cell->get_population(popID);
+   // TODO pass intersections_id here
+   compute_cell_intersections(spatial_cell, block, popID, map_order, pop.subcycleDt, intersections_id);
+   switch(dimension){
+      case 0:
+         intersection    = static_cast<Realf>(pop.intersection_x);
+         intersection_di = static_cast<Realf>(pop.intersection_x_dk);
+         intersection_dj = static_cast<Realf>(pop.intersection_x_dj);
+         intersection_dk = static_cast<Realf>(pop.intersection_x_di);
+         break;
+      case 1:
+         intersection    = static_cast<Realf>(pop.intersection_y);
+         intersection_di = static_cast<Realf>(pop.intersection_y_di);
+         intersection_dj = static_cast<Realf>(pop.intersection_y_dk);
+         intersection_dk = static_cast<Realf>(pop.intersection_y_dj);
+         break;
+      case 2:
+         intersection    = static_cast<Realf>(pop.intersection_z);
+         intersection_di = static_cast<Realf>(pop.intersection_z_di);
+         intersection_dj = static_cast<Realf>(pop.intersection_z_dj);
+         intersection_dk = static_cast<Realf>(pop.intersection_z_dk);
+         break;
+   }
 
+   return true;
+}
 
 /*
    Here we map from the current time step grid, to a target grid which
@@ -121,14 +160,14 @@ void inline swapBlockIndices(velocity_block_indices_t &blockIndices, const uint 
 bool map_1d(SpatialCell* spatial_cell,
             const uint popID,
             Real in_intersection, Real in_intersection_di, Real in_intersection_dj, Real in_intersection_dk,
+            const uint map_order,
             const uint dimension) {
    no_subnormals(); // Needed by Agner's vectorclass
 
-   // Conversion here:
-   Realf intersection = (Realf)in_intersection;
-   Realf intersection_di = (Realf)in_intersection_di;
-   Realf intersection_dj = (Realf)in_intersection_dj;
-   Realf intersection_dk = (Realf)in_intersection_dk;
+   Realf intersection {0.0};
+   Realf intersection_di {0.0};
+   Realf intersection_dj {0.0};
+   Realf intersection_dk {0.0};
 
    Realf dv,v_min;
    Realf is_temp;
@@ -153,9 +192,9 @@ bool map_1d(SpatialCell* spatial_cell,
       /* i and k coordinates have been swapped*/
 
       /*swap intersection i and k coordinates*/
-      is_temp=intersection_di;
-      intersection_di=intersection_dk;
-      intersection_dk=is_temp;
+      // is_temp=intersection_di;
+      // intersection_di=intersection_dk;
+      // intersection_dk=is_temp;
 
       /*set values in array that is used to convert block indices to id using a dot product*/
       block_indices_to_id[0] = vmesh->getGridLength()[0]*vmesh->getGridLength()[1];
@@ -171,9 +210,9 @@ bool map_1d(SpatialCell* spatial_cell,
       /* j and k coordinates have been swapped*/
 
       /*swap intersection j and k coordinates*/
-      is_temp=intersection_dj;
-      intersection_dj=intersection_dk;
-      intersection_dk=is_temp;
+      // is_temp=intersection_dj;
+      // intersection_dj=intersection_dk;
+      // intersection_dk=is_temp;
 
       /*set values in array that is used to convert block indices to id using a dot product*/
       block_indices_to_id[0]=1;
@@ -255,6 +294,8 @@ bool map_1d(SpatialCell* spatial_cell,
         (base level) within the 4 corner cells in this
         block. Needed for computing maximum extent of target column*/
 
+      calculate_intersections(spatial_cell, blocks[columnBlockOffsets[setColumnOffsets[setIndex]]], popID, map_order, dimension, intersection, intersection_di, intersection_dj, intersection_dk, 0);
+
       Realf max_intersectionMin = intersection +
                                       (setFirstBlockIndices[0] * WID + 0) * intersection_di +
                                       (setFirstBlockIndices[1] * WID + 0) * intersection_dj;
@@ -306,6 +347,9 @@ bool map_1d(SpatialCell* spatial_cell,
           * edge in source grid. Added 1.01*dv to account for unexpected issues*/
          Realf firstBlockMinV = (WID * firstBlockIndices[2]) * dv + v_min;
          Realf lastBlockMaxV = (WID * (lastBlockIndices[2] + 1)) * dv + v_min;
+
+         // TODO idk if this should be here
+         calculate_intersections(spatial_cell, cblocks[0], popID, map_order, dimension, intersection, intersection_di, intersection_dj, intersection_dk, 0);
 
          /*gk is now the k value in terms of cells in target
          grid. This distance between max_intersectionMin (so lagrangian
@@ -490,6 +534,9 @@ bool map_1d(SpatialCell* spatial_cell,
                index (i in vector)
             */
 
+            // TODO not sure if this should be here
+            calculate_intersections(spatial_cell, cblocks[0], popID, map_order, dimension, intersection, intersection_di, intersection_dj, intersection_dk, 0);
+
             const Vec intersection_min =
                intersection +
                (block_indices_begin[0] * WID + to_realf(i_indices)) * intersection_di +
@@ -553,6 +600,8 @@ bool map_1d(SpatialCell* spatial_cell,
                // v_l, v_r are the left and right velocity coordinates of source cell. Left is the old right.
                Vec v_l = v_r;
                v_r += dv;
+
+               calculate_intersections(spatial_cell, cblocks[k], popID, map_order, dimension, intersection, intersection_di, intersection_dj, intersection_dk, 0);
 
                // left(l) and right(r) k values (global index) in the target
                // Lagrangian grid, the intersecting cells. Again old right is new left.
