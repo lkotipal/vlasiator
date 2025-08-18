@@ -246,9 +246,9 @@ namespace vmesh {
          return false;
       }
 
-      coords[0] = vmesh::getMeshWrapper()->at(meshID).meshMinLimits[0] + getBlockDx(0);
-      coords[1] = vmesh::getMeshWrapper()->at(meshID).meshMinLimits[1] + getBlockDx(1);
-      coords[2] = vmesh::getMeshWrapper()->at(meshID).meshMinLimits[2] + getBlockDx(2);
+      coords[0] = vmesh::getMeshWrapper()->at(meshID).meshMinLimits[0] + indices[0] * getBlockDx(0);
+      coords[1] = vmesh::getMeshWrapper()->at(meshID).meshMinLimits[1] + indices[1] * getBlockDx(1);
+      coords[2] = vmesh::getMeshWrapper()->at(meshID).meshMinLimits[2] + indices[2] * getBlockDx(2);
       return true;
    }
 
