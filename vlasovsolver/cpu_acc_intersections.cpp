@@ -314,8 +314,7 @@ void compute_intersections_2nd(
             = Eigen::Matrix<Real,3,1>(vmesh->getMeshMinLimits()[0]+vmesh->getCellDx(block, 0)*0.5, 0.0, 0.0);
         // Distance between Euclidian planes
         const Eigen::Matrix<Real,3,1> euclidian_di = Eigen::Matrix<Real,3,1>(vmesh->getCellDx(block, 0), 0.0, 0.0);
-        const Eigen::Matrix<Real,3,1> lagrangian_dj 
-            = bwd_transform.linear() * Eigen::Matrix<Real,3,1>(0.0, vmesh->getCellDx(1), 0.0); 
+        const Eigen::Matrix<Real,3,1> lagrangian_dj = bwd_transform.linear() * Eigen::Matrix<Real,3,1>(0.0, vmesh->getCellDx(block, 1), 0.0); 
         const Eigen::Matrix<Real,3,1> lagrangian_dk = bwd_transform.linear() * Eigen::Matrix<Real,3,1>(0.0, 0.0, vmesh->getCellDx(block, 2)); 
   
         // line along Lagrangian x line, unit vector. Only rotation here, not translation
@@ -392,9 +391,9 @@ void compute_intersections_3rd(
                                       vmesh->getMeshMinLimits()[1],
                                       0.5 * vmesh->getCellDx(block, 2) + vmesh->getMeshMinLimits()[2]);
         const Eigen::Matrix<Real,3,1> point_1_0_0 = bwd_transform
-            * Eigen::Matrix<Real,3,1>(1.5 * vmesh->getCellDx(0) + vmesh->getMeshMinLimits()[0],
+            * Eigen::Matrix<Real,3,1>(1.5 * vmesh->getCellDx(block, 0) + vmesh->getMeshMinLimits()[0], 
                                       vmesh->getMeshMinLimits()[1],
-                                      0.5 * vmesh->getCellDx(2) + vmesh->getMeshMinLimits()[2]);
+                                      0.5 * vmesh->getCellDx(block, 2) + vmesh->getMeshMinLimits()[2]);
         const Eigen::Matrix<Real,3,1> point_0_1_0 = bwd_transform
             * Eigen::Matrix<Real,3,1>(0.5 * vmesh->getCellDx(block, 0) + vmesh->getMeshMinLimits()[0],
                                       1.0 * vmesh->getCellDx(block, 1) + vmesh->getMeshMinLimits()[1],

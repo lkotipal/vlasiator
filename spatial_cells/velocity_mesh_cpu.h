@@ -61,10 +61,8 @@ namespace vmesh {
       bool getBlockCoordinates(const vmesh::GlobalID& globalID,Real coords[3]) const;
       void getBlockInfo(const vmesh::GlobalID& globalID,Real* array) const;
       bool getBlockSize(const vmesh::GlobalID& globalID,Real size[3]) const;
-      Real getBlockDx(int idx) const;
       Real getBlockDx(const vmesh::GlobalID globalID, int idx) const;
       bool getCellSize(const vmesh::GlobalID& globalID,Real size[3]) const;
-      Real getCellDx(int idx) const;
       Real getCellDx(const vmesh::GlobalID globalID, int idx) const;
       vmesh::GlobalID getGlobalID(const vmesh::LocalID localID) const;
       vmesh::GlobalID getGlobalID(const Real* coords) const;
@@ -235,40 +233,40 @@ namespace vmesh {
 */
    inline bool VelocityMesh::getBlockCoordinates(const vmesh::GlobalID& globalID,Real coords[3]) const {
       if (globalID == invalidGlobalID()) {
-         for (int i=0; i<3; ++i) coords[i] = std::numeric_limits<Real>::quiet_NaN();
+         for (int i=0; i<3; ++i) {
+            coords[i] = std::numeric_limits<Real>::quiet_NaN();
+         }
          return false;
       }
 
-      vmesh::LocalID indices[3];
+      uint32_t indices[3];
       getIndices(globalID,indices[0],indices[1],indices[2]);
       if (indices[0] == invalidBlockIndex()) {
          for (int i=0; i<3; ++i) coords[i] = std::numeric_limits<Real>::quiet_NaN();
          return false;
       }
 
-      coords[0] = vmesh::getMeshWrapper()->at(meshID).meshMinLimits[0] + indices[0] * getBlockDx(0);
-      coords[1] = vmesh::getMeshWrapper()->at(meshID).meshMinLimits[1] + indices[1] * getBlockDx(1);
-      coords[2] = vmesh::getMeshWrapper()->at(meshID).meshMinLimits[2] + indices[2] * getBlockDx(2);
+      for (int idx = 0; idx < 3; ++idx) {
+         coords[idx] = vmesh::getMeshWrapper()->at(meshID).meshMinLimits[idx];
+         for (uint32_t i = 0; i < indices[idx]; ++i) {
+            coords[idx] += getBlockDx(i, idx);
+         }
+      }
+
       return true;
    }
 
    inline void VelocityMesh::getBlockInfo(const vmesh::GlobalID& globalID,Real* array) const {
       #ifdef DEBUG_VMESH
       if (globalID == invalidGlobalID()) {
-         for (int i=0; i<6; ++i) array[i] = std::numeric_limits<Real>::infinity();
+         for (int i=0; i<6; ++i)  {
+            array[i] = std::numeric_limits<Real>::infinity();
+         }
       }
       #endif
 
-      vmesh::LocalID indices[3];
-      indices[0] = globalID %  vmesh::getMeshWrapper()->at(meshID).gridLength[0];
-      indices[1] = (globalID / vmesh::getMeshWrapper()->at(meshID).gridLength[0]) % vmesh::getMeshWrapper()->at(meshID).gridLength[1];
-      indices[2] = globalID / (vmesh::getMeshWrapper()->at(meshID).gridLength[0] * vmesh::getMeshWrapper()->at(meshID).gridLength[1]);
-
       // Indices 0-2 contain coordinates of the lower left corner.
-      // The values are the same as if getBlockCoordinates(globalID,&(array[0])) was called
-      array[0] = vmesh::getMeshWrapper()->at(meshID).meshMinLimits[0] + indices[0]*getBlockDx(0);
-      array[1] = vmesh::getMeshWrapper()->at(meshID).meshMinLimits[1] + indices[1]*getBlockDx(1);
-      array[2] = vmesh::getMeshWrapper()->at(meshID).meshMinLimits[2] + indices[2]*getBlockDx(2);
+      getBlockCoordinates(globalID, array);
 
       // Indices 3-5 contain the cell size.
       getCellSize(globalID, array + 3);
@@ -282,22 +280,12 @@ namespace vmesh {
       return vmesh::getMeshWrapper()->at(meshID).getBlockDxFromID(globalID, idx);
    }
 
-   //[[deprecated]]
-   inline Real VelocityMesh::getBlockDx(int idx) const {
-      return vmesh::getMeshWrapper()->at(meshID).getBlockDx(idx);
-   }
-
    inline bool VelocityMesh::getCellSize(const vmesh::GlobalID& globalID,Real size[3]) const {
       return vmesh::getMeshWrapper()->at(meshID).getCellSize(globalID, size);
    }
    
    inline Real VelocityMesh::getCellDx(const vmesh::GlobalID globalID, int idx) const {
       return vmesh::getMeshWrapper()->at(meshID).getCellDx(globalID, idx);
-   }
-
-   //[[deprecated]]
-   inline Real VelocityMesh::getCellDx(int idx) const {
-      return vmesh::getMeshWrapper()->at(meshID).getCellDx(idx);
    }
 
    inline vmesh::GlobalID VelocityMesh::getGlobalID(const vmesh::LocalID localID) const {

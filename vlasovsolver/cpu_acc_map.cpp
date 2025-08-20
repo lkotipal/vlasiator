@@ -168,7 +168,7 @@ bool map_1d(SpatialCell* spatial_cell,
    Realf intersection_dj {0.0};
    Realf intersection_dk {0.0};
 
-   Realf dv,v_min;
+   Realf v_min;
    Realf is_temp;
    int max_v_length;
    uint block_indices_to_id[3] = {0, 0, 0}; /*< used when computing id of target block, 0 for compiler */
@@ -182,7 +182,6 @@ bool map_1d(SpatialCell* spatial_cell,
       return true;
    }
 
-   dv            = vmesh->getCellDx(dimension);
    v_min         = vmesh->getMeshMinLimits()[dimension];
    max_v_length  = vmesh->getGridLength()[dimension];
 
@@ -235,8 +234,6 @@ bool map_1d(SpatialCell* spatial_cell,
       cell_indices_to_id[2]=WID2;
       break;
    }
-
-   const Real i_dv=1.0/dv;
 
    // sort blocks according to dimension, and divide them into columns
    vmesh::LocalID* blocks = new vmesh::LocalID[vmesh->size()];
@@ -339,6 +336,9 @@ bool map_1d(SpatialCell* spatial_cell,
                           lastBlockIndices[0], lastBlockIndices[1], lastBlockIndices[2]);
          swapBlockIndices(firstBlockIndices, dimension);
          swapBlockIndices(lastBlockIndices, dimension);
+
+         const Real dv {vmesh->getCellDx(cblocks[0], dimension)};
+         const Real i_dv {1.0/dv};
 
          /*firstBlockV is in z the minimum velocity value of the lower
           * edge in source grid.
@@ -533,13 +533,15 @@ bool map_1d(SpatialCell* spatial_cell,
                index (i in vector)
             */
 
-            // TODO not sure if this should be here
             calculate_intersections(spatial_cell, cblocks[0], popID, map_order, dimension, intersection, intersection_di, intersection_dj, intersection_dk, 0);
 
             const Vec intersection_min =
                intersection +
                (block_indices_begin[0] * WID + to_realf(i_indices)) * intersection_di +
                (block_indices_begin[1] * WID + to_realf(j_indices)) * intersection_dj;
+
+            const Real dv {vmesh->getCellDx(cblocks[0], dimension)};
+            const Real i_dv {1.0/dv};
 
             /*compute some initial values, that are used to set up the
              * shifting of values as we go through all blocks in
@@ -596,6 +598,10 @@ bool map_1d(SpatialCell* spatial_cell,
                // set the initial value for the integrand at the boundary at v = 0
                // (in reduced cell units), this will be shifted to target_density_1, see below.
                Vec target_density_r(0.0);
+
+               const Real dv {vmesh->getCellDx(cblocks[k/WID], dimension)};
+               const Real i_dv {1.0/dv};
+
                // v_l, v_r are the left and right velocity coordinates of source cell. Left is the old right.
                Vec v_l = v_r;
                v_r += dv;
