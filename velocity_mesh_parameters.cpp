@@ -136,15 +136,19 @@ void vmesh::MeshWrapper::initVelocityMeshes(const uint nMeshes) {
    return;
 }
 
-vmesh::MeshParameters::MeshParameters(std::string_view name, std::array<Real, 6> meshLimits, std::array<uint32_t, 3> gridLength, std::array<uint32_t, 3> blockLength) :
+vmesh::MeshParameters::MeshParameters(std::string_view name, std::array<Real, 6> meshLimits, std::array<uint32_t, 6> hiResRange, std::array<uint32_t, 3> gridLengthIn, std::array<uint32_t, 3> blockLength) :
    name {name}, 
    meshLimits {meshLimits}, 
-   gridLength {gridLength}, 
+   hiResRange {hiResRange},
+   gridLength {
+      gridLengthIn[0] + hiResRange[1] - hiResRange[0], 
+      gridLengthIn[1] + hiResRange[3] - hiResRange[2], 
+      gridLengthIn[2] + hiResRange[5] - hiResRange[4]
+   }, 
    blockLength {blockLength},
    max_velocity_blocks {gridLength[0] * gridLength[1] * gridLength[2]},
    meshMinLimits {meshLimits[0], meshLimits[2], meshLimits[4]},
    meshMaxLimits {meshLimits[1], meshLimits[3], meshLimits[5]},
    gridSize {meshMaxLimits[0] - meshMinLimits[0], meshMaxLimits[1] - meshMinLimits[1], meshMaxLimits[2] - meshMinLimits[2]},
-   blockSize {gridSize[0] / gridLength[0], gridSize[1] / gridLength[1], gridSize[2] / gridLength[2]},
-   cellSize {blockSize[0] / blockLength[0], blockSize[1] / blockLength[1], blockSize[2] / blockLength[2]}
+   blockSize {gridSize[0] / gridLengthIn[0], gridSize[1] / gridLengthIn[1], gridSize[2] / gridLengthIn[2]}
 { }

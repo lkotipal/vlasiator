@@ -168,8 +168,13 @@ bool ObjectWrapper::getPopulationParameters() {
       }
 
       std::array<uint32_t, 3> blockLength {WID, WID, WID};
+      std::array<uint32_t, 6> hiResRange {
+         0, 0,
+         0, 0,
+         0, 0
+      };
 
-      vmesh::getMeshWrapper()->velocityMeshesCreation->push_back({pop, meshLimits, gridLength, blockLength});
+      vmesh::getMeshWrapper()->velocityMeshesCreation->push_back({pop, meshLimits, hiResRange, gridLength, blockLength});
 
       //Get thermal / suprathermal moments parameters
       Readparameters::get(pop + "_thermal.radius", species.thermalRadius);
