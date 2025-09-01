@@ -260,6 +260,7 @@ struct GPUMemoryManager {
 
       std::lock_guard<std::mutex> lock(memoryMutex);
 
+      // If a pointer with the given name already exists, we create a new name
       if (gpuMemoryPointers.count(baseName)) {
          int& counter = nameCounters[baseName];
          uniqueName = baseName + "_" + std::to_string(++counter);
@@ -291,6 +292,7 @@ struct GPUMemoryManager {
 
    // Create a new pointer with a base name and an index
    bool createSubPointer(const std::string& basePointerName, const uint index) {
+      // Ensure the base pointer exists
       if (!gpuMemoryPointers.count(basePointerName)){
          std::cerr << "Error: Pointer name '" << basePointerName << "' not found.\n";
          return false;
@@ -314,7 +316,9 @@ struct GPUMemoryManager {
       return success;
    }
 
+   // Start a session, where we have one big session pointer which can be split into multiple smaller pointers
    bool startSession(size_t dev_bytes, size_t host_bytes){
+      // Ensure that the session pointers are at least as big as the largest session so far
       size_t host_requiredSessionSize = max(host_previousSessionSize, host_bytes);
       size_t dev_requiredSessionSize = max(dev_previousSessionSize, dev_bytes);
 
@@ -331,6 +335,7 @@ struct GPUMemoryManager {
       }
       sessionOn = true;
 
+      // Reallocate session pointers if the required size increases
       if(dev_requiredSessionSize > dev_sessionAllocationSize){
          allocate("dev_sessionPointer", dev_requiredSessionSize);
          dev_sessionAllocationSize = dev_requiredSessionSize;
@@ -348,6 +353,7 @@ struct GPUMemoryManager {
       return true;
    }
 
+   // Ending a session wipes the divisions of the session pointer
    bool endSession(){
       if(!sessionOn){
          std::cerr << "No session is currently on. Please start a session before ending it.\n";
@@ -359,6 +365,7 @@ struct GPUMemoryManager {
       host_previousSessionSize = host_sessionSize;
       host_sessionSize = 0;
 
+      // Free the pointers that did not fit into the session pointer
       freeSessionPointers();
 
       return true;
@@ -387,7 +394,7 @@ struct GPUMemoryManager {
       return true;
    }
 
-   // Allocate memory to a pointer by name
+   // Allocate memory to a pointer by name with an extra buffer added
    bool allocateWithBuffer(const std::string& name, size_t bytes, size_t buffer) {
       std::lock_guard<std::mutex> lock(memoryMutex);
       if (gpuMemoryPointers.count(name) == 0) {
@@ -433,7 +440,7 @@ struct GPUMemoryManager {
       return true;
    }
 
-   // Allocate pinned host memory to a pointer by name
+   // Allocate pinned host memory to a pointer by name with an extra buffer
    bool hostAllocateWithBuffer(const std::string& name, size_t bytes, size_t buffer) {
       std::lock_guard<std::mutex> lock(memoryMutex);
       if (gpuMemoryPointers.count(name) == 0) {
@@ -506,7 +513,7 @@ struct GPUMemoryManager {
       return true;
    }
 
-   // Allocate memory to a sub pointer by name and index
+   // Allocate memory to a sub pointer by name and index with an extra buffer
    bool subPointerAllocateWithBuffer(const std::string& basePointerName, const uint index, size_t bytes, size_t buffer) {
       if (gpuMemoryPointers.count(basePointerName) == 0) {
          std::cerr << "Error: Pointer name '" << basePointerName << "' not found.\n";
@@ -523,7 +530,7 @@ struct GPUMemoryManager {
       return allocateWithBuffer(pointerName, bytes, buffer);
    }
 
-   // Allocate memory to a sub pointer by name and index
+   // Allocate host memory to a sub pointer by name and index
    bool subPointerHostAllocate(const std::string& basePointerName, const uint index, size_t bytes) {
       if (gpuMemoryPointers.count(basePointerName) == 0) {
          std::cerr << "Error: Pointer name '" << basePointerName << "' not found.\n";
@@ -540,6 +547,7 @@ struct GPUMemoryManager {
       return hostAllocate(pointerName, bytes);
    }
 
+   // Calculate the offset required to align a pointer
    template<typename T>
    size_t alignOffset(void* base, size_t offset) {
       uintptr_t fullAddress = reinterpret_cast<uintptr_t>(base) + offset;
@@ -548,6 +556,7 @@ struct GPUMemoryManager {
       return alignedAddress - reinterpret_cast<uintptr_t>(base);
    }
 
+   // Create a new pointer by partitioning the session pointer
    template<typename T>
    bool sessionAllocate(const std::string& name, size_t bytes){
       void *sessionPointer = getPointer<void>("dev_sessionPointer");
@@ -557,6 +566,7 @@ struct GPUMemoryManager {
       int padding = offset - dev_sessionSize;
       dev_sessionSize += bytes + padding;
 
+      // If the pointer does not fit into the session pointer, create a new pointer
       if (dev_sessionSize > dev_sessionAllocationSize){
          std::lock_guard<std::mutex> lock(memoryMutex);
          sessionPointerOffset[name] = dev_sessionSize;
@@ -569,6 +579,7 @@ struct GPUMemoryManager {
       return true;
    }
 
+   // Create a new pointer by partitioning the host session pointer
    template<typename T>
    bool sessionHostAllocate(const std::string& name, size_t bytes){
       void *sessionPointer = getPointer<void>("host_sessionPointer");
@@ -578,6 +589,7 @@ struct GPUMemoryManager {
       int padding = offset - host_sessionSize;
       host_sessionSize += bytes + padding;
 
+      // If the pointer does not fit into the session pointer, create a new pointer
       if (host_sessionSize > host_sessionAllocationSize){
          std::lock_guard<std::mutex> lock(memoryMutex);
          sessionPointerOffset[name] = host_sessionSize;
@@ -598,6 +610,7 @@ struct GPUMemoryManager {
       return 0;
    }
 
+   // Get the total amount of GPU memory allocated with the memory manager
    size_t totalGpuAllocation(){
       size_t total = 0;
 
@@ -622,6 +635,7 @@ struct GPUMemoryManager {
       return total;
    }
 
+   // get the total amount of host memory allocated with the memory manager
    size_t totalCpuAllocation(){
       size_t total = 0;
 
@@ -646,7 +660,7 @@ struct GPUMemoryManager {
       return total;
    }
 
-   // Free all allocated GPU memory
+   // Free all allocated pointers from session, besides the sessionpointer itself
    void freeSessionPointers() {
       for (auto& pair : sessionPointers) {
          if (pair.second != nullptr) {
@@ -713,15 +727,18 @@ struct GPUMemoryManager {
       return getPointer<T>(pointerName);
    }
 
+   // Get pointer in a session
    template <typename T>
    T* getSessionPointer(const std::string& name) const {
       if (!sessionPointerOffset.count(name)){
          throw std::runtime_error("Unknown pointer name");
       }
 
+      // The pointer is usually contained in the session pointer and distinguished by an offset
       char *sessionPointer = static_cast<char*>(gpuMemoryPointers.at("dev_sessionPointer"));
       int offset = sessionPointerOffset.at(name);
 
+      // If the pointer did not fit inside the session pointer, retrieve it from the separate map
       if (offset > dev_sessionAllocationSize){
          if (!sessionPointers.count(name)){
             throw std::runtime_error("Unknown pointer name");
@@ -732,15 +749,18 @@ struct GPUMemoryManager {
       return reinterpret_cast<T*>(sessionPointer + offset);
    }
 
+   // Get host pointer in a session
    template <typename T>
    T* getSessionHostPointer(const std::string& name) const {
       if (!sessionPointerOffset.count(name)){
          throw std::runtime_error("Unknown pointer name");
       }
 
+      // The pointer is usually contained in the session pointer and distinguished by an offset
       char *sessionPointer = static_cast<char*>(gpuMemoryPointers.at("host_sessionPointer"));
       int offset = sessionPointerOffset.at(name);
 
+      // If the pointer did not fit inside the session pointer, retrieve it from the separate map
       if (offset > host_sessionAllocationSize){
          if (!sessionPointers.count(name)){
             throw std::runtime_error("Unknown pointer name");
@@ -751,11 +771,13 @@ struct GPUMemoryManager {
       return reinterpret_cast<T*>(sessionPointer + offset);
    }
 
+   // Update a new pointer to the memory manager
    void updatePointer(const std::string& name, void* newPtr) {
       std::lock_guard<std::mutex> lock(memoryMutex);
       gpuMemoryPointers[name] = newPtr;
    }
 
+   // Set the value of the base pointer at a given index to be the corresponding sub pointer
    template <typename T>
    void setSubPointer(const std::string& basePointerName, const uint index){
       if (!gpuMemoryPointers.count(basePointerName)){
