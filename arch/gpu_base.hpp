@@ -296,7 +296,7 @@ struct GPUMemoryManager {
          return false;
       }
 
-      std::string pointerName = basePointerName + std::to_string(index);
+      std::string pointerName = basePointerName + "#" + std::to_string(index);
 
       if (gpuMemoryPointers.count(pointerName)){
          return false;
@@ -463,7 +463,7 @@ struct GPUMemoryManager {
          return false;
       }
 
-      std::string pointerName = basePointerName + std::to_string(index);
+      std::string pointerName = basePointerName + "#" + std::to_string(index);
 
       if (!gpuMemoryPointers.count(pointerName)){
          std::cerr << "Error: Pointer name '" << pointerName << "' not found.\n";
@@ -480,7 +480,7 @@ struct GPUMemoryManager {
          return false;
       }
 
-      std::string pointerName = basePointerName + std::to_string(index);
+      std::string pointerName = basePointerName + "#" + std::to_string(index);
 
       if (!gpuMemoryPointers.count(pointerName)){
          std::cerr << "Error: Pointer name '" << pointerName << "' not found.\n";
@@ -513,7 +513,7 @@ struct GPUMemoryManager {
          return false;
       }
 
-      std::string pointerName = basePointerName + std::to_string(index);
+      std::string pointerName = basePointerName + "#" + std::to_string(index);
 
       if (!gpuMemoryPointers.count(pointerName)){
          std::cerr << "Error: Pointer name '" << pointerName << "' not found.\n";
@@ -530,7 +530,7 @@ struct GPUMemoryManager {
          return false;
       }
 
-      std::string pointerName = basePointerName + std::to_string(index);
+      std::string pointerName = basePointerName + "#" + std::to_string(index);
 
       if (!gpuMemoryPointers.count(pointerName)){
          std::cerr << "Error: Pointer name '" << pointerName << "' not found.\n";
@@ -709,7 +709,7 @@ struct GPUMemoryManager {
       if (!gpuMemoryPointers.count(basePointerName)){
          throw std::runtime_error("Unknown base pointer name");
       }
-      std::string pointerName = basePointerName + std::to_string(index);
+      std::string pointerName = basePointerName + "#" + std::to_string(index);
       return getPointer<T>(pointerName);
    }
 
@@ -762,7 +762,7 @@ struct GPUMemoryManager {
          throw std::runtime_error("Unknown base pointer name");
       }
 
-      std::string pointerName = basePointerName + std::to_string(index);
+      std::string pointerName = basePointerName + "#" + std::to_string(index);
 
       if (!gpuMemoryPointers.count(pointerName)){
          throw std::runtime_error("Unknown pointer name");
