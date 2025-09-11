@@ -85,6 +85,7 @@ int gpu_reportMemory(const size_t local_cap=0, const size_t ghost_cap=0, const s
 unsigned int nextPowerOfTwo(unsigned int n);
 
 void gpu_vlasov_allocate(uint maxBlockCount);
+void gpu_calculateProbeAllocation(uint maxBlockCount);
 void gpu_vlasov_deallocate();
 void gpu_vlasov_allocate_perthread(uint cpuThreadID, uint maxBlockCount);
 uint gpu_vlasov_getSmallestAllocation();
@@ -559,6 +560,10 @@ struct GPUMemoryManager {
    // Create a new pointer by partitioning the session pointer
    template<typename T>
    bool sessionAllocate(const std::string& name, size_t bytes){
+      if(!sessionOn){
+         std::cerr << "No session is currently on. Please start a session before allocating to it.\n";
+         return false;
+      }
       void *sessionPointer = getPointer<void>("dev_sessionPointer");
       size_t offset = alignOffset<T>(sessionPointer, dev_sessionSize);
       sessionPointerOffset[name] = offset;
@@ -712,7 +717,7 @@ struct GPUMemoryManager {
    template <typename T>
    T* getPointer(const std::string& name) const {
       if (!gpuMemoryPointers.count(name)){
-         throw std::runtime_error("Unknown pointer name");
+         throw std::runtime_error("Unknown pointer name: " + name);
       }
       return static_cast<T*>(gpuMemoryPointers.at(name));
    }
@@ -721,7 +726,7 @@ struct GPUMemoryManager {
    template <typename T>
    T* getSubPointer(const std::string& basePointerName, const uint index) const {
       if (!gpuMemoryPointers.count(basePointerName)){
-         throw std::runtime_error("Unknown base pointer name");
+         throw std::runtime_error("Unknown base pointer name: " + basePointerName);
       }
       std::string pointerName = basePointerName + "#" + std::to_string(index);
       return getPointer<T>(pointerName);
@@ -731,7 +736,7 @@ struct GPUMemoryManager {
    template <typename T>
    T* getSessionPointer(const std::string& name) const {
       if (!sessionPointerOffset.count(name)){
-         throw std::runtime_error("Unknown pointer name");
+         throw std::runtime_error("Unknown pointer name: " + name);
       }
 
       // The pointer is usually contained in the session pointer and distinguished by an offset
@@ -741,7 +746,7 @@ struct GPUMemoryManager {
       // If the pointer did not fit inside the session pointer, retrieve it from the separate map
       if (offset > dev_sessionAllocationSize){
          if (!sessionPointers.count(name)){
-            throw std::runtime_error("Unknown pointer name");
+            throw std::runtime_error("Unknown pointer name: " + name);
          }
          return static_cast<T*>(sessionPointers.at(name));
       }
@@ -753,7 +758,7 @@ struct GPUMemoryManager {
    template <typename T>
    T* getSessionHostPointer(const std::string& name) const {
       if (!sessionPointerOffset.count(name)){
-         throw std::runtime_error("Unknown pointer name");
+         throw std::runtime_error("Unknown pointer name: " + name);
       }
 
       // The pointer is usually contained in the session pointer and distinguished by an offset
@@ -763,7 +768,7 @@ struct GPUMemoryManager {
       // If the pointer did not fit inside the session pointer, retrieve it from the separate map
       if (offset > host_sessionAllocationSize){
          if (!sessionPointers.count(name)){
-            throw std::runtime_error("Unknown pointer name");
+            throw std::runtime_error("Unknown pointer name: " + name);
          }
          return static_cast<T*>(sessionPointers.at(name));
       }
@@ -781,13 +786,13 @@ struct GPUMemoryManager {
    template <typename T>
    void setSubPointer(const std::string& basePointerName, const uint index){
       if (!gpuMemoryPointers.count(basePointerName)){
-         throw std::runtime_error("Unknown base pointer name");
+         throw std::runtime_error("Unknown base pointer name: " + basePointerName);
       }
 
       std::string pointerName = basePointerName + "#" + std::to_string(index);
 
       if (!gpuMemoryPointers.count(pointerName)){
-         throw std::runtime_error("Unknown pointer name");
+         throw std::runtime_error("Unknown pointer name: " + pointerName);
       }
 
       T** basePointer = static_cast<T**>(gpuMemoryPointers[basePointerName]);
@@ -800,7 +805,7 @@ extern GPUMemoryManager gpuMemoryManager;
 
 extern ColumnOffsets *host_columnOffsetData;
 extern uint gpu_largest_columnCount;
-extern size_t gpu_probeFullSize, gpu_probeFlattenedSize;
+extern size_t gpu_probeFullSize, gpu_probeFlattenedSize, gpu_probeStride;
 
 // Hash map and splitvectors buffers used in block adjustment are declared in block_adjust_gpu.hpp
 // Vector and set for use in translation are declared in vlasovsolver/gpu_trans_map_amr.hpp

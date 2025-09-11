@@ -54,7 +54,7 @@ gpuStream_t gpuPriorityStreamList[MAXCPUTHREADS];
 // Pointers to buffers used in acceleration
 ColumnOffsets *host_columnOffsetData = NULL;
 // Counts used in acceleration
-size_t gpu_probeFullSize = 0, gpu_probeFlattenedSize = 0;
+size_t gpu_probeFullSize = 0, gpu_probeFlattenedSize = 0, gpu_probeStride = 0;
 
 // Buffers, Vector and set for use in translation
 split::SplitVector<vmesh::GlobalID> *unionOfBlocks=NULL, *dev_unionOfBlocks=NULL;
@@ -343,6 +343,25 @@ __host__ void gpu_vlasov_allocate(
    gpuMemoryManager.createUniquePointer("dev_blockDataOrdered");
    gpuMemoryManager.allocate("dev_blockDataOrdered", allocationCount*sizeof(Realf*));
    gpuMemoryManager.hostAllocate("host_blockDataOrdered", allocationCount*sizeof(Realf*));
+
+   // per-buffer allocations
+   for (uint i=0; i<allocationCount; ++i) {
+      gpu_vlasov_allocate_perthread(i, maxBlocksPerCell);
+   }
+
+   // Above function stores buffer pointers in host_blockDataOrdered, copy pointers to dev_blockDataOrdered
+   CHK_ERR( gpuMemcpy(gpuMemoryManager.getPointer<Realf*>("dev_blockDataOrdered"), gpuMemoryManager.getPointer<Realf*>("host_blockDataOrdered"), allocationCount*sizeof(Realf*), gpuMemcpyHostToDevice) );
+}
+
+/*
+   Top-level GPU memory allocation function.
+   This is called from within non-threaded regions so does not perform async.
+ */
+__host__ void gpu_calculateProbeAllocation(
+   const uint maxBlockCount // Largest found vmesh size
+   ) {
+   // Always prepare for at least VLASOV_BUFFER_MINBLOCKS blocks
+   const uint maxBlocksPerCell = max(VLASOV_BUFFER_MINBLOCKS, maxBlockCount);
    
    // Evaluate required size for acceleration probe cube (based on largest population)
    for (uint popID=0; popID<getObjectWrapper().particleSpecies.size(); ++popID) {
@@ -359,12 +378,24 @@ __host__ void gpu_vlasov_allocate(
       probeCubeExtentsFlat = 2*Hashinator::defaults::MAX_BLOCKSIZE * (1 + ((probeCubeExtentsFlat - 1) / (2*Hashinator::defaults::MAX_BLOCKSIZE)));
       gpu_probeFlattenedSize = std::max(gpu_probeFlattenedSize,probeCubeExtentsFlat);
    }
-   // per-buffer allocations
-   for (uint i=0; i<allocationCount; ++i) {
-      gpu_vlasov_allocate_perthread(i, maxBlocksPerCell);
-   }
-   // Above function stores buffer pointers in host_blockDataOrdered, copy pointers to dev_blockDataOrdered
-   CHK_ERR( gpuMemcpy(gpuMemoryManager.getPointer<Realf*>("dev_blockDataOrdered"), gpuMemoryManager.getPointer<Realf*>("host_blockDataOrdered"), allocationCount*sizeof(Realf*), gpuMemcpyHostToDevice) );
+
+   size_t probeAllocation = sizeof(vmesh::LocalID)*gpu_probeFullSize + gpu_probeFlattenedSize*GPU_PROBEFLAT_N*sizeof(vmesh::LocalID);
+   /*
+   CUDA C Programming Guide
+   6.3.2. Device Memory Accesses (June 2025)
+   "Any address of a variable residing in global memory or returned by one of the memory allocation routines from the driver or
+   runtime API is always aligned to at least 256 bytes."
+
+   ROCm documentation
+   HIP 6.4.43483 Documentation for hipMallocPitch
+   "Currently the alignment is set to 128 bytes"
+
+   Thus, our mallocs should be in increments of 256 bytes. WID3 is at least 64, and len(Realf) is at least 4, so this is true in all
+   cases. Still, let us ensure (just to be sure) that probe cube addressing does not break alignment.
+   And in fact let's use the block memory size as the stride.
+   */
+   probeAllocation = (1 + ((probeAllocation - 1) / (WID3 * sizeof(Realf)))) * (WID3 * sizeof(Realf));
+   gpu_probeStride = max(gpu_probeStride,probeAllocation);
 }
 
 /* Deallocation at end of simulation */
@@ -395,13 +426,10 @@ __host__ void gpu_vlasov_allocate_perthread(
    while(gpu_vlasov_allocatedSize.size() < allocationCount){ //Make sure the gpu_vlasov_allocatedSize has enough elements
       gpu_vlasov_allocatedSize.push_back(0);
    }
-   const size_t probeRequirement = sizeof(vmesh::LocalID)*gpu_probeFullSize + gpu_probeFlattenedSize*GPU_PROBEFLAT_N*sizeof(vmesh::LocalID);
 
    // Dual use of blockDataOrdered: use also for acceleration probe cube and its flattened version.
    // Calculate required size
    size_t blockDataAllocation = blockAllocationCount * WID3 * sizeof(Realf);
-   // minimum allocation size:
-   blockDataAllocation = std::max(blockDataAllocation,probeRequirement);
    /*
      CUDA C Programming Guide
      6.3.2. Device Memory Accesses (June 2025)
