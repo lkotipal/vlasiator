@@ -640,6 +640,48 @@ struct GPUMemoryManager {
       return total;
    }
 
+   std::vector<std::tuple<std::string, size_t>> largestGpuAllocations(size_t numberOfOutputPointers) {
+      std::unordered_map<std::string, size_t> aggregatedSizes;
+
+      // Sizes of subpointers are added to the size of the basepointer
+      auto addPointers = [&](auto& pointerMap) {
+         for (auto& pair : pointerMap) {
+            if (pair.second != nullptr) {
+               const std::string& name = pair.first;
+               if (pointerDevice[name] == "dev") {
+                  std::string baseName = name;
+                  size_t hashtagPosition = name.find('#');
+                  if (hashtagPosition != std::string::npos) {
+                     baseName = name.substr(0, hashtagPosition);
+                  }
+                  aggregatedSizes[baseName] += allocationSizes[name];
+               }
+            }
+         }
+      };
+
+      addPointers(gpuMemoryPointers);
+      addPointers(sessionPointers);
+
+      // Convert map to vector of tuples
+      std::vector<std::tuple<std::string, size_t>> allocations;
+      for (auto& pair : aggregatedSizes) {
+         allocations.emplace_back(pair.first, pair.second);
+      }
+
+      // Sort descending by size
+      std::sort(allocations.begin(), allocations.end(), [](auto& a, auto& b) {
+         return std::get<1>(a) > std::get<1>(b);
+      });
+
+      // Extract the largest pointers
+      if (allocations.size() > numberOfOutputPointers) {
+         allocations.resize(numberOfOutputPointers);
+      }
+
+      return allocations;
+   }
+
    // get the total amount of host memory allocated with the memory manager
    size_t totalCpuAllocation(){
       size_t total = 0;

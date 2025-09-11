@@ -307,6 +307,10 @@ int gpu_reportMemory(const size_t local_cells_capacity, const size_t ghost_cells
    size_t sum_mb = (miniBuffers+batchBuffers+vlasovBuffers+accBuffers+transBuffers+local_cells_capacity+ghost_cells_capacity+memoryManagerCapacity)/(1024*1024);
    size_t local_req_mb = local_cells_size/(1024*1024);
    size_t ghost_req_mb = ghost_cells_size/(1024*1024);
+
+   const size_t numberOfPrintedMemoryManagerPointers = 3;
+   std::vector<std::tuple<std::string, size_t>> largestMemoryManagerPointers = gpuMemoryManager.largestGpuAllocations(numberOfPrintedMemoryManagerPointers);
+
    if (myRank==0) {
       logFile<<" =================================="<<std::endl;
       logFile<<" GPU Memory report"<<std::endl;
@@ -318,6 +322,10 @@ int gpu_reportMemory(const size_t local_cells_capacity, const size_t ghost_cells
       logFile<<"     Local cells:           "<<local_cells_capacity/(1024*1024)<<" Mbytes"<<std::endl;
       logFile<<"     Ghost cells:           "<<ghost_cells_capacity/(1024*1024)<<" Mbytes"<<std::endl;
       logFile<<"     Memory manager:        "<<memoryManagerCapacity/(1024*1024)<<" Mbytes"<<std::endl;
+      for (auto& [name, size] : largestMemoryManagerPointers) {
+         const int nameWidth = 30;
+         logFile << "         " << std::left << std::setw(nameWidth) << (name + ":") << std::right << size / (1024 * 1024) << " Mbytes\n";
+      }
       if (local_req_mb || ghost_req_mb) {
          logFile<<"     Local cells required:  "<<local_req_mb<<" Mbytes"<<std::endl;
          logFile<<"     Ghost cells required:  "<<ghost_req_mb<<" Mbytes"<<std::endl;
