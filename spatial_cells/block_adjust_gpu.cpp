@@ -408,7 +408,7 @@ void adjust_velocity_blocks_in_cells(
       // This is handled in-kernel.
       batch_update_neighbour_halo_kernel<<<grid_neigh_halo, WARPSPERBLOCK*GPUTHREADS, 0, baseStream>>> (
          gpuMemoryManager.getPointer<vmesh::VelocityMesh*>("dev_vmeshes"),
-         dev_allMgpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>("dev_allMaps")aps, // Needs both has_content and has_no_content maps
+         gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>("dev_allMaps"), // Needs both has_content and has_no_content maps
          gpuMemoryManager.getSessionPointer<split::SplitVector<vmesh::GlobalID>*>("dev_vbwcl_neigh")
          );
       CHK_ERR( gpuPeekAtLastError() );
