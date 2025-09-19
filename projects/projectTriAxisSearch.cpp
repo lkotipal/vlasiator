@@ -63,9 +63,6 @@ namespace projects {
       creal dx = cell->parameters[CellParams::DX];
       creal dy = cell->parameters[CellParams::DY];
       creal dz = cell->parameters[CellParams::DZ];
-      creal dvxBlock = vmesh::getMeshWrapper()->at(popID).getBlockDx(0);
-      creal dvyBlock = vmesh::getMeshWrapper()->at(popID).getBlockDx(1);
-      creal dvzBlock = vmesh::getMeshWrapper()->at(popID).getBlockDx(2);
       // creal dvxCell = cell->get_velocity_grid_cell_size(popID)[0];
       // creal dvyCell = cell->get_velocity_grid_cell_size(popID)[1];
       // creal dvzCell = cell->get_velocity_grid_cell_size(popID)[2];
@@ -78,49 +75,19 @@ namespace projects {
       const vector<std::array<Real, 3>> V0 = this->getV0(x+0.5*dx, y+0.5*dy, z+0.5*dz, popID);
       const bool singlePeak = ( V0.size() == 1 );
       // Loop over possible V peaks
-      for (vector<std::array<Real, 3>>::const_iterator it = V0.begin(); it != V0.end(); it++) {
-         // VX search
-         search = true;
-         counterX = 0;
-         while (search) {
-            if ( (tolerance * minValue >
-                  probePhaseSpace(cell, popID, it->at(0) + counterX*dvxBlock, it->at(1), it->at(2))
-                  || counterX > vxblocks_ini ) ) {
-               search = false;
-            }
-            counterX++;
-         }
-         counterX+=buffer;
-         Real vRadiusSquared = (Real)counterX*(Real)counterX*dvxBlock*dvxBlock;
+      for (int peak = 0; peak < V0.size(); ++peak) {
+         std::array<Real, 3> currentV0 {V0[peak]};
+         std::array<Real, 3> vRadiusSquared {probePhaseSpaceInv(cell, popID, tolerance * minValue, peak)};
+         std::array<Real, 3> vRadius {sqrt(vRadiusSquared[0]), sqrt(vRadiusSquared[1]), sqrt(vRadiusSquared[2])};
 
-         // VY search
-         search = true;
-         counterY = 0;
-         while(search) {
-            if ( (tolerance * minValue >
-                  probePhaseSpace(cell, popID, it->at(0), it->at(1) + counterY*dvyBlock, it->at(2))
-                  || counterY > vyblocks_ini ) ) {
-               search = false;
-            }
-            counterY++;
-         }
-         counterY+=buffer;
-         vRadiusSquared = max(vRadiusSquared, (Real)counterY*(Real)counterY*dvyBlock*dvyBlock);
-
-         // VZ search
-         search = true;
-         counterZ = 0;
-         while(search) {
-            if ( (tolerance * minValue >
-                  probePhaseSpace(cell, popID, it->at(0), it->at(1), it->at(2) + counterZ*dvzBlock)
-                  || counterZ > vzblocks_ini ) ) {
-               search = false;
-            }
-            counterZ++;
-         }
-         counterZ+=buffer;
-         vRadiusSquared = max(vRadiusSquared, (Real)counterZ*(Real)counterZ*dvzBlock*dvzBlock);
-
+         // Assuming here blocks are the smallest around V0
+         Real dV[3];
+         vmesh::GlobalID block0 {vmesh->getGlobalID(currentV0.data())};
+         vmesh->getBlockSize(block0, dV);
+         Real counterX = (vRadius[0] / dV[0]);
+         Real counterY = (vRadius[1] / dV[1]);
+         Real counterZ = (vRadius[2] / dV[2]);
+         
          #ifndef USE_GPU // non-GPU mesh resizing
          // sphere volume is 4/3 pi r^3, approximate that 5*counterX*counterY*counterZ is enough.
          vmesh::LocalID currentMaxSize = LID + 5*counterX*counterY*counterZ;
@@ -135,14 +102,13 @@ namespace projects {
                for (uint iv=0; iv<vxblocks_ini; ++iv) {
                   const vmesh::GlobalID GID = vmesh->getGlobalID(iv,jv,kv);
                   vmesh->getBlockCoordinates(GID,V_crds);
+                  vmesh->getBlockSize(GID, dV);
 
                   // Check block center point
-                  V_crds[0] += (2*dvxBlock - it->at(0) );
-                  V_crds[1] += (2*dvyBlock - it->at(1) );
-                  V_crds[2] += (2*dvzBlock - it->at(2) );
-                  Real R2 = ((V_crds[0])*(V_crds[0])
-                             + (V_crds[1])*(V_crds[1])
-                             + (V_crds[2])*(V_crds[2]));
+                  for (int i = 0; i < 3; ++i) {
+                     // TODO why 2 * dV??
+                     V_crds[i] += 0.5 * dV[i] - currentV0[i];
+                  }
 
                   #ifndef USE_GPU // non-GPU mesh resizing
                   if (LID >= currentMaxSize) {
@@ -151,19 +117,11 @@ namespace projects {
                      GIDbuffer = vmesh->getGrid()->data();
                   }
                   #endif
-                  if (singlePeak) {
-                     // Add this block
-                     if (R2 < vRadiusSquared) {
-                        GIDbuffer[LID] = GID;
-                        LID++;
-                     }
-                  } else {
-                     // Add this block only if it doesn't exist yet
-                     if (R2 < vRadiusSquared && singleSet.count(GID)==0) {
-                        singleSet.insert(GID);
-                        GIDbuffer[LID] = GID;
-                        LID++;
-                     }
+                  // Add this block only if it doesn't exist yet
+                  if (V_crds[0] * V_crds[0] / vRadiusSquared[0] + V_crds[1] * V_crds[1] / vRadiusSquared[1] + V_crds[2] * V_crds[2] / vRadiusSquared[2] < 1 && singleSet.count(GID)==0) {
+                     singleSet.insert(GID);
+                     GIDbuffer[LID] = GID;
+                     LID++;
                   }
                } // vxblocks_ini
             } // vyblocks_ini

@@ -264,6 +264,42 @@ namespace projects {
       return value;
    }
 
+   std::array<Real, 3> MultiPeak::probePhaseSpaceInv(
+      spatial_cell::SpatialCell *cell,
+      const uint popID,
+      Real value,
+      int peak
+   ) const {
+      const MultiPeakSpeciesParameters& sP = speciesParams[popID];
+
+      const Real x  = cell->parameters[CellParams::XCRD] + 0.5*cell->parameters[CellParams::DX];
+      const Real y  = cell->parameters[CellParams::YCRD] + 0.5*cell->parameters[CellParams::DY];
+      const Real z  = cell->parameters[CellParams::ZCRD] + 0.5*cell->parameters[CellParams::DZ];
+
+      Real rhoFactor = 1.0;
+      switch (densityModel) {
+         case Uniform:
+            rhoFactor = 1.0;
+            break;
+         case TestCase:
+            rhoFactor = 1.0;
+            if ((x >= 3.9e5 && x <= 6.1e5) && (y >= 3.9e5 && y <= 6.1e5)) {
+               rhoFactor = 1.5;
+            }
+            break;
+         default:
+            rhoFactor = 1.0;
+            break;
+      }
+
+      const Real mass = getObjectWrapper().particleSpecies[popID].mass;
+      return {
+         MaxwellianPhaseSpaceDensityInv(value, sP.Tx[peak], sP.rho[peak] + sP.rhoPertAbsAmp[peak] * rhoRnd * rhoFactor, mass),
+         MaxwellianPhaseSpaceDensityInv(value, sP.Ty[peak], sP.rho[peak] + sP.rhoPertAbsAmp[peak] * rhoRnd * rhoFactor, mass),
+         MaxwellianPhaseSpaceDensityInv(value, sP.Tz[peak], sP.rho[peak] + sP.rhoPertAbsAmp[peak] * rhoRnd * rhoFactor, mass)
+      };
+   }
+
    void MultiPeak::calcCellParameters(spatial_cell::SpatialCell* cell,creal& t) {
       std::default_random_engine rndState;
       setRandomCellSeed(cell,rndState);

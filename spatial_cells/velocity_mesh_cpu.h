@@ -59,6 +59,7 @@ namespace vmesh {
       size_t count(const vmesh::GlobalID& globalID) const;
       vmesh::GlobalID findBlock(vmesh::GlobalID cellIndices[3]) const;
       bool getBlockCoordinates(const vmesh::GlobalID& globalID,Real coords[3]) const;
+      std::array<Real, 3> getBlockCoordinates(const vmesh::GlobalID& globalID) const;
       void getBlockInfo(const vmesh::GlobalID& globalID,Real* array) const;
       bool getBlockSize(const vmesh::GlobalID& globalID,Real size[3]) const;
       Real getBlockDx(const vmesh::GlobalID globalID, int idx) const;
@@ -231,7 +232,7 @@ namespace vmesh {
       return cellSize;
    }
 */
-   inline bool VelocityMesh::getBlockCoordinates(const vmesh::GlobalID& globalID,Real coords[3]) const {
+   inline bool VelocityMesh::getBlockCoordinates(const vmesh::GlobalID& globalID, Real coords[3]) const {
       if (globalID == invalidGlobalID()) {
          for (int i=0; i<3; ++i) {
             coords[i] = std::numeric_limits<Real>::quiet_NaN();
@@ -256,6 +257,13 @@ namespace vmesh {
       return true;
    }
 
+   inline std::array<Real, 3> VelocityMesh::getBlockCoordinates(const vmesh::GlobalID& globalID) const {
+      std::array<Real, 3> coords;
+      // TODO some error checking here... maybe assert would be fine
+      getBlockCoordinates(globalID, coords.data());
+      return coords;
+   }
+
    inline void VelocityMesh::getBlockInfo(const vmesh::GlobalID& globalID,Real* array) const {
       #ifdef DEBUG_VMESH
       if (globalID == invalidGlobalID()) {
@@ -277,7 +285,7 @@ namespace vmesh {
    }
    
    inline Real VelocityMesh::getBlockDx(const vmesh::GlobalID globalID, int idx) const {
-      return vmesh::getMeshWrapper()->at(meshID).getBlockDxFromID(globalID, idx);
+      return vmesh::getMeshWrapper()->at(meshID).getBlockDx(globalID, idx);
    }
 
    inline bool VelocityMesh::getCellSize(const vmesh::GlobalID& globalID,Real size[3]) const {
@@ -307,18 +315,12 @@ namespace vmesh {
          return invalidGlobalID();
       }
 
-      //uint32_t indices[3] = {
-      //   static_cast<vmesh::LocalID>(floor((coords[0] - vmesh::getMeshWrapper()->at(meshID).meshMinLimits[0]) / getBlockDx(0))),
-      //   static_cast<vmesh::LocalID>(floor((coords[1] - vmesh::getMeshWrapper()->at(meshID).meshMinLimits[1]) / getBlockDx(1))),
-      //   static_cast<vmesh::LocalID>(floor((coords[2] - vmesh::getMeshWrapper()->at(meshID).meshMinLimits[2]) / getBlockDx(2)))
-      //};
-
       uint32_t indices[3] = {0, 0, 0};
 
       for (int idx = 0; idx < 3; ++idx) {
          Real coord = coords[idx] - vmesh::getMeshWrapper()->at(meshID).meshMinLimits[idx];
          for (uint32_t i = 0; i < vmesh::getMeshWrapper()->at(meshID).blockLength[i]; ++i) {
-            coord -= vmesh::getMeshWrapper()->at(meshID).getBlockDx(idx, i);
+            coord -= vmesh::getMeshWrapper()->at(meshID).getBlockDxFromIndex(idx, i);
             if (coord < 0) {
                indices[idx] = i; // I think...
                break;

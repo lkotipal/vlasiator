@@ -178,6 +178,23 @@ namespace projects {
       return value;
    }
 
+   std::array<Real, 3> Fluctuations::probePhaseSpaceInv(
+      spatial_cell::SpatialCell *cell,
+      const uint popID,
+      Real value,
+      int peak
+   ) const {
+      const FluctuationsSpeciesParameters& sP = speciesParams[popID];
+      const Real mass = getObjectWrapper().particleSpecies[popID].mass;
+      Real initRho = sP.DENSITY * (1.0 + sP.densityPertRelAmp * (0.5 - rndRho));
+
+      return {
+         MaxwellianPhaseSpaceDensityInv(value, sP.TEMPERATUREX, initRho, mass),
+         MaxwellianPhaseSpaceDensityInv(value, sP.TEMPERATUREY, initRho, mass),
+         MaxwellianPhaseSpaceDensityInv(value, sP.TEMPERATUREZ, initRho, mass)
+      };
+   }
+
    void Fluctuations::calcCellParameters(spatial_cell::SpatialCell* cell,creal& t) {
 
       std::default_random_engine rndState;

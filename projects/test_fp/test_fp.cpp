@@ -172,6 +172,20 @@ namespace projects {
       return value;
    }
 
+   std::array<Real, 3> test_fp::probePhaseSpaceInv(
+      spatial_cell::SpatialCell *cell,
+      const uint popID,
+      Real value,
+      int peak
+   ) const {
+      const Real mass = getObjectWrapper().particleSpecies[popID].mass;
+      Real initRho = this->DENSITY;
+      Real initT = this->TEMPERATURE;
+
+      Real V = MaxwellianPhaseSpaceDensityInv(value, initT, initRho, mass);
+      return {V, V, V};
+   }
+
    void test_fp::setProjectBField(
       FsGrid< std::array<Real, fsgrids::bfield::N_BFIELD>, FS_STENCIL_WIDTH> & perBGrid,
       FsGrid< std::array<Real, fsgrids::bgbfield::N_BGB>, FS_STENCIL_WIDTH> & BgBGrid,

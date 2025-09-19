@@ -251,6 +251,18 @@ namespace projects {
       return value;
    }
 
+   std::array<Real, 3> Flowthrough::probePhaseSpaceInv(
+      spatial_cell::SpatialCell *cell,
+      const uint popID,
+      Real value,
+      int peak
+   ) const {
+      const FlowthroughSpeciesParameters& sP = speciesParams[popID];
+      const Real mass = getObjectWrapper().particleSpecies[popID].mass;
+      Real V = MaxwellianPhaseSpaceDensityInv(value, sP.T, getCorrectNumberDensity(cell, popID), mass);
+      return {V, V, V};
+   }
+
    void Flowthrough::calcCellParameters(spatial_cell::SpatialCell* cell,creal& t) { }
 
    void Flowthrough::setProjectBField(

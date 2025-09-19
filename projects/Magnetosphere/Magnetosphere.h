@@ -60,6 +60,12 @@ namespace projects {
       virtual Realf probePhaseSpace(spatial_cell::SpatialCell *cell,
                                     const uint popID,
                                     Real vx_in, Real vy_in, Real vz_in) const override;
+      virtual std::array<Real, 3> probePhaseSpaceInv(
+         spatial_cell::SpatialCell *cell,
+         const uint popID,
+         Real value,
+         int peak
+      ) const override;
 
       bool refineSpatialCells( dccrg::Dccrg<spatial_cell::SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid ) const override;
       bool forceRefinement( dccrg::Dccrg<spatial_cell::SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid, int n ) const override;

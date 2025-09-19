@@ -46,6 +46,17 @@ namespace projects {
                                     const uint popID,
                                     Real vx_in, Real vy_in, Real vz_in) const = 0;
 
+      // Do the inverse of above; solve for vx, vy vz fw. the density = threshold
+      virtual std::array<Real, 3> probePhaseSpaceInv(
+         spatial_cell::SpatialCell *cell,
+         const uint popID,
+         Real value,
+         int peak // Multipeak specific basically
+      ) const {
+         // TODO make this pure virtual to get rid of a footgun
+         return {0, 0, 0};
+      }
+
       /*! \brief Return a vector containing the velocity coordinate of the centre of each ion population in the distribution.
        * 
        * This function is used by findBlocksToInitialize() to start the search of the extent of the distribution along each axis.

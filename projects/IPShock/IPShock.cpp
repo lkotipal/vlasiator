@@ -366,6 +366,20 @@ namespace projects {
       const Realf value = MaxwellianPhaseSpaceDensity(vx,vy,vz,initT,initRho,mass);
       return value;
    }
+
+   std::array<Real, 3> IPShock::probePhaseSpaceInv(
+      spatial_cell::SpatialCell *cell,
+      const uint popID,
+      Real value,
+      int peak
+   ) const {
+      const IPShockSpeciesParameters& sP = this->speciesParams[popID];
+      const Real mass = getObjectWrapper().particleSpecies[popID].mass;
+      const Real x  = cell->parameters[CellParams::XCRD] + 0.5*cell->parameters[CellParams::DX];
+
+      Real V = MaxwellianPhaseSpaceDensityInv(value, interpolate(sP.TEMPERATUREu,sP.TEMPERATUREd, x), interpolate(sP.DENSITYu,sP.DENSITYd, x), mass);
+      return {V, V, V};
+   }
    
    std::vector<std::array<Real, 3>> IPShock::getV0(creal x, creal y, creal z, const uint popID) const {
       Real mass = getObjectWrapper().particleSpecies[popID].mass;

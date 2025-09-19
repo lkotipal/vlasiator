@@ -817,7 +817,7 @@ namespace SBC {
       //return rho * pow(mass / (2.0 * M_PI * physicalconstants::K_B * T), 1.5) *
       //   exp(- mass * (vx*vx + vy*vy + vz*vz) / (2.0 * physicalconstants::K_B * T));
 
-      Real vRadiusSquared {log(0.1 * minValue / (rho * pow(mass / (2.0 * M_PI * physicalconstants::K_B * T), 1.5))) / (-mass / (2.0 * physicalconstants::K_B * T))};
+      Real vRadiusSquared {projects::MaxwellianPhaseSpaceDensityInv(0.1 * minValue, T, rho, mass)};
       Real vRadius {sqrt(vRadiusSquared)};
 
       // Assuming here blocks are the smallest around V0

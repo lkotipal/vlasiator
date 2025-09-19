@@ -592,6 +592,35 @@ namespace projects {
       const Realf value = MaxwellianPhaseSpaceDensity(vx,vy,vz,initT,initRho,mass);
       return value;
    }
+
+   std::array<Real, 3> Magnetosphere::probePhaseSpaceInv(
+      spatial_cell::SpatialCell *cell,
+      const uint popID,
+      Real value,
+      int peak
+   ) const {
+      const MagnetosphereSpeciesParameters& sP = this->speciesParams[popID];
+      const Real mass = getObjectWrapper().particleSpecies[popID].mass;
+
+      Real initRho = sP.rho;
+      Real initT = sP.T;
+      const Real x  = cell->parameters[CellParams::XCRD] + 0.5*cell->parameters[CellParams::DX];
+      const Real y  = cell->parameters[CellParams::YCRD] + 0.5*cell->parameters[CellParams::DY];
+      const Real z  = cell->parameters[CellParams::ZCRD] + 0.5*cell->parameters[CellParams::DZ];
+      Real radius = this->geometryRadius(x,y,z);
+      if(radius < sP.taperOuterRadius) {
+         // sine tapering
+         initRho = sP.rho - (sP.rho-sP.ionosphereRho)*0.5*(1.0+sin(M_PI*(radius-sP.taperInnerRadius)/(sP.taperOuterRadius-sP.taperInnerRadius)+0.5*M_PI));
+         initT = sP.T - (sP.T-sP.ionosphereT)*0.5*(1.0+sin(M_PI*(radius-sP.taperInnerRadius)/(sP.taperOuterRadius-sP.taperInnerRadius)+0.5*M_PI));
+         if(radius <= sP.taperInnerRadius) {
+            initRho = sP.ionosphereRho;
+            initT = sP.ionosphereT;
+         }
+      }
+
+      Real V = MaxwellianPhaseSpaceDensityInv(value, initT, initRho, mass);
+      return {V, V, V};
+   }
    
    vector<std::array<Real, 3> > Magnetosphere::getV0(
       creal x,

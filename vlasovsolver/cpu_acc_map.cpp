@@ -290,6 +290,7 @@ bool map_1d(SpatialCell* spatial_cell,
         (base level) within the 4 corner cells in this
         block. Needed for computing maximum extent of target column*/
 
+      // TODO check logic... this isn't per column I think so di and dj might be wrong
       calculate_intersections(spatial_cell, blocks[columnBlockOffsets[setColumnOffsets[setIndex]]], popID, map_order, dimension, intersection, intersection_di, intersection_dj, intersection_dk, 0);
 
       Realf max_intersectionMin = intersection +
@@ -332,7 +333,7 @@ bool map_1d(SpatialCell* spatial_cell,
          velocity_block_indices_t lastBlockIndices;
          vmesh->getIndices(cblocks[0],
                           firstBlockIndices[0], firstBlockIndices[1], firstBlockIndices[2]);
-         vmesh->getIndices(cblocks[n_cblocks -1],
+         vmesh->getIndices(cblocks[n_cblocks - 1],
                           lastBlockIndices[0], lastBlockIndices[1], lastBlockIndices[2]);
          swapBlockIndices(firstBlockIndices, dimension);
          swapBlockIndices(lastBlockIndices, dimension);
@@ -344,17 +345,22 @@ bool map_1d(SpatialCell* spatial_cell,
           * edge in source grid.
            *lastBlockV is in z the maximum velocity value of the upper
           * edge in source grid. Added 1.01*dv to account for unexpected issues*/
-         Realf firstBlockMinV = (WID * firstBlockIndices[2]) * dv + v_min;
-         Realf lastBlockMaxV = (WID * (lastBlockIndices[2] + 1)) * dv + v_min;
+         
+         auto firstBlockCoords {vmesh->getBlockCoordinates(cblocks[0])};
+         auto lastBlockCoords {vmesh->getBlockCoordinates(cblocks[n_cblocks - 1])};
 
-         // TODO idk if this should be here
-         calculate_intersections(spatial_cell, cblocks[0], popID, map_order, dimension, intersection, intersection_di, intersection_dj, intersection_dk, 0);
+         Realf firstBlockMinV {firstBlockCoords[dimension]};
+         Realf lastBlockMaxV = {lastBlockCoords[dimension] + WID * dv};
+         //Realf lastBlockMaxV = (WID * (lastBlockIndices[2] + 1)) * dv + v_min;
 
          /*gk is now the k value in terms of cells in target
          grid. This distance between max_intersectionMin (so lagrangian
          plan, well max value here) and V of source grid, divided by
          intersection_dk to find out how many grid cells that is*/
+         calculate_intersections(spatial_cell, cblocks[0], popID, map_order, dimension, intersection, intersection_di, intersection_dj, intersection_dk, 0);
          const int firstBlock_gk = (int)((firstBlockMinV - max_intersectionMin)/intersection_dk);
+
+         calculate_intersections(spatial_cell, cblocks[n_cblocks - 1], popID, map_order, dimension, intersection, intersection_di, intersection_dj, intersection_dk, 0);
          const int lastBlock_gk = (int)((lastBlockMaxV - min_intersectionMin)/intersection_dk);
 
          int firstBlockIndexK = firstBlock_gk/WID;
@@ -533,6 +539,7 @@ bool map_1d(SpatialCell* spatial_cell,
                index (i in vector)
             */
 
+            // TODO potential error here: We use dk from first block for every block
             calculate_intersections(spatial_cell, cblocks[0], popID, map_order, dimension, intersection, intersection_di, intersection_dj, intersection_dk, 0);
 
             const Vec intersection_min =
@@ -547,7 +554,9 @@ bool map_1d(SpatialCell* spatial_cell,
              * shifting of values as we go through all blocks in
              * order. See comments where they are shifted for
              * explanations of their meaning*/
-            Vec v_r((WID * block_indices_begin[2]) * dv + v_min);
+
+            auto firstBlockCoords {vmesh->getBlockCoordinates(cblocks[0])};
+            Vec v_r(firstBlockCoords[dimension]);
             Vec lagrangian_v_r((v_r-intersection_min)/intersection_dk);
 #if VECTORCLASS_H >= 20000
             Veci lagrangian_gk_r=truncatei(lagrangian_v_r);
@@ -599,7 +608,7 @@ bool map_1d(SpatialCell* spatial_cell,
                // (in reduced cell units), this will be shifted to target_density_1, see below.
                Vec target_density_r(0.0);
 
-               const Real dv {vmesh->getCellDx(cblocks[k/WID], dimension)};
+               const Real dv {vmesh->getCellDx(cblocks[0], dimension)};
                const Real i_dv {1.0/dv};
 
                // v_l, v_r are the left and right velocity coordinates of source cell. Left is the old right.

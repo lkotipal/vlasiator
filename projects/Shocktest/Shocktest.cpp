@@ -191,6 +191,23 @@ namespace projects {
       return value;
    }
 
+   std::array<Real, 3> Shocktest::probePhaseSpaceInv(
+      spatial_cell::SpatialCell *cell,
+      const uint popID,
+      Real value,
+      int peak
+   ) const {
+      const Real mass = getObjectWrapper().particleSpecies[popID].mass;
+
+      const Real x = cell->parameters[CellParams::XCRD] + 0.5*cell->parameters[CellParams::DX];
+      cint side = (x < 0.0) ? this->LEFT : this->RIGHT;
+      Real initRho = this->rho[side];
+      Real initT = this->T[side];
+
+      Real V = MaxwellianPhaseSpaceDensityInv(value, initT, initRho, mass);
+      return {V, V, V};
+   }
+
    /** Returns the center coordinates of the maxwellian distribution
    @ param x The x coordinate of the given spatial cell
    @ param y The x coordinate of the given spatial cell

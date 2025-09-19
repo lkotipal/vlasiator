@@ -63,6 +63,12 @@ bool ObjectWrapper::addPopulationParameters() {
      RP::add(pop + "_vspace.vx_length","Initial number of velocity blocks in vx-direction.",1);
      RP::add(pop + "_vspace.vy_length","Initial number of velocity blocks in vy-direction.",1);
      RP::add(pop + "_vspace.vz_length","Initial number of velocity blocks in vz-direction.",1);
+     RP::add(pop + "_vspace.vx_hires_min","",0);
+     RP::add(pop + "_vspace.vx_hires_max","",0);
+     RP::add(pop + "_vspace.vy_hires_min","",0);
+     RP::add(pop + "_vspace.vy_hires_max","",0);
+     RP::add(pop + "_vspace.vz_hires_min","",0);
+     RP::add(pop + "_vspace.vz_hires_max","",0);
      RP::add(pop + "_vspace.max_refinement_level","Maximum allowed mesh refinement level.", 1);
 
      // Thermal / suprathermal parameters
@@ -128,6 +134,7 @@ bool ObjectWrapper::getPopulationParameters() {
       // Particle velocity space properties
       std::array<Real, 6> meshLimits;
       std::array<uint32_t, 3> gridLength;
+      std::array<uint32_t, 6> hiResRange;
       RP::get(pop + "_vspace.vx_min",meshLimits[0]);
       RP::get(pop + "_vspace.vx_max",meshLimits[1]);
       RP::get(pop + "_vspace.vy_min",meshLimits[2]);
@@ -137,6 +144,12 @@ bool ObjectWrapper::getPopulationParameters() {
       RP::get(pop + "_vspace.vx_length",gridLength[0]);
       RP::get(pop + "_vspace.vy_length",gridLength[1]);
       RP::get(pop + "_vspace.vz_length",gridLength[2]);
+      RP::get(pop + "_vspace.vx_hires_min",hiResRange[0]);
+      RP::get(pop + "_vspace.vx_hires_max",hiResRange[1]);
+      RP::get(pop + "_vspace.vy_hires_min",hiResRange[2]);
+      RP::get(pop + "_vspace.vy_hires_max",hiResRange[3]);
+      RP::get(pop + "_vspace.vz_hires_min",hiResRange[4]);
+      RP::get(pop + "_vspace.vz_hires_max",hiResRange[5]);
       if(gridLength[0] > MAX_BLOCKS_PER_DIM  ||
             gridLength[1] > MAX_BLOCKS_PER_DIM  ||
             gridLength[2] > MAX_BLOCKS_PER_DIM ) {
@@ -168,11 +181,6 @@ bool ObjectWrapper::getPopulationParameters() {
       }
 
       std::array<uint32_t, 3> blockLength {WID, WID, WID};
-      std::array<uint32_t, 6> hiResRange {
-         0, 0,
-         0, 0,
-         0, 0
-      };
 
       vmesh::getMeshWrapper()->velocityMeshesCreation->push_back({pop, meshLimits, hiResRange, gridLength, blockLength});
 

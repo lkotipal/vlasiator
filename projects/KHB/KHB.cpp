@@ -238,6 +238,25 @@ namespace projects {
       return value;
    }
 
+   std::array<Real, 3> KHB::probePhaseSpaceInv(
+      spatial_cell::SpatialCell *cell,
+      const uint popID,
+      Real value,
+      int peak
+   ) const {
+      const Real mass = getObjectWrapper().particleSpecies[popID].mass;
+      const Real x  = cell->parameters[CellParams::XCRD] + 0.5*cell->parameters[CellParams::DX];
+      creal Bx = profile(this->Bx[this->BOTTOM], this->Bx[this->TOP], x);
+      creal By = profile(this->By[this->BOTTOM], this->By[this->TOP], x);
+      creal Bz = profile(this->Bz[this->BOTTOM], this->Bz[this->TOP], x);
+
+      Real initRho = profile(this->rho[this->BOTTOM], this->rho[this->TOP], x);
+      creal mu0 = physicalconstants::MU_0;
+      creal initT = (this->P - 0.5 * (Bx * Bx + By * By + Bz * Bz) / mu0) / initRho / physicalconstants::K_B;
+      Real V = MaxwellianPhaseSpaceDensityInv(value, initT, initRho, mass);
+      return {V, V, V};
+   }
+
    void KHB::calcCellParameters(spatial_cell::SpatialCell* cell,creal& t) { }
 
    void KHB::setProjectBField(

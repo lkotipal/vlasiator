@@ -163,6 +163,18 @@ namespace projects {
       return value;
    }
 
+   std::array<Real, 3> Harris::probePhaseSpaceInv(
+      spatial_cell::SpatialCell *cell,
+      const uint popID,
+      Real value,
+      int peak
+   ) const {
+      const HarrisSpeciesParameters& sP = speciesParams[popID];
+      const Real mass = getObjectWrapper().particleSpecies[popID].mass;
+      Real V = MaxwellianPhaseSpaceDensityInv(value, sP.TEMPERATURE, sP.DENSITY, mass);
+      return {V, V, V};
+   }
+
    void Harris::calcCellParameters(spatial_cell::SpatialCell* cell,creal& t) { }
 
    vector<std::array<Real, 3>> Harris::getV0(

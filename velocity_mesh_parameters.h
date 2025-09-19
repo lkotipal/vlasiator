@@ -52,7 +52,6 @@ namespace vmesh {
     */
    struct MeshParameters {
 
-      // TODO these should be const'd
       const std::string name;                         /**< Name of the mesh (unique).*/
       const std::array<Real, 6> meshLimits;                       /**< Velocity mesh bounding box limits vx_min,vx_max,...,vz_max.*/
       const std::array<uint32_t, 6> hiResRange;             // Min/max x,y,z indices (x_min, x_max, y_min etc.) with double resolution
@@ -68,7 +67,6 @@ namespace vmesh {
       const std::array<Real, 3> gridSize;                         /**< Physical size of the grid bounding box.*/
 
       const std::array<Real, 3> blockSize;                        /**< Size of a block at base grid level.*/
-
       // Based on blocksize
       //const std::array<Real, 3> cellSize;                         /**< Size of a cell in a block at base grid level.*/
 
@@ -86,38 +84,44 @@ namespace vmesh {
          };
       }
 
-      //[[deprecated]]
+      [[deprecated]]
       ARCH_HOSTDEV Real getBlockDx(int idx) const {
          return blockSize[idx];
       }
 
       // Assumption: cell size in coordinate i only depends on the grid coordinate x_i
-      ARCH_HOSTDEV Real getBlockDx(uint32_t cellIndex, int idx) const {
+      ARCH_HOSTDEV Real getBlockDxFromIndex(uint32_t cellIndex, int idx) const {
          return blockSize[idx] * (cellIndex >= hiResRange[2 * idx] && cellIndex < hiResRange[2 * idx + 1] ? 0.5 : 1.0);
       }
 
-      ARCH_HOSTDEV Real getBlockDxFromID(const vmesh::GlobalID globalID, int idx) const {
-         return getBlockDx(getIndices(globalID)[idx], idx);
+      ARCH_HOSTDEV Real getBlockDx(const vmesh::GlobalID globalID, int idx) const {
+         return getBlockDxFromIndex(getIndices(globalID)[idx], idx);
       }
 
-      //[[deprecated]]
+      [[deprecated]]
       ARCH_HOSTDEV Real getCellDx(int idx) const {
          return blockSize[idx] / blockLength[idx];
       }
 
-      ARCH_HOSTDEV Real getCellDx(uint32_t cellIndex, int idx) const {
+      ARCH_HOSTDEV Real getCellDxFromIndex(uint32_t cellIndex, int idx) const {
          // I _think_ basic division works here
-         return getBlockDx(cellIndex / blockLength[idx], idx) / blockLength[idx];
+         return getBlockDxFromIndex(cellIndex / blockLength[idx], idx) / blockLength[idx];
       }
 
-      // This guy should probably check the cells block and then its dx
+      ARCH_HOSTDEV Real getCellDx(const vmesh::GlobalID globalID, int idx) const {
+         return getBlockDx(globalID, idx) / blockLength[idx];
+      }
+
+      // TODO This guy should probably check the cells block and then its dx
+      // is this needed tho...
+      [[deprecated]]
       ARCH_HOSTDEV Real getCellDxFromID(const vmesh::GlobalID globalID, int idx) const {
          return blockSize[idx] / blockLength[idx];
       }
 
       ARCH_HOSTDEV bool getBlockSize(const vmesh::GlobalID globalID, Real size[3]) const {
          for (int i = 0; i < 3; ++i) {
-            size[i] = getBlockDxFromID(globalID, i);
+            size[i] = getBlockDx(globalID, i);
          }
          return true;
       }

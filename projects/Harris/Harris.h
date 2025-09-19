@@ -54,6 +54,13 @@ namespace projects {
       virtual Realf probePhaseSpace(spatial_cell::SpatialCell *cell,
                                     const uint popID,
                                     Real vx_in, Real vy_in, Real vz_in) const override;
+      virtual std::array<Real, 3> probePhaseSpaceInv(
+         spatial_cell::SpatialCell *cell,
+         const uint popID,
+         Real value,
+         int peak
+      ) const override;
+
       virtual std::vector<std::array<Real, 3>> getV0(
          creal x,
          creal y,

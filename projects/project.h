@@ -45,9 +45,16 @@ namespace projects {
    ARCH_HOSTDEV inline Realf MaxwellianPhaseSpaceDensity(
       creal& vx, creal& vy, creal& vz,
       creal& T, creal& rho, creal& mass
-      ) {
+   ) {
       return rho * pow(mass / (2.0 * M_PI * physicalconstants::K_B * T), 1.5) *
          exp(- mass * (vx*vx + vy*vy + vz*vz) / (2.0 * physicalconstants::K_B * T));
+   }
+
+   // Returns r^2 f.w. the phase space density equals value
+   ARCH_HOSTDEV inline Realf MaxwellianPhaseSpaceDensityInv(
+      creal& value, creal& T, creal& rho, creal& mass
+   ) {
+      return log(value / (rho * pow(mass / (2.0 * M_PI * physicalconstants::K_B * T), 1.5))) / (-mass / (2.0 * physicalconstants::K_B * T));
    }
 
    /** Returns the phase-space density of a Tri-Maxwellian distribution function

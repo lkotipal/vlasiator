@@ -198,6 +198,23 @@ namespace projects {
       return value;
    }
 
+   std::array<Real, 3> LossCone::probePhaseSpaceInv(
+      spatial_cell::SpatialCell *cell,
+      const uint popID,
+      Real value,
+      int peak
+   ) const {
+      const LossConeSpeciesParameters& sP = speciesParams[popID];
+      const Real mass = getObjectWrapper().particleSpecies[popID].mass;
+      const Real initRho = sP.DENSITY * (1.0 + sP.densityPertRelAmp * (0.5 - rndRho));
+
+      return {
+         MaxwellianPhaseSpaceDensityInv(value, sP.TEMPERATUREX, initRho, mass),
+         MaxwellianPhaseSpaceDensityInv(value, sP.TEMPERATUREY, initRho, mass),
+         MaxwellianPhaseSpaceDensityInv(value, sP.TEMPERATUREZ, initRho, mass)
+      };
+   }
+
    void LossCone::calcCellParameters(spatial_cell::SpatialCell* cell,creal& t) {
       Real* cellParams = cell->get_cell_parameters();
       creal x = cellParams[CellParams::XCRD];
