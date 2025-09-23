@@ -86,12 +86,13 @@ namespace vmesh {
 
       [[deprecated]]
       ARCH_HOSTDEV Real getBlockDx(int idx) const {
-         return blockSize[idx];
+         return 0;
       }
 
       // Assumption: cell size in coordinate i only depends on the grid coordinate x_i
       ARCH_HOSTDEV Real getBlockDxFromIndex(uint32_t cellIndex, int idx) const {
-         return blockSize[idx] * (cellIndex >= hiResRange[2 * idx] && cellIndex < hiResRange[2 * idx + 1] ? 0.5 : 1.0);
+         // TODO janky statement... should encode the stretchy stuff into hiResRange
+         return blockSize[idx] * (cellIndex >= hiResRange[2 * idx] && cellIndex < hiResRange[2 * idx + 1] + hiResRange[2 * idx + 1] - hiResRange[2 * idx] ? 0.5 : 1.0);
       }
 
       ARCH_HOSTDEV Real getBlockDx(const vmesh::GlobalID globalID, int idx) const {
@@ -100,7 +101,7 @@ namespace vmesh {
 
       [[deprecated]]
       ARCH_HOSTDEV Real getCellDx(int idx) const {
-         return blockSize[idx] / blockLength[idx];
+         return 0;
       }
 
       ARCH_HOSTDEV Real getCellDxFromIndex(uint32_t cellIndex, int idx) const {
@@ -110,13 +111,6 @@ namespace vmesh {
 
       ARCH_HOSTDEV Real getCellDx(const vmesh::GlobalID globalID, int idx) const {
          return getBlockDx(globalID, idx) / blockLength[idx];
-      }
-
-      // TODO This guy should probably check the cells block and then its dx
-      // is this needed tho...
-      [[deprecated]]
-      ARCH_HOSTDEV Real getCellDxFromID(const vmesh::GlobalID globalID, int idx) const {
-         return blockSize[idx] / blockLength[idx];
       }
 
       ARCH_HOSTDEV bool getBlockSize(const vmesh::GlobalID globalID, Real size[3]) const {

@@ -202,7 +202,7 @@ bool writeVelocityDistributionData(const uint popID,Writer& vlsvWriter,
          crds[0] = vmesh::getMeshWrapper()->at(meshID).meshMinLimits[crd];
          for (size_t i=1; i < N_nodes; ++i) {
             // Janky
-            crds[i] = crds[i - 1] + vmesh::getMeshWrapper()->at(meshID).getCellDxFromIndex(i, crd);
+            crds[i] = crds[i - 1] + vmesh::getMeshWrapper()->at(meshID).getCellDxFromIndex(i - 1, crd);
          }
 
          if (crd == 0) {

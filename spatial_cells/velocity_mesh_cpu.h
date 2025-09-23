@@ -232,6 +232,7 @@ namespace vmesh {
       return cellSize;
    }
 */
+
    inline bool VelocityMesh::getBlockCoordinates(const vmesh::GlobalID& globalID, Real coords[3]) const {
       if (globalID == invalidGlobalID()) {
          for (int i=0; i<3; ++i) {
@@ -250,7 +251,7 @@ namespace vmesh {
       for (int idx = 0; idx < 3; ++idx) {
          coords[idx] = vmesh::getMeshWrapper()->at(meshID).meshMinLimits[idx];
          for (uint32_t i = 0; i < indices[idx]; ++i) {
-            coords[idx] += getBlockDx(i, idx);
+            coords[idx] += vmesh::getMeshWrapper()->at(meshID).getBlockDxFromIndex(i, idx);
          }
       }
 
