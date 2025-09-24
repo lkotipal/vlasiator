@@ -172,7 +172,7 @@ void report_memory_consumption(
       double max_mem_papi[4];
       /*PAPI returns memory in KB units, transform to bytes*/
       mem_papi[0] = dmem.high_water_mark * 1024;
-      mem_papi[1] = dmem.high_water_mark * 1024 + extra_bytes;
+      mem_papi[1] = dmem.resident * 1024 + extra_bytes;
       mem_papi[2] = dmem.resident * 1024;
       mem_papi[3] = extra_bytes;
       //sum node mem
@@ -194,12 +194,13 @@ void report_memory_consumption(
          logFile << reportstring;
          if (max_mem_papi[3] != 0.0) {
             snprintf(reportstring,512, "(MEM) tstep %i t %.3g %-21s (GiB/node; avg, min, max, sum): %-8.3g %-8.3g %-8.3g %-8.3g on %i nodes\n",
-               P::tstep, P::t, "HWM with refines", sum_mem_papi[1]/nNodes/GiB, min_mem_papi[1]/GiB, max_mem_papi[1]/GiB, sum_mem_papi[1]/GiB, nNodes);
+               P::tstep, P::t, "Resident with refines", sum_mem_papi[1]/nNodes/GiB, min_mem_papi[1]/GiB, max_mem_papi[1]/GiB, sum_mem_papi[1]/GiB, nNodes);
             logFile << reportstring;
          }
       }
       if(rank == MASTER_RANK) {
-         bailout(max_mem_papi[1]/GiB > P::bailout_max_memory, "Memory high water mark per node exceeds bailout threshold", __FILE__, __LINE__);
+         bailout(max_mem_papi[0]/GiB > P::bailout_max_memory, "Memory high water mark per node exceeds bailout threshold", __FILE__, __LINE__);
+         bailout(max_mem_papi[1]/GiB > P::bailout_max_memory, "Estimated resident per node exceeds bailout threshold", __FILE__, __LINE__);
       }
    }
 #endif
