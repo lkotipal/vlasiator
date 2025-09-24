@@ -18,27 +18,45 @@
  * You should have received a copy of the GNU General Public License along
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * File:   vlsv_util.h
+ * 
+ * File:   vlsv_util.cpp
  * Author: sandroos
  *
  * Created on July 6, 2015, 12:56 PM
  */
 
-/** @file vlsv_util.h
- * This file contains miscellaneous utility routines that
- * are used by vlsv tools.*/
+#include <cstdlib>
+#include <iostream>
+#include <glob.h>
 
-#include <string>
-#include <vector>
+#include "vlsv_util.h"
 
-#ifndef VLSV_UTIL_H
-#define VLSV_UTIL_H
+using namespace std;
 
-namespace toolutil {
+std::vector<std::string> toolutil::getFiles(const std::string& mask) {
+   vector<string> fileList;
 
-   std::vector<std::string> getFiles(const std::string& mask);
+   glob_t glob_matches;
+   int retval = glob(mask.c_str(), GLOB_TILDE_CHECK, NULL, &glob_matches);
+   if(retval != 0) {
+      switch(retval) {
+         case GLOB_NOSPACE:
+            cerr << "ERROR enumerating filenames: out of memory in " << __FILE__ << ":" << __LINE__ << endl;
+            break;
+         case GLOB_ABORTED:
+            cerr << "ERROR in reading directory contents in " << __FILE__ << ":" << __LINE__ << endl;
+            break;
+         case GLOB_NOMATCH:
+            cerr << "ERROR: no matching file found for pattern " << mask << endl;
+            break;
+      }
+      globfree(&glob_matches);
+      return fileList;
+   }
+   for(unsigned int i=0; i<glob_matches.gl_pathc; i++) {
+      fileList.push_back(glob_matches.gl_pathv[i]);
+   }
 
-} // namespace toolutil
-
-#endif  // VLSV_UTIL_H
+   globfree(&glob_matches);
+   return fileList;
+}

@@ -1,6 +1,8 @@
+#pragma once
+
 /*
  * This file is part of Vlasiator.
- * Copyright 2010-2016 Finnish Meteorological Institute
+ * Copyright 2010-2025 Finnish Meteorological Institute and University of Helsinki
  *
  * For details of usage, see the COPYING file and read the "Rules of the Road"
  * at http://www.physics.helsinki.fi/vlasiator/
@@ -20,31 +22,32 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef CPU_1D_PLM_H
-#define CPU_1D_PLM_H
+#include <zoltan.h>
+#include <dccrg.hpp>
+#include "../common.h"
+#include "../spatial_cells/spatial_cell_wrapper.hpp"
+#include <dccrg_cartesian_geometry.hpp>
 
-#include "cpu_slope_limiters.hpp"
-#include "vec.h"
-
-using namespace std;
-
-/*!
- Compute PLM coefficients
- f(v) = a[0] + a[1]/2.0*t
-t=(v-v_{i-0.5})/dv where v_{i-0.5} is the left face of a cell
-The factor 2.0 is in the polynom to ease integration, then integral is a[0]*t + a[1]*t**2
-*/
-
-static inline void compute_plm_coeff(const Vec* const values, uint k, Vec a[2], const Realf threshold) {
-   // scale values closer to 1 for more accurate slope limiter calculation
-   const Realf scale = 1. / threshold;
-   // Vec v_1 = values[k - 1] * scale;
-   // Vec v_2 = values[k] * scale;
-   // Vec v_3 = values[k + 1] * scale;
-   // Vec d_cv = slope_limiter(v_1, v_2, v_3) * threshold;
-   const Vec d_cv = slope_limiter(values[k - 1] * scale, values[k] * scale, values[k + 1] * scale) * threshold;
-   a[0] = values[k] - d_cv * 0.5;
-   a[1] = d_cv * 0.5;
-}
-
+#ifdef USE_GPU
+#include "gpu_pitch_angle_diffusion.hpp"
+#else
+#include "cpu_pitch_angle_diffusion.h"
 #endif
+
+extern std::vector<Real> betaParaArray;
+extern std::vector<Real> TanisoArray;
+extern std::vector<Real> nu0Array;
+extern size_t n_betaPara;
+extern size_t n_Taniso;
+extern bool nuArrayRead;
+
+void readNuArrayFromFile();
+
+Realf interpolateNuFromArray(
+   const Real Taniso, const Real betaParallel);
+
+void computePitchAngleDiffusionParameters(
+   SpatialCell& cell,
+   const uint popID, size_t CellIdx, bool& currentSpatialLoopComplete,
+   Realf& sparsity, std::array<Real,3>& b, Real& nu0
+   );

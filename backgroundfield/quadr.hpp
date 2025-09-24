@@ -23,8 +23,8 @@
 #ifndef QUADR_HPP
 #define QUADR_HPP
 
-#include "functions.hpp"
 #include <iostream>
+#include "functions.hpp"
 using namespace std;
 
 /*
@@ -38,6 +38,8 @@ using namespace std;
 /*
   The iterations are stopped when the results changes by less than absacc.
 */
+
+
 
 double Romberg(const T1DFunction& func, double a, double b, double absacc);
 double Romberg(const T2DFunction& func, double a, double b, double c, double d, double absacc);

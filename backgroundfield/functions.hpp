@@ -22,13 +22,13 @@
 
 #ifndef FUNCTIONS_HPP
 #define FUNCTIONS_HPP
-#include "../definitions.h"
 #include <functional>
+#include "../definitions.h"
 
 enum coordinate { X, Y, Z };
 
 typedef std::function<double(double)> T1DFunction;
-typedef std::function<double(double, double)> T2DFunction;
-typedef std::function<double(double, double, double)> T3DFunction;
+typedef std::function<double(double,double)> T2DFunction;
+typedef std::function<double(double,double,double)> T3DFunction;
 
 #endif

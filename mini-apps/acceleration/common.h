@@ -12,11 +12,12 @@ Copyright 2010, 2011, 2012, 2013 Finnish Meteorological Institute
 typedef uint32_t uint;
 typedef const uint32_t cuint;
 
-const uint WID = 4;           /*!< Number of cells per coordinate in a velocity block. Only a value of 4 supported by vectorized Leveque solver */
-const uint WID2 = WID * WID;  /*!< Number of cells per 2D slab in a velocity block. */
-const uint WID3 = WID2 * WID; /*!< Number of cells in a velocity block. */
 
-// set general floating point precision here. Default is single precision, use -DDP to set double precision
+const uint WID = 4;         /*!< Number of cells per coordinate in a velocity block. Only a value of 4 supported by vectorized Leveque solver */
+const uint WID2 = WID*WID;  /*!< Number of cells per 2D slab in a velocity block. */
+const uint WID3 = WID2*WID; /*!< Number of cells in a velocity block. */
+
+//set general floating point precision here. Default is single precision, use -DDP to set double precision
 #ifdef DP
 typedef double Real;
 typedef const double creal;
@@ -24,6 +25,7 @@ typedef const double creal;
 typedef float Real;
 typedef const float creal;
 #endif
+
 
 #define MAX_BLOCKS_PER_DIM 100
 #ifdef ACC_SEMILAG_PLM
@@ -36,3 +38,5 @@ typedef const float creal;
 
 
 #endif
+
+
