@@ -1,7 +1,7 @@
 name: Run precommit to automatically format and fix PRs
 
 on:
-  pull_request:
+  pull_request_target:
   push:
 
 permissions:
@@ -15,7 +15,9 @@ jobs:
 
     steps:
       - name: Checkout source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -24,7 +26,7 @@ jobs:
         run: |
           echo "deb http://ftp.fi.debian.org/debian/ experimental main contrib non-free" >> /etc/apt/sources.list
           apt-get update
-          apt-get install -y clang-format-22 git npm nodejs
+          apt-get install -y clang-format-22 pre-commit npm nodejs
           ln -s /usr/bin/clang-format-22 /usr/bin/clang-format
       - name: Make sure git is happy with the working directory
         run: |
