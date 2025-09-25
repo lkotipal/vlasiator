@@ -281,7 +281,7 @@ struct GPUMemoryManager {
          std::cerr << "Error: Pointer name '" << name << "' not found.\n";
          return false;
       }
-      
+
       if (gpuMemoryPointers[name] != nullptr) {
          CHK_ERR( gpuFree(gpuMemoryPointers[name]) );
       }

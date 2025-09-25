@@ -79,7 +79,7 @@ void updateRemoteVelocityBlockLists(
 );
 
 /*! Deallocates all blocks in remote cells in order to save
- *  memory. 
+ *  memory.
  * \param mpiGrid Spatial grid
  */
 void deallocateRemoteCellBlocks(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid);
@@ -94,9 +94,9 @@ void deallocateRemoteCellBlocks(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geomet
  Note that block existence does not use vlasov stencil as it is important to also include diagonals to avoid massloss
 
  \param mpiGrid  Parallel grid with spatial cells
- \param cellsToAdjust  List of cells that are adjusted, that is cells which blocks are added or removed. 
+ \param cellsToAdjust  List of cells that are adjusted, that is cells which blocks are added or removed.
  \param doPrepareToReceiveBlocks If true, then remote cells are set up so that velocity space data can be received. Global operation, value has to be the same for all processes.
- 
+
 */
 bool adjustVelocityBlocks(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
                           const std::vector<CellID>& cellsToAdjust,

@@ -42,7 +42,7 @@ namespace projects {
     public:
       Flowthrough();
       virtual ~Flowthrough();
-      
+
       virtual bool initialize(void) override;
       static void addParameters(void);
       virtual void getParameters(void) override;
@@ -71,7 +71,7 @@ namespace projects {
                                                       const uint popID
                                                      ) const override;
 
-      bool emptyBox;               /**< If true, then the simulation domain is empty initially 
+      bool emptyBox;               /**< If true, then the simulation domain is empty initially
                                     * and matter will flow in only through the boundaries.*/
 
       Real densityWidth;

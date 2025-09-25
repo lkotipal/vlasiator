@@ -34,4 +34,3 @@
 void pitchAngleDiffusion(dccrg::Dccrg<spatial_cell::SpatialCell, dccrg::Cartesian_Geometry>& mpiGrid,const uint popID);
 
 #endif
-

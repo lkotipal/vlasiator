@@ -31,7 +31,7 @@ namespace projects {
       public:
          TestHall();
          virtual ~TestHall();
-         
+
          virtual bool initialize(void) override;
          static void addParameters(void);
          virtual void getParameters(void) override;
@@ -41,11 +41,11 @@ namespace projects {
             FsGrid< std::array<Real, fsgrids::bgbfield::N_BGB>, FS_STENCIL_WIDTH> & BgBGrid,
             FsGrid< fsgrids::technical, FS_STENCIL_WIDTH> & technicalGrid
          ) override;
-         
+
       virtual Realf fillPhaseSpace(spatial_cell::SpatialCell *cell,
                                   const uint popID,
                                   const uint nRequested) const override;
-         
+
          bool noDipoleInSW;
          Real constBgB[3];
          Real dipoleScalingFactor;

@@ -45,7 +45,7 @@ namespace projects {
     public:
       Dispersion();
       virtual ~Dispersion();
-      
+
       virtual bool initialize(void) override;
       static void addParameters(void);
       virtual void getParameters(void) override;
@@ -73,7 +73,7 @@ namespace projects {
       Real maxwCutoff;
       std::vector<DispersionSpeciesParameters> speciesParams;
       uint seed;
-      
+
       static Real rndRho, rndVel[3];
       #pragma omp threadprivate(rndRho,rndVel)
    } ; // class Dispersion

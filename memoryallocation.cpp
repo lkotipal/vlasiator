@@ -30,8 +30,8 @@
 #include "common.h"
 #include "parameters.h"
 #ifdef PAPI_MEM
-#include "papi.h" 
-#endif 
+#include "papi.h"
+#endif
 
 extern Logger logFile, diagnostic;
 using namespace std;

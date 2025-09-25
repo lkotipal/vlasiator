@@ -110,7 +110,7 @@ __global__ void __launch_bounds__(WID3,WID3S_PER_MP) batch_update_velocity_block
             __syncthreads();
          }
       }
-      
+
       const int indexInsideWarp = ti % GPUTHREADS;
       const int warpIndex = ti / GPUTHREADS;
 

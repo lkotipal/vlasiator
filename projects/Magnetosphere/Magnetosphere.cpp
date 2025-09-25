@@ -286,7 +286,7 @@ namespace projects {
       }
       return radius;
    }
-   
+
    /* set 0-centered dipole */
    void Magnetosphere::setProjectBField(
       FsGrid< std::array<Real, fsgrids::bfield::N_BFIELD>, FS_STENCIL_WIDTH> & perBGrid,
@@ -592,7 +592,7 @@ namespace projects {
       const Realf value = MaxwellianPhaseSpaceDensity(vx,vy,vz,initT,initRho,mass);
       return value;
    }
-   
+
    vector<std::array<Real, 3> > Magnetosphere::getV0(
       creal x,
       creal y,
@@ -624,8 +624,8 @@ namespace projects {
 
    bool Magnetosphere::refineSpatialCells( dccrg::Dccrg<spatial_cell::SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid ) const {
       phiprof::Timer refineSCTimer {"Magnetosphere: refine spatial cells"};
-   
-      int myRank;       
+
+      int myRank;
       MPI_Comm_rank(MPI_COMM_WORLD,&myRank);
 
       if(myRank == MASTER_RANK) {

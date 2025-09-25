@@ -37,7 +37,7 @@ using namespace std;
 namespace projects {
    Firehose::Firehose(): Project() { }
    Firehose::~Firehose() { }
-   
+
    bool Firehose::initialize(void) {return Project::initialize();}
 
    void Firehose::addParameters(){
@@ -161,7 +161,7 @@ namespace projects {
    }
 
    void Firehose::calcCellParameters(spatial_cell::SpatialCell* cell,creal& t) { }
-   
+
    void Firehose::setProjectBField(
       FsGrid< std::array<Real, fsgrids::bfield::N_BFIELD>, FS_STENCIL_WIDTH> & perBGrid,
       FsGrid< std::array<Real, fsgrids::bgbfield::N_BGB>, FS_STENCIL_WIDTH> & BgBGrid,
@@ -171,8 +171,8 @@ namespace projects {
       bgField.initialize(this->Bx,
                          this->By,
                          this->Bz);
-      
+
       setBackgroundField(bgField, BgBGrid);
    }
-   
+
 } // namespace projects

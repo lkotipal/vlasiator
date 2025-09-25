@@ -354,7 +354,7 @@ bool checkScalarParameter(vlsv::ParallelReader& file,const string& name,T correc
    }
 }
 
-/** Read velocity block mesh data and distribution function data belonging to this process 
+/** Read velocity block mesh data and distribution function data belonging to this process
  * for the given particle species. This function must be called simultaneously by all processes.
  * @param file VLSV reader with input file open.
  * @param spatMeshName Name of the spatial mesh.
@@ -896,7 +896,7 @@ template<unsigned long int N> bool readFsGridVariable(
       if (readFsgridDecomposition(file, fileDecomposition) == false) {
          exitOnError(false, "(RESTART) Failed to read Fsgrid decomposition", MPI_COMM_WORLD);
       }
-   } else { 
+   } else {
       // Override
       logFile << "(RESTART) Using manual override for FsGrid MESH_DECOMPOSITION." << endl << write;
       fileDecomposition = P::overrideReadFsGridDecomposition;
@@ -1337,7 +1337,7 @@ bool exec_readGrid(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
    phiprof::Timer updateNeighborsTimer {"updateMpiGridNeighbors"};
    mpiGrid.update_copies_of_remote_neighbors(Neighborhoods::FULL);
    updateNeighborsTimer.stop();
-   
+
    phiprof::Timer readfsTimer {"readFsGrid"};
    // Read fsgrid data back in
    int fsgridInputRanks=0;
@@ -1351,7 +1351,7 @@ bool exec_readGrid(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
    if (success) { success = readFsGridVariable(file, "fg_E", fsgridInputRanks, EGrid); }
    exitOnError(success,"(RESTART) Failure reading fsgrid restart variables",MPI_COMM_WORLD);
    readfsTimer.stop();
-   
+
    phiprof::Timer readIonosphereTimer {"readIonosphere"};
    bool ionosphereSuccess=true;
    ionosphereSuccess = readIonosphereNodeVariable(file, "ig_fac", SBC::ionosphereGrid, ionosphereParameters::SOURCE);
@@ -1437,7 +1437,7 @@ bool readFileCells(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
 
 bool readFsgridDecomposition(vlsv::ParallelReader& file, std::array<FsGridTools::Task_t,3>& decomposition){
    list<pair<string,string> > attribs;
-   int myRank;   
+   int myRank;
    MPI_Comm_rank(MPI_COMM_WORLD,&myRank);
 
    phiprof::Timer readFsGridDecomposition {"readFsGridDecomposition"};
@@ -1452,7 +1452,7 @@ bool readFsgridDecomposition(vlsv::ParallelReader& file, std::array<FsGridTools:
       return false;
    }
 
-   std::array<FsGridTools::Task_t,3> fsGridDecomposition={0,0,0}; 
+   std::array<FsGridTools::Task_t,3> fsGridDecomposition={0,0,0};
    FsGridTools::Task_t* ptr = &fsGridDecomposition[0];
 
    success = file.read("MESH_DECOMPOSITION",attribs, 0, 3, ptr, false);
@@ -1484,7 +1484,7 @@ bool readFsgridDecomposition(vlsv::ParallelReader& file, std::array<FsGridTools:
       FsGridTools::FsSize_t* ids_ptr = &rank_first_ids[0];
 
       std::set<FsGridTools::FsIndex_t> x_corners, y_corners, z_corners;
-      
+
       int64_t begin_rank = 0;
       for(auto rank_size : mesh_domain_sizes){
          if(myRank == MASTER_RANK){

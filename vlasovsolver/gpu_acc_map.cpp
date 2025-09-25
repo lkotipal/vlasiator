@@ -1011,7 +1011,7 @@ __global__ void __launch_bounds__(WID3, ACCELERATION_KERNEl_MIN_BLOCKS) accelera
    for (uint columnIndex = 0;
         columnIndex < numColumns;
         ++columnIndex) {
-      
+
       const uint column = setColumnOffset + columnIndex;
 
       const Realf v_r0 = ( (Realf)(WID * columnData->kBegin[column]) * dv + v_min);

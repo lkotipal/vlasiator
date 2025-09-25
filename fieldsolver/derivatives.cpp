@@ -705,12 +705,12 @@ void calculateCurvatureSimple(
  */
 static std::array<Real, 3> getBVol(SpatialCell* cell)
 {
-   return std::array<Real, 3> { 
+   return std::array<Real, 3> {
       {
-         cell->parameters[CellParams::BGBXVOL] + cell->parameters[CellParams::PERBXVOL], 
-         cell->parameters[CellParams::BGBYVOL] + cell->parameters[CellParams::PERBYVOL], 
+         cell->parameters[CellParams::BGBXVOL] + cell->parameters[CellParams::PERBXVOL],
+         cell->parameters[CellParams::BGBYVOL] + cell->parameters[CellParams::PERBYVOL],
          cell->parameters[CellParams::BGBZVOL] + cell->parameters[CellParams::PERBZVOL]
-      } 
+      }
    };
 }
 
@@ -720,11 +720,11 @@ static std::array<Real, 3> getBVol(SpatialCell* cell)
 static std::array<Real, 3> getMomentumDensity(SpatialCell* cell)
 {
    Real rho = cell->parameters[CellParams::RHOM];
-   return std::array<Real, 3> { 
+   return std::array<Real, 3> {
       {
-         rho * cell->parameters[CellParams::VX], 
-         rho * cell->parameters[CellParams::VY], 
-         rho * cell->parameters[CellParams::VZ]} 
+         rho * cell->parameters[CellParams::VX],
+         rho * cell->parameters[CellParams::VY],
+         rho * cell->parameters[CellParams::VZ]}
    };
 }
 
@@ -753,7 +753,7 @@ static Real calculateAnisotropy(const Eigen::Matrix3d& rot, const std::array<Rea
       {P[5], P[1], P[3]},
       {P[4], P[3], P[2]},
    };
-   
+
    Eigen::Matrix3d transposerot = rot.transpose();
    Eigen::Matrix3d Pprime = rot * Ptensor * transposerot;
 
@@ -799,7 +799,7 @@ void calculateScaledDeltas(
       if (myV < EPS) {
          maxV = std::max(maxV,otherV);
       }
-      
+
       Real maxRho = std::max(myRho, otherRho);
       if (maxRho > EPS) {
          dRho = std::max(fabs(myRho - otherRho) / maxRho, dRho);
@@ -817,7 +817,7 @@ void calculateScaledDeltas(
          dB = std::max(sqrt(deltaBsq) / maxB, dB);
       }
    }
-   
+
    Real alpha {0.0};
    alpha = std::max(alpha, dRho * P::alphaDRhoWeight);
    alpha = std::max(alpha, dU * P::alphaDUWeight);
@@ -926,7 +926,7 @@ void calculateScaledDeltasSimple(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geome
       computeTimer.stop(N_cells,"Spatial Cells");
    }
 
-   
+
 
    gradientsTimer.stop(N_cells,"Spatial Cells");
 }

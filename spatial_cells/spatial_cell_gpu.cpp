@@ -344,7 +344,7 @@ namespace spatial_cell {
          velocity_block_with_content_list_capacity = newReserve;
          dev_velocity_block_with_content_list = velocity_block_with_content_list->upload<true>(stream);
       }
-      // This one is also used in acceleration for adding new blocks to the mesh, so should have more room. 
+      // This one is also used in acceleration for adding new blocks to the mesh, so should have more room.
       if (vbwcl_sizePower < HashmapReqSize+1) {
          vbwcl_sizePower = HashmapReqSize+1;
          velocity_block_with_content_map->resize(vbwcl_sizePower, Hashinator::targets::device, stream);

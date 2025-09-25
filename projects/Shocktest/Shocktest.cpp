@@ -42,9 +42,9 @@ namespace projects {
    Shocktest::Shocktest() : TriAxisSearch() {} // Constructor
    Shocktest::~Shocktest() {} // Destructor
 
-   
+
    bool Shocktest::initialize(void) { return Project::initialize(); }
-   
+
    void Shocktest::addParameters(){
       typedef Readparameters RP;
       RP::add("Shocktest.rho1", "Number density, left state (m^-3)", 0.0);
@@ -64,7 +64,7 @@ namespace projects {
       RP::add("Shocktest.Bz1", "Magnetic field z component, left state (T)", 0.0);
       RP::add("Shocktest.Bz2", "Magnetic field z component, right state (T)", 0.0);
    }
-   
+
    void Shocktest::getParameters(){
       Project::getParameters();
 
@@ -107,7 +107,7 @@ namespace projects {
       RP::get("Shocktest.Bz1", this->Bz[this->LEFT]);
       RP::get("Shocktest.Bz2", this->Bz[this->RIGHT]);
    }
-   
+
    Realf Shocktest::fillPhaseSpace(spatial_cell::SpatialCell *cell,
                                        const uint popID,
                                        const uint nRequested
@@ -208,31 +208,31 @@ namespace projects {
       centerPoints.push_back(V0);
       return centerPoints;
    }
-   
+
    /** Calculate parameters for the given spatial cell at the given time.
     * @param cellParams Array containing cell parameters.
-    * @param t The current value of time. This is passed as a convenience. If you need more detailed information 
+    * @param t The current value of time. This is passed as a convenience. If you need more detailed information
     * of the state of the simulation, you can read it from Parameters.
     */
    void Shocktest::calcCellParameters(spatial_cell::SpatialCell* cell,creal& t) { }
-   
+
    void Shocktest::setProjectBField(
       FsGrid< std::array<Real, fsgrids::bfield::N_BFIELD>, FS_STENCIL_WIDTH> & perBGrid,
       FsGrid< std::array<Real, fsgrids::bgbfield::N_BGB>, FS_STENCIL_WIDTH> & BgBGrid,
       FsGrid< fsgrids::technical, FS_STENCIL_WIDTH> & technicalGrid
    ) {
       setBackgroundFieldToZero(BgBGrid);
-      
+
       if(!P::isRestart) {
          auto localSize = perBGrid.getLocalSize().data();
-         
+
          #pragma omp parallel for collapse(3)
          for (FsGridTools::FsIndex_t x = 0; x < localSize[0]; ++x) {
             for (FsGridTools::FsIndex_t y = 0; y < localSize[1]; ++y) {
                for (FsGridTools::FsIndex_t z = 0; z < localSize[2]; ++z) {
                   const std::array<Real, 3> xyz = perBGrid.getPhysicalCoords(x, y, z);
                   std::array<Real, fsgrids::bfield::N_BFIELD>* cell = perBGrid.get(x, y, z);
-                  
+
                   cell->at(fsgrids::bfield::PERBX) = (xyz[0] < 0.0) ? this->Bx[this->LEFT] : this->Bx[this->RIGHT];
                   cell->at(fsgrids::bfield::PERBY) = (xyz[0] < 0.0) ? this->By[this->LEFT] : this->By[this->RIGHT];
                   cell->at(fsgrids::bfield::PERBZ) = (xyz[0] < 0.0) ? this->Bz[this->LEFT] : this->Bz[this->RIGHT];

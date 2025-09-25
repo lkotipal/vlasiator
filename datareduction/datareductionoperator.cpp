@@ -712,9 +712,9 @@ namespace DRO {
    }
 
   /********
-	   Next level of helper functions - these include threading and calculate zeroth or first velocity moments or the
-	   diagonal / off-diagonal pressure tensor components for
-	   thermal or non-thermal populations  ********/
+           Next level of helper functions - these include threading and calculate zeroth or first velocity moments or the
+           diagonal / off-diagonal pressure tensor components for
+           thermal or non-thermal populations  ********/
 
    //Calculates rho thermal or rho non-thermal
    static void rhoNonthermalCalculation( const SpatialCell * cell, const bool calculateNonthermal, cuint popID, Real & rho ) {
@@ -977,7 +977,7 @@ namespace DRO {
    }
 
   /*********
-	     End velocity moment / thermal/non-thermal helper functions
+             End velocity moment / thermal/non-thermal helper functions
   *********/
 
    // Rho nonthermal:
@@ -1822,9 +1822,9 @@ namespace DRO {
                              + (VY - averageVY) * (VY - averageVY)
                              + (VZ - averageVZ) * (VZ - averageVZ);
 
-	                  lsum[0] += block_data[cellIndex(i,j,k)] * VSQ * (VX - averageVX) * DV3;
-	                  lsum[1] += block_data[cellIndex(i,j,k)] * VSQ * (VY - averageVY) * DV3;
-	                  lsum[2] += block_data[cellIndex(i,j,k)] * VSQ * (VZ - averageVZ) * DV3;
+                          lsum[0] += block_data[cellIndex(i,j,k)] * VSQ * (VX - averageVX) * DV3;
+                          lsum[1] += block_data[cellIndex(i,j,k)] * VSQ * (VY - averageVY) * DV3;
+                          lsum[2] += block_data[cellIndex(i,j,k)] * VSQ * (VZ - averageVZ) * DV3;
          }, sum);
 
          HeatFlux[0] = sum[0] * HALF * getObjectWrapper().particleSpecies[popID].mass;

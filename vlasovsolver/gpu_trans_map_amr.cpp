@@ -131,7 +131,7 @@ __global__ void __launch_bounds__(WID3) translation_kernel(
 
    // Acting on velocity block blockGID, now found from array
    for (uint thisBlockIndex = startingBlockIndex + blockIdx.x; thisBlockIndex < nAllBlocks; thisBlockIndex += blockIndexIncrement) {
-      
+
       const uint blockGID = allBlocks[thisBlockIndex];
       // First read data in
       uint nBin = blockIdx.z;
@@ -206,7 +206,7 @@ __global__ void __launch_bounds__(WID3) translation_kernel(
 
       // Now we propagate the pencils and write data back to the block data containers
       // Get velocity data from vmesh that we need later to calculate the translation
-   
+
       vmesh::LocalID blockIndicesD = 0;
       if (dimension==0) {
          randovmesh->getIndicesX(blockGID, blockIndicesD);

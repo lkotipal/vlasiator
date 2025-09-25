@@ -44,7 +44,7 @@ namespace projects {
     public:
       Magnetosphere();
       virtual ~Magnetosphere();
-      
+
       virtual bool initialize(void) override;
       static void addParameters(void);
       virtual void getParameters(void) override;
@@ -71,7 +71,7 @@ namespace projects {
                                                       creal z,
                                                       const uint popID
                                                      ) const override;
-      
+
       std::array<Real, 3> constBgB;
       bool noDipoleInSW;
       Real ionosphereRadius;
@@ -108,4 +108,3 @@ namespace projects {
 } // namespace projects
 
 #endif
-

@@ -201,7 +201,7 @@ struct setOfPencils {
       gpuMemoryManager.createPointer("host_binSize", host_binSize);
       gpuMemoryManager.createPointer("dev_binStart", dev_binStart);
       gpuMemoryManager.createPointer("dev_binSize", dev_binSize);
-      
+
       gpuMemoryManager.allocate(dev_pencilsInBin, sumOfLengths*sizeof(uint));
       gpuMemoryManager.hostAllocate(host_binStart, activeBins.size()*sizeof(uint));
       gpuMemoryManager.hostAllocate(host_binSize, activeBins.size()*sizeof(uint));

@@ -483,8 +483,8 @@ bool map_1d(SpatialCell* spatial_cell,
             const Veci  target_cell_index_common =
                i_indices * cell_indices_to_id[0] +
                j_indices * cell_indices_to_id[1];
-       
-            /* 
+
+            /*
                intersection_min is the intersection z coordinate (z after
                swaps that is) of the lowest possible z plane for each i,j
                index (i in vector)
@@ -572,7 +572,7 @@ bool map_1d(SpatialCell* spatial_cell,
                   const int blockK = gk/WID;
                   const int gk_mod_WID = (gk - blockK * WID);
 
-                  
+
                   //cell indices in the target block  (TODO: to be replaced by
                   //compile time generated scatter write operation)
                   const Veci target_cell(target_cell_index_common + gk_mod_WID * cell_indices_to_id[2]);

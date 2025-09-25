@@ -31,7 +31,7 @@ namespace projects {
     public:
       Template();
       virtual ~Template();
-      
+
       virtual bool initialize(void) override;
       static void addParameters(void);
       virtual void getParameters(void) override;
@@ -40,7 +40,7 @@ namespace projects {
          FsGrid< std::array<Real, fsgrids::bgbfield::N_BGB>, FS_STENCIL_WIDTH> & BgBGrid,
          FsGrid< fsgrids::technical, FS_STENCIL_WIDTH> & technicalGrid
       ) override;
-      
+
       virtual Realf fillPhaseSpace(spatial_cell::SpatialCell *cell,
                                   const uint popID,
                                   const uint nRequested) const override;
@@ -53,10 +53,9 @@ namespace projects {
                                                      creal z,
                                                      const uint popID
                                                     ) const override;
-      
+
       Real param;
    }; // class Template
 } // namespace projects
 
 #endif
-

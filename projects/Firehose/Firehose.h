@@ -43,7 +43,7 @@ namespace projects {
     public:
       Firehose();
       virtual ~Firehose();
-      
+
       virtual bool initialize(void) override;
       static void addParameters(void);
       virtual void getParameters(void) override;
@@ -61,7 +61,7 @@ namespace projects {
 
       Real Bx;
       Real By;
-      Real Bz;   
+      Real Bz;
       Real lambda;
       Real amp;
       std::vector<FirehoseSpeciesParameters> speciesParams;

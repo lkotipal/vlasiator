@@ -33,7 +33,7 @@ namespace projects {
    public:
       verificationLarmor();
       virtual ~verificationLarmor();
-      
+
       virtual bool initialize(void) override;
       static void addParameters(void);
       virtual void getParameters(void) override;
@@ -63,4 +63,3 @@ namespace projects {
 } // namespace projects
 
 #endif
-

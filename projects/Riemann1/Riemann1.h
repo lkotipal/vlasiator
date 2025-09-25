@@ -32,7 +32,7 @@ namespace projects {
       public:
          Riemann1();
          virtual ~Riemann1();
-         
+
          virtual bool initialize(void) override;
          static void addParameters(void);
          virtual void getParameters(void) override;
@@ -47,7 +47,7 @@ namespace projects {
                                   const uint nRequested) const override;
          virtual void calcCellParameters(spatial_cell::SpatialCell* cell,creal& t) override;
 
-      
+
          enum {
             LEFT,
             RIGHT

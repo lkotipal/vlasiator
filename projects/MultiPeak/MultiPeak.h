@@ -57,7 +57,7 @@ namespace projects {
     public:
       MultiPeak();
       virtual ~MultiPeak();
-      
+
       virtual bool initialize(void) override;
       static void addParameters(void);
       virtual void getParameters(void) override;
@@ -84,7 +84,7 @@ namespace projects {
                                                       const uint popID
                                                      ) const override;
       static Real rhoRnd; //static as it has to be threadprivate
-      #pragma omp threadprivate(rhoRnd)       
+      #pragma omp threadprivate(rhoRnd)
       Real Bx;
       Real By;
       Real Bz;
@@ -105,4 +105,3 @@ namespace projects {
 } //  namespace projects
 
 #endif
-

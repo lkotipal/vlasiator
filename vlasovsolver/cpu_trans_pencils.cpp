@@ -675,7 +675,7 @@ CellID selectPositiveNeighbor(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Ge
    // select the neighbor indicated by path, if it is local to this process.
    for (const auto& [neighbor, dir] : grid.get_face_neighbors_of(id)) {
      if (dir == ((int)dimension + 1)) {
-	 myNeighbors.push_back(neighbor);
+         myNeighbors.push_back(neighbor);
       }
    }
    // TODO Verify: are neighbours always in the same order? Let's sort based
@@ -717,9 +717,9 @@ CellID selectPositiveNeighbor(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Ge
  *             the builder terminates.
  */
 void buildPencilsWithNeighbors( const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry> &grid,
-					setOfPencils &pencils, const CellID seedId,
-					vector<CellID> ids, const uint dimension,
-					vector<uint> path, const vector<CellID> &endIds) {
+                                        setOfPencils &pencils, const CellID seedId,
+                                        vector<CellID> ids, const uint dimension,
+                                        vector<uint> path, const vector<CellID> &endIds) {
 
    const bool debug = false;
    CellID nextNeighbor;

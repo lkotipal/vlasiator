@@ -26,9 +26,9 @@
 //#include "../spatial_cells/spatial_cell_wrapper.hpp"
 
 /*! \brief Top-level field averaging function.
- * 
+ *
  * Averages the electric and magnetic fields over the cell volumes.
- * 
+ *
  * \sa reconstructionCoefficients
  */
 void calculateVolumeAveragedFields(

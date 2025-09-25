@@ -46,7 +46,7 @@ namespace projects {
    public:
       LossCone();
       virtual ~LossCone();
-      
+
       virtual bool initialize(void) override;
       static void addParameters(void);
       virtual void getParameters(void) override;
@@ -69,7 +69,7 @@ namespace projects {
                                     const uint popID,
                                     Real vx_in, Real vy_in, Real vz_in) const override;
       virtual void calcCellParameters(spatial_cell::SpatialCell* cell,creal& t) override;
-      
+
       Real BX0;
       Real BY0;
       Real BZ0;

@@ -33,7 +33,7 @@ namespace projects {
     public:
       KHB();
       virtual ~KHB();
-      
+
       virtual bool initialize(void) override;
       static void addParameters(void);
       virtual void getParameters(void) override;
@@ -58,7 +58,7 @@ namespace projects {
                                     Real vx_in, Real vy_in, Real vz_in) const override;
 
       Real profile(creal top, creal bottom, creal x) const;
-      
+
       enum {
          TOP,
          BOTTOM

@@ -42,9 +42,9 @@ using namespace spatial_cell;
 namespace projects {
    Dispersion::Dispersion(): Project() { }
    Dispersion::~Dispersion() { }
-   
+
    bool Dispersion::initialize(void) {return Project::initialize();}
-   
+
    void Dispersion::addParameters() {
       typedef Readparameters RP;
       RP::add("Dispersion.B0", "Guide magnetic field strength (T)", 1.0e-9);
@@ -67,7 +67,7 @@ namespace projects {
         RP::add(pop + "_Dispersion.velocityPertAbsAmp", "Absolute amplitude of the velocity perturbation", 1.0e6);
       }
    }
-   
+
    void Dispersion::getParameters() {
       Project::getParameters();
       typedef Readparameters RP;
@@ -95,7 +95,7 @@ namespace projects {
          speciesParams.push_back(sP);
       }
    }
-   
+
    void Dispersion::hook(
       cuint& stage,
       const dccrg::Dccrg<spatial_cell::SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
@@ -114,7 +114,7 @@ namespace projects {
                localRhom[cells[i] - 1] = mpiGrid[cells[i]]->parameters[CellParams::RHOM];
             }
          }
-         
+
          MPI_Reduce(&(localRhom[0]), &(outputRhom[0]), P::xcells_ini, MPI_DOUBLE, MPI_SUM, MASTER_RANK, MPI_COMM_WORLD);
 
          vector<Real> localPerBx(P::xcells_ini, 0.0);
@@ -123,7 +123,7 @@ namespace projects {
          vector<Real> outputPerBx(P::xcells_ini, 0.0);
          vector<Real> outputPerBy(P::xcells_ini, 0.0);
          vector<Real> outputPerBz(P::xcells_ini, 0.0);
-         
+
          const std::array<FsGridTools::FsIndex_t, 3> localSize = perBGrid.getLocalSize();
          const std::array<FsGridTools::FsIndex_t, 3> localStart = perBGrid.getLocalStart();
          for (FsGridTools::FsIndex_t x = 0; x < localSize[0]; ++x) {
@@ -131,11 +131,11 @@ namespace projects {
             localPerBy[x + localStart[0]] = perBGrid.get(x, 0, 0)->at(fsgrids::bfield::PERBY);
             localPerBz[x + localStart[0]] = perBGrid.get(x, 0, 0)->at(fsgrids::bfield::PERBZ);
          }
-         
+
          MPI_Reduce(&(localPerBx[0]), &(outputPerBx[0]), P::xcells_ini, MPI_DOUBLE, MPI_SUM, MASTER_RANK, MPI_COMM_WORLD);
          MPI_Reduce(&(localPerBy[0]), &(outputPerBy[0]), P::xcells_ini, MPI_DOUBLE, MPI_SUM, MASTER_RANK, MPI_COMM_WORLD);
          MPI_Reduce(&(localPerBz[0]), &(outputPerBz[0]), P::xcells_ini, MPI_DOUBLE, MPI_SUM, MASTER_RANK, MPI_COMM_WORLD);
-         
+
          if(myRank == MASTER_RANK) {
             FILE* outputFile = fopen("perBxt.bin", "ab");
             fwrite(&(outputPerBx[0]), sizeof(outputPerBx[0]), P::xcells_ini, outputFile);
@@ -152,7 +152,7 @@ namespace projects {
          }
       }
    }
-   
+
    Realf Dispersion::fillPhaseSpace(spatial_cell::SpatialCell *cell,
                                        const uint popID,
                                        const uint nRequested
@@ -204,14 +204,14 @@ namespace projects {
    void Dispersion::calcCellParameters(spatial_cell::SpatialCell* cell,creal& t) {
       std::default_random_engine rndState;
       setRandomCellSeed(cell,rndState);
-      
+
       this->rndRho=getRandomNumber(rndState);
-      
+
       this->rndVel[0]=getRandomNumber(rndState);
       this->rndVel[1]=getRandomNumber(rndState);
       this->rndVel[2]=getRandomNumber(rndState);
    }
-   
+
    void Dispersion::setProjectBField(
       FsGrid< std::array<Real, fsgrids::bfield::N_BFIELD>, FS_STENCIL_WIDTH> & perBGrid,
       FsGrid< std::array<Real, fsgrids::bgbfield::N_BGB>, FS_STENCIL_WIDTH> & BgBGrid,
@@ -221,27 +221,27 @@ namespace projects {
       bgField.initialize(this->B0 * cos(this->angleXY) * cos(this->angleXZ),
                          this->B0 * sin(this->angleXY) * cos(this->angleXZ),
                          this->B0 * sin(this->angleXZ));
-                         
+
       setBackgroundField(bgField, BgBGrid);
-      
+
       if(!P::isRestart) {
          const auto localSize = BgBGrid.getLocalSize().data();
-         
+
 #pragma omp parallel for collapse(3)
          for (FsGridTools::FsIndex_t x = 0; x < localSize[0]; ++x) {
             for (FsGridTools::FsIndex_t y = 0; y < localSize[1]; ++y) {
                for (FsGridTools::FsIndex_t z = 0; z < localSize[2]; ++z) {
                   std::array<Real, fsgrids::bfield::N_BFIELD>* cell = perBGrid.get(x, y, z);
                   const int64_t cellid = perBGrid.GlobalIDForCoords(x, y, z);
-                  
+
                   std::default_random_engine rndState;
                   setRandomSeed(cellid,rndState);
-                  
+
                   Real rndBuffer[3];
                   rndBuffer[0]=getRandomNumber(rndState);
                   rndBuffer[1]=getRandomNumber(rndState);
                   rndBuffer[2]=getRandomNumber(rndState);
-                  
+
                   cell->at(fsgrids::bfield::PERBX) = this->magXPertAbsAmp * (0.5 - rndBuffer[0]);
                   cell->at(fsgrids::bfield::PERBY) = this->magYPertAbsAmp * (0.5 - rndBuffer[1]);
                   cell->at(fsgrids::bfield::PERBZ) = this->magZPertAbsAmp * (0.5 - rndBuffer[2]);

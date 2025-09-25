@@ -69,7 +69,7 @@ template<long unsigned int numFields> void setPerturbedFieldToZero(
     This function is used along with a field function to append the given function values to the
     perturbed B grid.
     A special other use case is, if using a Magnetosphere with dipole type 4 (vector dipole), when
-    the corrective terms to vanish the dipole towards the inflow boundary are stored in 
+    the corrective terms to vanish the dipole towards the inflow boundary are stored in
     the backgroundfield FSgrid object at offset fsgrids::bgbfield::BGBXVDCORR
 */
 template<long unsigned int numFields> void setPerturbedField(
@@ -125,12 +125,11 @@ template<long unsigned int numFields> void setPerturbedField(
                                  dx[faceCoord2[fComponent]]
                                 );
 
-	    }
-	    // Derivatives or volume averages are not calculated for the perBField
-	 }
+            }
+            // Derivatives or volume averages are not calculated for the perBField
+         }
       }
    }
 }
 
 #endif
-

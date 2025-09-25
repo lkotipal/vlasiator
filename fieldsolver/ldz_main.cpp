@@ -22,7 +22,7 @@
 
 /*! \file ldz_main.cpp
  * \brief Londrillo -- Del Zanna upwind constrained transport field solver.
- * 
+ *
  * On the divergence-free condition in Godunov-type schemes for
  * ideal magnetohydrodynamics: the upwind constrained transport method,
  * P. Londrillo and L. Del Zanna, J. Comp. Phys., 195, 2004.
@@ -38,7 +38,7 @@
  * schemes for magnetohydrodynamics, D. S. Balsara, J. Comp. Phys.,
  * 228, 5040-5056, 2009.
  * http://dx.doi.org/10.1016/j.jcp.2009.03.038
- * 
+ *
  * *****  NOTATION USED FOR VARIABLES FOLLOWS THE ONES USED  *****\n
  * *****      IN THE ABOVEMENTIONED PUBLICATION(S)           *****
  */
@@ -57,18 +57,18 @@
 extern Logger logFile;
 
 /*! \brief Top-level field propagation function.
- * 
+ *
  * Propagates the magnetic field, computes the derivatives and the upwinded
  * electric field, then computes the volume-averaged field values. Takes care
  * of the Runge-Kutta iteration at the top level, the functions called get as
  * an argument the element from the enum defining the current stage and handle
  * their job correspondingly.
- * 
+ *
  * \param dt Length of the time step
  * \param subcycles Number of subcycles to compute.
- * 
+ *
  * \sa propagateMagneticFieldSimple calculateDerivativesSimple calculateUpwindedElectricFieldSimple calculateVolumeAveragedFields calculateBVOLDerivativesSimple
- * 
+ *
  */
 bool propagateFields(
    FsGrid< std::array<Real, fsgrids::bfield::N_BFIELD>, FS_STENCIL_WIDTH> & perBGrid,
@@ -90,14 +90,14 @@ bool propagateFields(
    creal& dt,
    cuint subcycles
 ) {
-   
+
    if(subcycles == 0) {
       cerr << "Field solver subcycles cannot be 0." << endl;
       exit(1);
    }
-   
+
    const FsGridTools::FsIndex_t* gridDims = &technicalGrid.getLocalSize()[0];
-   
+
    #pragma omp parallel for collapse(2)
    for (FsGridTools::FsIndex_t k=0; k<gridDims[2]; k++) {
       for (FsGridTools::FsIndex_t j=0; j<gridDims[1]; j++) {
@@ -106,8 +106,8 @@ bool propagateFields(
          }
       }
    }
-   
-   
+
+
    if (subcycles == 1) {
       #ifdef FS_1ST_ORDER_TIME
       propagateMagneticFieldSimple(perBGrid, perBDt2Grid, BgBGrid, EGrid, EDt2Grid, technicalGrid, sysBoundaries, dt, RK_ORDER1);
@@ -193,7 +193,7 @@ bool propagateFields(
          RK_ORDER2_STEP1,
          true // communicateEGradPeOrMomentsDerivatives
       );
-      
+
       propagateMagneticFieldSimple(perBGrid, perBDt2Grid, BgBGrid, EGrid, EDt2Grid, technicalGrid, sysBoundaries, dt, RK_ORDER2_STEP2);
       calculateDerivativesSimple(perBGrid, perBDt2Grid, momentsGrid, momentsDt2Grid, dPerBGrid, dMomentsGrid, dMomentsDt2Grid, technicalGrid, sysBoundaries, RK_ORDER2_STEP2, true/*doMoments*/);
       if(P::ohmGradPeTerm > 0) {
@@ -291,9 +291,9 @@ bool propagateFields(
             RK_ORDER2_STEP1,
             subcycleCount==0 // communicateEGradPeOrMomentsDerivatives
          );
-         
+
          propagateMagneticFieldSimple(perBGrid, perBDt2Grid, BgBGrid, EGrid, EDt2Grid, technicalGrid, sysBoundaries, subcycleDt, RK_ORDER2_STEP2);
-         
+
          // We need to calculate derivatives of the moments at every substep, but the moments only
          // need to be communicated in the first one.
          calculateDerivativesSimple(perBGrid, perBDt2Grid, momentsGrid, momentsDt2Grid, dPerBGrid, dMomentsGrid, dMomentsDt2Grid, technicalGrid, sysBoundaries, RK_ORDER2_STEP2, (subcycleCount==0)/*doMoments*/);
@@ -336,9 +336,9 @@ bool propagateFields(
             RK_ORDER2_STEP2,
             subcycleCount==0 // communicateEGradPeOrMomentsDerivatives
          );
-         
+
          phiprof::Timer subcyclingTimer {"FS subcycle stuff"};
-         subcycleT += subcycleDt; 
+         subcycleT += subcycleDt;
          subcycleCount++;
 
          if( subcycleT >= targetT || subcycleCount >= maxSubcycleCount  ) {
@@ -351,7 +351,7 @@ bool propagateFields(
          }
 
 
-         
+
          // Reassess subcycle dt
          Real dtMaxLocal;
          Real dtMaxGlobal;
@@ -373,7 +373,7 @@ bool propagateFields(
          phiprof::Timer allreduceTimer {"MPI_Allreduce"};
          technicalGrid.Allreduce(&(dtMaxLocal), &(dtMaxGlobal), 1, MPI_Type<Real>(), MPI_MIN);
          allreduceTimer.stop();
-         
+
          //reduce dt if it is too high
          if( subcycleDt > dtMaxGlobal * P::fieldSolverMaxCFL ) {
             creal meanFieldsCFL = 0.5*(P::fieldSolverMaxCFL+ P::fieldSolverMinCFL);
@@ -391,19 +391,19 @@ bool propagateFields(
             //check that subcyclDt has correct CFL, take 2 if not
             if(subcycleDt > dtMaxGlobal * P::fieldSolverMaxCFL ) {
                subcycleDt = (targetT - subcycleT)/2;
-               maxSubcycleCount = subcycleCount + 2; 
+               maxSubcycleCount = subcycleCount + 2;
             }
          }
-         
+
          subcyclingTimer.stop();
       }
-      
-      
+
+
       if( subcycles != subcycleCount && myRank == MASTER_RANK) {
          logFile << "Effective field solver subcycles were " << subcycleCount << " instead of " << P::fieldSolverSubcycles << " on step " <<  P::tstep << std::endl;
       }
    }
-   
+
    calculateVolumeAveragedFields(perBGrid,EGrid,dPerBGrid,volGrid,technicalGrid);
    calculateBVOLDerivativesSimple(volGrid, technicalGrid, sysBoundaries);
    if(FieldTracing::fieldTracingParameters.doTraceFullBox || Parameters::computeCurvature) {

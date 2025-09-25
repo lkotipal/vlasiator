@@ -26,7 +26,7 @@
  */
 
 #ifndef VELOCITY_MESH_PARAMETERS_H
-#define	VELOCITY_MESH_PARAMETERS_H
+#define VELOCITY_MESH_PARAMETERS_H
 
 #include <vector>
 #include <array>
@@ -152,4 +152,4 @@ namespace vmesh {
 
 } // namespace vmesh
 
-#endif	/* VELOCITY_MESH_PARAMETERS_H */
+#endif  /* VELOCITY_MESH_PARAMETERS_H */

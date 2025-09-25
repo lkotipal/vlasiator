@@ -113,7 +113,7 @@ void calculateEdgeGradPeTermXComponents(
          rhoq = momentsGrid.get(i,j,k)->at(fsgrids::moments::RHOQ);
          limitedRhoq = (rhoq <= Parameters::hallMinimumRhoq ) ? Parameters::hallMinimumRhoq : rhoq ;
          EGradPeGrid.get(i,j,k)->at(fsgrids::egradpe::EXGRADPE) = - dMomentsGrid.get(i,j,k)->at(fsgrids::dmoments::dPedx) / (limitedRhoq*EGradPeGrid.DX);
-	 break;
+         break;
 
       default:
          cerr << __FILE__ << ":" << __LINE__ << "You are welcome to code higher-order Hall term correction terms." << endl;

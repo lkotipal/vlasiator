@@ -45,4 +45,3 @@ struct Particle {
 typedef std::vector<Particle, aligned_allocator<Particle, 32>> ParticleContainer;
 
 void writeParticles(ParticleContainer& p, const char* filename);
-

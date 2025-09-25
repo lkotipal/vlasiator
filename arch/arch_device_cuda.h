@@ -539,7 +539,7 @@ namespace arch{
                printf("The blocksize (%u) does not match with any of the predetermined block sizes! The error occurred in %s at line %d\n", blocksize, __FILE__, __LINE__);
                exit(1);
             }
-         }      
+         }
          /* Check for kernel launch errors */
          CHK_ERR(cudaPeekAtLastError());
          /* Synchronize and free the thread data allocation */

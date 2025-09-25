@@ -34,7 +34,7 @@ namespace projects {
     public:
       Larmor();
       virtual ~Larmor();
-      
+
       virtual bool initialize(void) override;
       static void addParameters(void);
       virtual void getParameters(void) override;
@@ -48,7 +48,7 @@ namespace projects {
                                   const uint popID,
                                   const uint nRequested) const override;
       virtual void calcCellParameters(spatial_cell::SpatialCell* cell,creal& t) override;
-      
+
       Real BX0;
       Real BY0;
       Real BZ0;
@@ -57,11 +57,11 @@ namespace projects {
       Real VZ0;
       Real DENSITY;
       Real TEMPERATURE;
-      Real maxwCutoff; 
+      Real maxwCutoff;
       Real SCA_X;
       Real SCA_Y;
    }; //Class Larmor
 } // namespace projects
-   
+
 
 #endif

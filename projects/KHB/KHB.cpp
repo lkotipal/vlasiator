@@ -127,7 +127,7 @@ namespace projects {
 
       // add each mode to the initial perturbation
       for (int i=0; i<=this->harmonics; i++) {
-	 if (this->randomPhase) {
+         if (this->randomPhase) {
             phase = 2.0 * M_PI * getRandomNumber(rndState);
          }
 
