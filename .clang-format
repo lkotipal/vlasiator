@@ -2,12 +2,12 @@
 BasedOnStyle: LLVM
 UseTab: Never
 IndentWidth: 3
-BracedInitializerIndentWidth: 3
-ConstructorInitializerIndentWidth: 3
-ContinuationIndentWidth: 3
-ObjCBlockIndentWidth: 3
-PPIndentWidth: 3
-TabWidth: 3
+  #BracedInitializerIndentWidth: 3
+  #ConstructorInitializerIndentWidth: 3
+  #ContinuationIndentWidth: 3
+  #ObjCBlockIndentWidth: 3
+  #PPIndentWidth: 3
+  #TabWidth: 3
 BreakBeforeBraces: Attach
 PointerAlignment: Left
 AlignAfterOpenBracket: true
@@ -23,4 +23,4 @@ BinPackParameters: AlwaysOnePerLine
 OneLineFormatOffRegex: '#'
 SortIncludes: false
 AlignAfterOpenBracket: BlockIndent
-...
+
