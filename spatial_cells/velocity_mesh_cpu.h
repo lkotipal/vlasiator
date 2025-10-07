@@ -63,6 +63,7 @@ namespace vmesh {
       void getBlockInfo(const vmesh::GlobalID& globalID,Real* array) const;
       bool getBlockSize(const vmesh::GlobalID& globalID,Real size[3]) const;
       Real getBlockDx(const vmesh::GlobalID globalID, int idx) const;
+      std::array<Real, 3> getCellSize(const vmesh::GlobalID& globalID) const;
       bool getCellSize(const vmesh::GlobalID& globalID,Real size[3]) const;
       Real getCellDx(const vmesh::GlobalID globalID, int idx) const;
       vmesh::GlobalID getGlobalID(const vmesh::LocalID localID) const;
@@ -73,6 +74,7 @@ namespace vmesh {
       std::vector<vmesh::GlobalID>* getGrid();
       const std::array<uint32_t, 3>& getGridLength() const;
 //      void     getNeighbors(const GlobalID& globalID,std::vector<GlobalID>& neighborIDs);
+      std::array<uint32_t, 3> getIndices(const vmesh::GlobalID& globalID) const;
       void getIndices(const vmesh::GlobalID& globalID,vmesh::LocalID& i,vmesh::LocalID& j,vmesh::LocalID& k) const;
       size_t getMesh() const;
       vmesh::LocalID getLocalID(const vmesh::GlobalID& globalID) const;
@@ -241,8 +243,7 @@ namespace vmesh {
          return false;
       }
 
-      uint32_t indices[3];
-      getIndices(globalID,indices[0],indices[1],indices[2]);
+      auto indices = getIndices(globalID);
       if (indices[0] == invalidBlockIndex()) {
          for (int i=0; i<3; ++i) coords[i] = std::numeric_limits<Real>::quiet_NaN();
          return false;
@@ -292,7 +293,13 @@ namespace vmesh {
    inline bool VelocityMesh::getCellSize(const vmesh::GlobalID& globalID,Real size[3]) const {
       return vmesh::getMeshWrapper()->at(meshID).getCellSize(globalID, size);
    }
-   
+
+   inline std::array<Real, 3> VelocityMesh::getCellSize(const vmesh::GlobalID& globalID) const {
+      std::array<Real, 3> size;
+      getCellSize(globalID, size.data());
+      return size;
+   }
+
    inline Real VelocityMesh::getCellDx(const vmesh::GlobalID globalID, int idx) const {
       return vmesh::getMeshWrapper()->at(meshID).getCellDx(globalID, idx);
    }
@@ -359,8 +366,12 @@ namespace vmesh {
       return vmesh::getMeshWrapper()->at(meshID).gridLength;
    }
 
+   inline std::array<uint32_t, 3> VelocityMesh::getIndices(const vmesh::GlobalID& globalID) const {
+      return vmesh::getMeshWrapper()->at(meshID).getIndices(globalID);
+   }
+
    inline void VelocityMesh::getIndices(const vmesh::GlobalID& globalID,vmesh::LocalID& i,vmesh::LocalID& j,vmesh::LocalID& k) const {
-      auto coords = vmesh::getMeshWrapper()->at(meshID).getIndices(globalID);
+      auto coords = getIndices(globalID);
       i = coords[0];
       j = coords[1];
       k = coords[2];

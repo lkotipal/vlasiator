@@ -31,4 +31,28 @@ bool map_1d(SpatialCell* spatial_cell, const uint popID,
             Real intersection, Real intersection_di, Real intersection_dj, Real intersection_dk,
             const uint map_order,
             const uint dimension);
+
+template<typename T>
+void swapIndices(std::array<T, 3>& arr, const uint dimension) { 
+   T temp;
+   // Switch block indices according to dimensions, the algorithm has
+   // been written for integrating along z.
+   switch (dimension){
+   case 0:
+      /*i and k coordinates have been swapped*/
+      temp = arr[2];
+      arr[2] = arr[0];
+      arr[0] = temp;
+      break;
+   case 1:
+      /*in values j and k coordinates have been swapped*/
+      temp = arr[2];
+      arr[2] = arr[1];
+      arr[1] = temp;
+      break;
+   case 2:
+      break;
+   }
+}
+
 #endif
