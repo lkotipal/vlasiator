@@ -243,7 +243,7 @@ struct GPUMemoryManager {
    std::unordered_map<std::string, int> nameCounters;
    std::unordered_map<std::string, std::string> pointerDevice;
    std::unordered_map<std::string, void*> sessionPointers;
-   std::unordered_map<std::string, int> sessionPointerOffset;
+   std::unordered_map<std::string, size_t> sessionPointerOffset;
    std::mutex memoryMutex;
    bool sessionOn = false;
    size_t dev_sessionSize = 0;
@@ -783,7 +783,7 @@ struct GPUMemoryManager {
 
       // The pointer is usually contained in the session pointer and distinguished by an offset
       char *sessionPointer = static_cast<char*>(gpuMemoryPointers.at("dev_sessionPointer"));
-      int offset = sessionPointerOffset.at(name);
+      size_t offset = sessionPointerOffset.at(name);
 
       // If the pointer did not fit inside the session pointer, retrieve it from the separate map
       if (offset > dev_sessionAllocationSize){
@@ -805,7 +805,7 @@ struct GPUMemoryManager {
 
       // The pointer is usually contained in the session pointer and distinguished by an offset
       char *sessionPointer = static_cast<char*>(gpuMemoryPointers.at("host_sessionPointer"));
-      int offset = sessionPointerOffset.at(name);
+      size_t offset = sessionPointerOffset.at(name);
 
       // If the pointer did not fit inside the session pointer, retrieve it from the separate map
       if (offset > host_sessionAllocationSize){

@@ -486,7 +486,7 @@ void adjust_velocity_blocks_in_cells(
    // Finds new Blocks (GID,LID) needing to be added
    // Note:list_with_replace_new then contains both new GIDs to use for replacements and new GIDs to place at end of vmesh
    extract_to_add_caller(
-      gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>("dev_allMaps")+0, // input maps: this is has_content_maps
+      gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>("dev_allMaps"), // input maps: this is has_content_maps
       gpuMemoryManager.getPointer<split::SplitVector<vmesh::GlobalID>*>("dev_lists_with_replace_new"), // output vecs
       NULL, // pass null to not store vector lengths
       gpuMemoryManager.getPointer<vmesh::VelocityMesh*>("dev_vmeshes"), // rule_meshes, not used in this call
@@ -497,7 +497,7 @@ void adjust_velocity_blocks_in_cells(
       ); // This needs to complete before the next 3 extractions
    // Finds Blocks (GID,LID) to be rescued from end of v-space
    extract_to_delete_or_move_caller(
-      gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>("dev_allMaps")+0, // input maps: this is has_content_maps
+      gpuMemoryManager.getPointer<Hashinator::Hashmap<vmesh::GlobalID,vmesh::LocalID>*>("dev_allMaps"), // input maps: this is has_content_maps
       gpuMemoryManager.getPointer<split::SplitVector<Hashinator::hash_pair<vmesh::GlobalID,vmesh::LocalID>>*>("dev_lists_with_replace_old"), // output vecs
       NULL, // pass null to not store vector lengths
       gpuMemoryManager.getPointer<vmesh::VelocityMesh*>("dev_vmeshes"), // rule_meshes
