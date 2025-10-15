@@ -66,6 +66,7 @@ namespace vmesh {
       std::array<Real, 3> getCellSize(const vmesh::GlobalID& globalID) const;
       bool getCellSize(const vmesh::GlobalID& globalID,Real size[3]) const;
       Real getCellDx(const vmesh::GlobalID globalID, int idx) const;
+      uint32_t getIndex(Real coord, int dim) const;
       vmesh::GlobalID getGlobalID(const vmesh::LocalID localID) const;
       vmesh::GlobalID getGlobalID(const Real* coords) const;
       vmesh::GlobalID getGlobalID(const uint32_t indices[3]) const;
@@ -304,6 +305,17 @@ namespace vmesh {
       return vmesh::getMeshWrapper()->at(meshID).getCellDx(globalID, idx);
    }
 
+   inline uint32_t VelocityMesh::getIndex(Real coord, int dim) const {
+      coord -= vmesh::getMeshWrapper()->at(meshID).meshMinLimits[dim];
+      for (uint32_t i = 0; i < vmesh::getMeshWrapper()->at(meshID).blockLength[i]; ++i) {
+         coord -= vmesh::getMeshWrapper()->at(meshID).getBlockDxFromIndex(dim, i);
+         if (coord < 0) {
+            return i;
+         }
+      }
+      return invalidGlobalID();
+   }
+
    inline vmesh::GlobalID VelocityMesh::getGlobalID(const vmesh::LocalID localID) const {
       #ifdef DEBUG_VMESH
       if (localID >= localToGlobalMap.size()) {
@@ -325,15 +337,8 @@ namespace vmesh {
 
       uint32_t indices[3] = {0, 0, 0};
 
-      for (int idx = 0; idx < 3; ++idx) {
-         Real coord = coords[idx] - vmesh::getMeshWrapper()->at(meshID).meshMinLimits[idx];
-         for (uint32_t i = 0; i < vmesh::getMeshWrapper()->at(meshID).blockLength[i]; ++i) {
-            coord -= vmesh::getMeshWrapper()->at(meshID).getBlockDxFromIndex(idx, i);
-            if (coord < 0) {
-               indices[idx] = i; // I think...
-               break;
-            }
-         }
+      for (int dim = 0; dim < 3; ++dim) {
+         indices[dim] = getIndex(coords[dim], dim);
       }
       
       return getGlobalID(indices);
