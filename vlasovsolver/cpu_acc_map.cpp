@@ -155,8 +155,7 @@ Vec to_lagrangian(Vec z, Vec intersection) {
    return z - intersection;
 }
 
-// Oh dear...
-// These functions are probably slow as hell
+/*
 Veci to_indexK(Real z, Vec intersection, Real gk_ratio, int dim, int meshID)
 {
    Vec coords = to_lagrangian(z, intersection);
@@ -202,7 +201,10 @@ Veci to_indexK(Vec z, Vec intersection, Real gk_ratio, int dim, int meshID)
 
    return rval;
 }
+*/
 
+// Oh dear...
+// These functions are probably slow as hell
 Veci to_gk(Vec z, Vec intersection, Real gk_ratio, int dim, int meshID)
 {
    Vec coords = to_lagrangian(z, intersection);
@@ -212,14 +214,13 @@ Veci to_gk(Vec z, Vec intersection, Real gk_ratio, int dim, int meshID)
    }
    Veci is_set = rval * 0;
 
-   for (uint32_t block = 0; block < vmesh::getMeshWrapper()->at(meshID).gridLength[dim]; ++block) {
-      Real dk = vmesh::getMeshWrapper()->at(meshID).getBlockDxFromIndex(block, dim) * gk_ratio / WID;
-      for (uint32_t cell = 0; cell < WID; ++cell) {
-         coords -= dk;
-         for (uint32_t j = 0; j < coords.size(); ++j) {
-            if (is_set[j] == 0 && coords[j] < 0) {
-               rval.insert(j, block * WID + cell);
-            }
+   for (uint32_t cell = 0; cell < vmesh::getMeshWrapper()->at(meshID).gridLength[dim] * WID; ++cell) {
+      Real dk = vmesh::getMeshWrapper()->at(meshID).getCellDxFromIndex(cell, dim) * gk_ratio;
+      coords -= dk;
+      for (uint32_t j = 0; j < coords.size(); ++j) {
+         if (is_set[j] == 0 && coords[j] < 0) {
+            rval.insert(j, cell);
+            is_set.insert(j, 1);
          }
       }
    }
@@ -236,14 +237,46 @@ Veci to_gk(Real z, Vec intersection, Real gk_ratio, int dim, int meshID)
    }
    Veci is_set = rval * 0;
 
-   for (uint32_t block = 0; block < vmesh::getMeshWrapper()->at(meshID).gridLength[dim]; ++block) {
-      Real dk = vmesh::getMeshWrapper()->at(meshID).getBlockDxFromIndex(block, dim) * gk_ratio / WID;
-      for (uint32_t cell = 0; cell < WID; ++cell) {
-         coords -= dk;
-         for (uint32_t j = 0; j < coords.size(); ++j) {
-            if (is_set[j] == 0 && coords[j] < 0) {
-               rval.insert(j, block * WID + cell);
-            }
+   for (uint32_t cell = 0; cell < vmesh::getMeshWrapper()->at(meshID).gridLength[dim] * WID; ++cell) {
+      Real dk = vmesh::getMeshWrapper()->at(meshID).getCellDxFromIndex(cell, dim) * gk_ratio;
+      coords -= dk;
+      for (uint32_t j = 0; j < coords.size(); ++j) {
+         if (is_set[j] == 0 && coords[j] < 0) {
+            rval.insert(j, cell);
+            is_set.insert(j, 1);
+         }
+      }
+   }
+
+   return rval;
+}
+
+Vec gk_to_lagrangian(int gk, Vec intersection, Real gk_ratio, int dim, int meshID)
+{
+   Vec coords = intersection;
+   for (uint32_t cell = 0; cell < gk; ++cell) {
+      Real dk = vmesh::getMeshWrapper()->at(meshID).getCellDxFromIndex(cell , dim) * gk_ratio;
+      coords += dk;
+   }
+
+   return coords;
+}
+
+Vec lagrangian_to_euler(Vec coords, int dim, int meshID) {
+   Vec rval = coords;
+   for (int i = 0; i < rval.size(); ++i) {
+      rval.insert(i, vmesh::VelocityMesh::invalidGlobalID());
+   }
+   Veci is_set = truncatei(rval);
+   is_set *= 0;
+   
+   for (uint32_t cell = 0; cell < vmesh::getMeshWrapper()->at(meshID).gridLength[dim] * WID; ++cell) {
+      Real dk = vmesh::getMeshWrapper()->at(meshID).getCellDxFromIndex(cell, dim);
+      coords -= dk;
+      for (uint32_t j = 0; j < coords.size(); ++j) {
+         if (is_set[j] == 0 && coords[j] < 0) {
+            rval.insert(j, cell);
+            is_set.insert(j, 1);
          }
       }
    }
@@ -457,7 +490,7 @@ bool map_1d(SpatialCell* spatial_cell,
          intersection_dk to find out how many grid cells that is*/
 
          calculate_intersections(spatial_cell, cblocks[0], popID, map_order, dimension, intersection, intersection_di, intersection_dj, intersection_dk, 0);
-         std::cerr << "v_min: " << v_min << ", firstBlockMinV: " << firstBlockMinV << ", min_intersectionMin:" << min_intersectionMin << ", max_intersectionMin: " << max_intersectionMin << "\n"; 
+         //std::cerr << "v_min: " << v_min << ", firstBlockMinV: " << firstBlockMinV << ", min_intersectionMin:" << min_intersectionMin << ", max_intersectionMin: " << max_intersectionMin << "\n"; 
          //const int firstBlock_gk = (int)((firstBlockMinV - max_intersectionMin)/intersection_dk);
          // Assumed here: intersection thingie is linear operator so index depends on just difference in eulerian k-index and ratio of eulerian dv and lagrangian dk
          //const int lastBlock_gk = firstBlock_gk + (int)(lastBlockIndices[2] - firstBlockIndices[2] + 1) * WID * (firstBlock_dv / intersection_dk);
@@ -470,7 +503,7 @@ bool map_1d(SpatialCell* spatial_cell,
 
          int firstBlockIndexK {to_indexK(firstBlockMinV, max_intersectionMin, intersection_dk / firstBlock_dv, dimension, popID)};
          int lastBlockIndexK {to_indexK(lastBlockMaxV, min_intersectionMin, intersection_dk / firstBlock_dv, dimension, popID)};
-         std::cerr << "Old firstBlockIndexK: " << (int)((firstBlockMinV - max_intersectionMin)/intersection_dk) / WID << ", new firstBlockIndexK: " << firstBlockIndexK << ", old lastBlockIndexK: " << (int)((lastBlockMaxV - min_intersectionMin)/intersection_dk) / WID << ", new lastBlockIndexK" << lastBlockIndexK;
+         //std::cerr << "Old firstBlockIndexK: " << (int)((firstBlockMinV - max_intersectionMin)/intersection_dk) / WID << ", new firstBlockIndexK: " << firstBlockIndexK << ", old lastBlockIndexK: " << (int)((lastBlockMaxV - min_intersectionMin)/intersection_dk) / WID << ", new lastBlockIndexK" << lastBlockIndexK;
 
          //std::cerr << "Dimension = " << dimension << ",intersection_dk = " << intersection_dk << ", firstblock_gk = " << firstBlock_gk << ",firstBlockIndexK = " << firstBlockIndexK << ", lastBlock_gk = " << lastBlock_gk  << ",lastBlockIndexK = " << lastBlockIndexK << "\n";
 
@@ -710,7 +743,7 @@ bool map_1d(SpatialCell* spatial_cell,
             Veci lagrangian_gk_r = to_gk(v_r, intersection_min, gk_ratio, dimension, popID);
             Vec k_r(firstBlockIndex * WID + vMin[2] * i_dv);   // TODO wtf is this actually?
 
-            std::cerr << "First old gk_r: " << truncatei((v_r-intersection_min)/intersection_dk)[0] << ", new gk_r: " << lagrangian_gk_r[0] << "\n";
+            //std::cerr << "First old gk_r: " << truncatei((v_r-intersection_min)/intersection_dk)[0] << ", new gk_r: " << lagrangian_gk_r[0] << "\n";
 
             /*compute location of min and max, this does not change for one
              * column (or even for this set of intersections, and can be used
@@ -784,7 +817,7 @@ bool map_1d(SpatialCell* spatial_cell,
                // TODO does this actually make sense?
                //lagrangian_gk_r = lagrangian_gk_r_first + k * gk_ratio + 1;
                Veci lagrangian_gk_r = to_gk(v_r, intersection_min, gk_ratio, dimension, popID);
-               std::cerr << "old gk_r: " << truncatei((v_r-intersection_min) / intersection_dk)[0] << ", new gk_r: " << lagrangian_gk_r[0] << "\n";
+               //std::cerr << "old gk_r: " << truncatei((v_r-intersection_min) / intersection_dk)[0] << ", new gk_r: " << lagrangian_gk_r[0] << "\n";
 
                //limits in lagrangian k for target column. Also take into
                //account limits of target column
@@ -815,9 +848,11 @@ bool map_1d(SpatialCell* spatial_cell,
                   // TODO what in the goddamn
                   //const Vec v_norm_r = (  min(  max( (gk + 1) * intersection_dk + intersection_min, v_l), v_r) - v_l) * i_dv;
                   // Does what I'm doing here actually make sense?
-                  const Vec euler_gk {((gk + 1) * intersection_dk + intersection_min) * i_dv};
+                  //const Vec euler_gk {((gk + 1) * intersection_dk + intersection_min) * i_dv};
+                  Vec lagrangian_coord = gk_to_lagrangian(gk + 1, intersection_min, gk_ratio, dimension, popID);
+                  const Vec euler_gk = lagrangian_to_euler(lagrangian_coord, dimension, popID);
                   const Vec v_norm_r = (min(max(euler_gk, k_l), k_r) - k_l);
-                  std::cerr << "old k_l: " << (v_l * i_dv)[0] << ", new k_l" << k_l[0] << ", old k_r: " << (v_r * i_dv)[0] << ", new k_r" << k_r[0] << ", old euler_gk:" << (((gk + 1) * intersection_dk + intersection_min) * i_dv)[0] << ", new euler_gk: " << euler_gk[0] << "\n";
+                  //std::cerr << "old k_l: " << (v_l * i_dv)[0] << ", new k_l" << k_l[0] << ", old k_r: " << (v_r * i_dv)[0] << ", new k_r" << k_r[0] << ", old euler_gk:" << (((gk + 1) * intersection_dk + intersection_min) * i_dv)[0] << ", new euler_gk: " << euler_gk[0] << "\n";
 
                   // I think???
                   //const Vec euler_gk {to_double(gk - lagrangian_gk_r_first) * (dv / intersection_dk) + intersection_min * i_dv};
