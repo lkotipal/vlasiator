@@ -136,8 +136,9 @@ int to_indexK(Real z, Real intersection, Real gk_ratio, int dim, int meshID)
 {
    Real coord = to_lagrangian(z, intersection);
 
-   for (uint32_t block = 0; block < vmesh::getMeshWrapper()->at(meshID).blockLength[block]; ++block) {
-      coord -= vmesh::getMeshWrapper()->at(meshID).getBlockDxFromIndex(dim, block) * gk_ratio;
+   for (uint32_t block = 0; block < vmesh::getMeshWrapper()->at(meshID).gridLength[dim]; ++block) {
+      Real dk = vmesh::getMeshWrapper()->at(meshID).getBlockDxFromIndex(block, dim) * gk_ratio;
+      coord -= dk;
       if (coord < 0) {
          return block;
       }
@@ -165,8 +166,8 @@ Veci to_indexK(Real z, Vec intersection, Real gk_ratio, int dim, int meshID)
    }
    Veci is_set = rval * 0;
 
-   for (uint32_t block = 0; block < vmesh::getMeshWrapper()->at(meshID).blockLength[block]; ++block) {
-      Real dk = vmesh::getMeshWrapper()->at(meshID).getBlockDxFromIndex(dim, block) * gk_ratio;
+   for (uint32_t block = 0; block < vmesh::getMeshWrapper()->at(meshID).gridLength[dim]; ++block) {
+      Real dk = vmesh::getMeshWrapper()->at(meshID).getBlockDxFromIndex(block, dim) * gk_ratio;
       coords -= dk;
       for (uint32_t j = 0; j < coords.size(); ++j) {
          if (is_set[j] == 0 && coords[j] < 0) {
@@ -188,8 +189,8 @@ Veci to_indexK(Vec z, Vec intersection, Real gk_ratio, int dim, int meshID)
    }
    Veci is_set = rval * 0;
 
-   for (uint32_t block = 0; block < vmesh::getMeshWrapper()->at(meshID).blockLength[block]; ++block) {
-      Real dk = vmesh::getMeshWrapper()->at(meshID).getBlockDxFromIndex(dim, block) * gk_ratio;
+   for (uint32_t block = 0; block < vmesh::getMeshWrapper()->at(meshID).gridLength[dim]; ++block) {
+      Real dk = vmesh::getMeshWrapper()->at(meshID).getBlockDxFromIndex(block, dim) * gk_ratio;
       coords -= dk;
       for (uint32_t j = 0; j < coords.size(); ++j) {
          if (is_set[j] == 0 && coords[j] < 0) {
@@ -211,8 +212,8 @@ Veci to_gk(Vec z, Vec intersection, Real gk_ratio, int dim, int meshID)
    }
    Veci is_set = rval * 0;
 
-   for (uint32_t block = 0; block < vmesh::getMeshWrapper()->at(meshID).blockLength[block]; ++block) {
-      Real dk = vmesh::getMeshWrapper()->at(meshID).getBlockDxFromIndex(dim, block) * gk_ratio / WID;
+   for (uint32_t block = 0; block < vmesh::getMeshWrapper()->at(meshID).gridLength[dim]; ++block) {
+      Real dk = vmesh::getMeshWrapper()->at(meshID).getBlockDxFromIndex(block, dim) * gk_ratio / WID;
       for (uint32_t cell = 0; cell < WID; ++cell) {
          coords -= dk;
          for (uint32_t j = 0; j < coords.size(); ++j) {
@@ -235,8 +236,8 @@ Veci to_gk(Real z, Vec intersection, Real gk_ratio, int dim, int meshID)
    }
    Veci is_set = rval * 0;
 
-   for (uint32_t block = 0; block < vmesh::getMeshWrapper()->at(meshID).blockLength[block]; ++block) {
-      Real dk = vmesh::getMeshWrapper()->at(meshID).getBlockDxFromIndex(dim, block) * gk_ratio / WID;
+   for (uint32_t block = 0; block < vmesh::getMeshWrapper()->at(meshID).gridLength[dim]; ++block) {
+      Real dk = vmesh::getMeshWrapper()->at(meshID).getBlockDxFromIndex(block, dim) * gk_ratio / WID;
       for (uint32_t cell = 0; cell < WID; ++cell) {
          coords -= dk;
          for (uint32_t j = 0; j < coords.size(); ++j) {

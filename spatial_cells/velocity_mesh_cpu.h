@@ -307,8 +307,8 @@ namespace vmesh {
 
    inline uint32_t VelocityMesh::getIndex(Real coord, int dim) const {
       coord -= vmesh::getMeshWrapper()->at(meshID).meshMinLimits[dim];
-      for (uint32_t i = 0; i < vmesh::getMeshWrapper()->at(meshID).blockLength[i]; ++i) {
-         coord -= vmesh::getMeshWrapper()->at(meshID).getBlockDxFromIndex(dim, i);
+      for (uint32_t i = 0; i < vmesh::getMeshWrapper()->at(meshID).gridLength[dim]; ++i) {
+         coord -= vmesh::getMeshWrapper()->at(meshID).getBlockDxFromIndex(i, dim);
          if (coord < 0) {
             return i;
          }
