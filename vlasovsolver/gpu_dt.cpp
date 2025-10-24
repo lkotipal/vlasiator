@@ -115,15 +115,15 @@ void reduce_vlasov_dt(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGr
 
    gpuMemoryManager.startSession(0,0);
 
-   gpuMemoryManager.sessionHostAllocate<Real>("host_max_dt", nAllCells*nPOP*sizeof(Real));
-   gpuMemoryManager.sessionHostAllocate<Real>("host_dxdydz", nAllCells*nPOP*3*sizeof(Real));
-   gpuMemoryManager.sessionAllocate<Real>("dev_max_dt", nAllCells*nPOP*sizeof(Real));
-   gpuMemoryManager.sessionAllocate<Real>("dev_dxdydz", nAllCells*nPOP*3*sizeof(Real));
-
-   Real* host_max_dt = gpuMemoryManager.getSessionHostPointer<Real>("host_max_dt");
-   Real* host_dxdydz = gpuMemoryManager.getSessionHostPointer<Real>("host_dxdydz");
-   Real* dev_max_dt = gpuMemoryManager.getSessionPointer<Real>("dev_max_dt");
-   Real* dev_dxdydz = gpuMemoryManager.getSessionPointer<Real>("dev_dxdydz");
+   SESSION_HOST_ALLOCATE(gpuMemoryManager, Real, host_max_dt, nAllCells*nPOP*sizeof(Real));
+   SESSION_HOST_ALLOCATE(gpuMemoryManager, Real, host_dxdydz, nAllCells*nPOP*3*sizeof(Real));
+   SESSION_ALLOCATE(gpuMemoryManager, Real, dev_max_dt, nAllCells*nPOP*sizeof(Real));
+   SESSION_ALLOCATE(gpuMemoryManager, Real, dev_dxdydz, nAllCells*nPOP*3*sizeof(Real));
+   
+   Real* host_max_dt = GET_SESSION_HOST_POINTER(gpuMemoryManager, Real, host_max_dt);
+   Real* host_dxdydz = GET_SESSION_HOST_POINTER(gpuMemoryManager, Real, host_dxdydz);
+   Real* dev_max_dt = GET_SESSION_POINTER(gpuMemoryManager, Real, dev_max_dt);
+   Real* dev_dxdydz = GET_SESSION_POINTER(gpuMemoryManager, Real, dev_dxdydz);
 
    // Gather vmeshes
    #pragma omp parallel for schedule(static)
@@ -135,15 +135,15 @@ void reduce_vlasov_dt(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGr
          host_dxdydz[3*celli*nPOP + 3*popID + 0] = cell->parameters[CellParams::DX];
          host_dxdydz[3*celli*nPOP + 3*popID + 1] = cell->parameters[CellParams::DY];
          host_dxdydz[3*celli*nPOP + 3*popID + 2] = cell->parameters[CellParams::DZ];
-         (gpuMemoryManager.getPointer<vmesh::VelocityMesh*>("host_vmeshes"))[celli*nPOP + popID] = cell->dev_get_velocity_mesh(popID); // GPU-side vmesh
+         (GET_POINTER(gpuMemoryManager, vmesh::VelocityMesh*, host_vmeshes))[celli*nPOP + popID] = cell->dev_get_velocity_mesh(popID); // GPU-side vmesh
       }
    }
    CHK_ERR( gpuMemcpy(dev_dxdydz, host_dxdydz, nAllCells*nPOP*3*sizeof(Real), gpuMemcpyHostToDevice) );
-   CHK_ERR( gpuMemcpy(gpuMemoryManager.getPointer<vmesh::VelocityMesh*>("dev_vmeshes"), gpuMemoryManager.getPointer<vmesh::VelocityMesh*>("host_vmeshes"), nAllCells*nPOP*sizeof(vmesh::VelocityMesh*), gpuMemcpyHostToDevice) );
+   CHK_ERR( gpuMemcpy(GET_POINTER(gpuMemoryManager, vmesh::VelocityMesh*, dev_vmeshes), GET_POINTER(gpuMemoryManager, vmesh::VelocityMesh*, host_vmeshes), nAllCells*nPOP*sizeof(vmesh::VelocityMesh*), gpuMemcpyHostToDevice) );
 
    // Launch kernel gathering largest allowed dt for velocity
    reduce_v_dt_kernel<<<nAllCells, GPUTHREADS*WARPSPERBLOCK, 0, 0>>> (
-      gpuMemoryManager.getPointer<vmesh::VelocityMesh*>("dev_vmeshes"),
+      GET_POINTER(gpuMemoryManager, vmesh::VelocityMesh*, dev_vmeshes),
       dev_max_dt,
       dev_dxdydz,
       nAllCells*nPOP

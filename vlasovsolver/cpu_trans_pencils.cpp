@@ -1520,10 +1520,10 @@ void prepareSeedIdsAndPencils(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Ge
    const uint thisN = DimensionPencils[dimension].N;
    const uint thisSum  = DimensionPencils[dimension].sumOfLengths;
 
-   gpuMemoryManager.createPointer("gpu_lengthOfPencils", DimensionPencils[dimension].gpu_lengthOfPencils);
-   gpuMemoryManager.createPointer("gpu_idsStart", DimensionPencils[dimension].gpu_idsStart);
-   gpuMemoryManager.createPointer("gpu_sourceDZ", DimensionPencils[dimension].gpu_sourceDZ);
-   gpuMemoryManager.createPointer("gpu_targetRatios", DimensionPencils[dimension].gpu_targetRatios);
+   gpuMemoryManager.createPointer(DimensionPencils[dimension].gpu_lengthOfPencils);
+   gpuMemoryManager.createPointer(DimensionPencils[dimension].gpu_idsStart);
+   gpuMemoryManager.createPointer(DimensionPencils[dimension].gpu_sourceDZ);
+   gpuMemoryManager.createPointer(DimensionPencils[dimension].gpu_targetRatios);
 
    gpuMemoryManager.allocate(DimensionPencils[dimension].gpu_lengthOfPencils, thisN*sizeof(uint));
    gpuMemoryManager.allocate(DimensionPencils[dimension].gpu_idsStart, thisN*sizeof(uint));

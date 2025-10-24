@@ -236,14 +236,28 @@ struct ColumnOffsets {
    }
 };
 
+/*
+Usage options:
+(a):
+1. Create your pointer using one of the macros for creating pointers. Pass the "name" of your
+pointer to that macro. A corresponding variable in the memory manager will be automatically generated
+by running the updateGpuMemoryPointerList.sh script.
+2. Allocate memory to that pointer by passing the "name" to one of the allocation macros
+3. Get the pointer by passing the "name" to one of the get pointer methods macros
+(b):
+1. Define an index variable for your pointer and pass that to one of the methods for crate pointers
+2. Allocate memory to that pointer by passing the index to one of the allocation methods
+3. Get the pointer by passing the index to one of the get pointer methods
+*/
 struct GPUMemoryManager {
    // Store pointers and their allocation sizes
-   std::unordered_map<std::string, void*> gpuMemoryPointers;
-   std::unordered_map<std::string, size_t> allocationSizes;
-   std::unordered_map<std::string, int> nameCounters;
-   std::unordered_map<std::string, std::string> pointerDevice;
-   std::unordered_map<std::string, void*> sessionPointers;
-   std::unordered_map<std::string, size_t> sessionPointerOffset;
+   std::vector<void*> gpuMemoryPointers;
+   std::vector<size_t> allocationSizes;
+   std::vector<uint> pointerDevice;
+   std::vector<void*> sessionPointers;
+   std::vector<size_t> sessionPointerOffset;
+   std::vector<uint> sessionPointerDevice;
+   std::vector<size_t> sessionAllocationSizes;
    std::mutex memoryMutex;
    bool sessionOn = false;
    size_t dev_sessionSize = 0;
@@ -252,69 +266,86 @@ struct GPUMemoryManager {
    size_t host_sessionAllocationSize = 0;
    size_t dev_previousSessionSize = 0;
    size_t host_previousSessionSize = 0;
+   size_t maxPointerIndex = 0;
+   size_t maxSessionPointerIndex = 0;
 
-   // Create a new pointer with a base name, ensure unique name
-   bool createPointer(const std::string& baseName, std::string &uniqueName) {
-      if (uniqueName != "null"){
+   // Indices for session pointers
+   size_t dev_sessionPointer = 0;
+   size_t host_sessionPointer = 0;
+
+   #define NO_POINTER_DEVICE 0
+   #define DEVICE_POINTER 1
+   #define HOST_POINTER 2
+
+   // Useful for passing typenames with commas to other macros
+   #define SINGLE_ARG(...) __VA_ARGS__
+
+   /* 
+   Definitions for global pointer indices
+   Run the updateGpuMemoryPointerList.sh script to automatically update the list
+   All "names" for pointersinitialized with CREATE_UNIQUE_POINTER, CREATE_SUBPOINTERS, SESSION_HOST_ALLOCATE
+   , or SESSION_HOST_ALLOCATE are listed here.
+   */
+   #define DEFINITIONS_HERE
+   size_t dev_allMaps, dev_allPencilsContainers, dev_allPencilsMeshes, dev_blockDataOrdered, dev_bulkVX, dev_bulkVY, dev_bulkVZ, dev_bValues, dev_cellIdxArray, dev_cellIdxKeys, dev_cellIdxStartCutoff, dev_columnOffsetData, dev_Ddt, dev_densityPostAdjust, dev_densityPreAdjust, dev_dfdt_mu, dev_dxdydz, dev_fcount, dev_fmu, dev_intersections, dev_lists_delete, dev_lists_to_replace, dev_lists_with_replace_new, dev_lists_with_replace_old, dev_mass, dev_massLoss, dev_max_dt, dev_minValues, dev_moments1, dev_moments2, dev_nAfter, dev_nBefore, dev_nBlocksToChange, dev_nColumns, dev_nColumnSets, dev_nu0Values, dev_nWithContent, dev_overflownElements, dev_pencilBlockData, dev_pencilBlocksCount, dev_potentialDdtValues, dev_probeCubeData, dev_remappedCellIdxArray, dev_resizeSuccess, dev_smallCellIdxArray, dev_sparsity, dev_VBC, dev_VBCs, dev_vbwcl_neigh, dev_vbwcl_vec, dev_velocityIdxArray, dev_vmeshes, gpu_block_indices_to_id, gpu_block_indices_to_probe, gpu_cell_indices_to_id, host_allMaps, host_allPencilsContainers, host_allPencilsMeshes, host_blockDataOrdered, host_bulkVX, host_bulkVY, host_bulkVZ, host_bValues, host_cellIdxStartCutoff, host_Ddt, host_dxdydz, host_intersections, host_lists_delete, host_lists_to_replace, host_lists_with_replace_new, host_lists_with_replace_old, host_mass, host_massLoss, host_max_dt, host_minValues, host_moments1, host_moments2, host_nAfter, host_nBefore, host_nBlocksToChange, host_nColumns, host_nColumnSets, host_nu0Values, host_nWithContent, host_overflownElements, host_remappedCellIdxArray, host_resizeSuccess, host_returnLID, host_returnReal, host_returnRealf, host_smallCellIdxArray, host_sparsity, host_VBC, host_VBCs, host_vbwcl_neigh, host_vbwcl_vec, host_vmeshes, member, my_test_pointer, returnLID, returnReal, returnRealf;
+   #define DEFINITIONS_END
+   #undef DEFINITIONS_HERE
+   #undef DEFINITIONS_END
+
+   // Macro for using a global "name" for a pointer without manually adding the pointer to a list
+   // Other methods have similar macros for using pointers with "names"
+   #define CREATE_UNIQUE_POINTER(object, member) object.createPointer(object.member)
+   // Create a new pointer and replace the given index with the index corresponding to the pointer
+   bool createPointer(size_t& pointerIndex) {
+      if (pointerIndex != 0){
          return false;
       }
 
       std::lock_guard<std::mutex> lock(memoryMutex);
 
-      // If a pointer with the given name already exists, we create a new name
-      if (gpuMemoryPointers.count(baseName)) {
-         int& counter = nameCounters[baseName];
-         uniqueName = baseName + "_" + std::to_string(++counter);
-      } else {
-         nameCounters[baseName] = 0;
-         uniqueName = baseName;
+      // Leave first pointer empty
+      if (maxPointerIndex == 0) {
+         gpuMemoryPointers.push_back(nullptr);
+         allocationSizes.push_back((size_t)(0));
+         pointerDevice.push_back(NO_POINTER_DEVICE);
       }
 
-      gpuMemoryPointers[uniqueName] = nullptr;
-      allocationSizes[uniqueName] = (size_t)(0);
-      pointerDevice[uniqueName] = "None";
-      return true;
-   }
+      gpuMemoryPointers.push_back(nullptr);
+      allocationSizes.push_back((size_t)(0));
+      pointerDevice.push_back(NO_POINTER_DEVICE);
 
-   // Create a new pointer, ensure that there aren't duplicates
-   bool createUniquePointer(const std::string& name) {
-      std::lock_guard<std::mutex> lock(memoryMutex);
-
-      if (gpuMemoryPointers.count(name)) {
-         return false;
-      }
-
-      nameCounters[name] = 0;
-      gpuMemoryPointers[name] = nullptr;
-      allocationSizes[name] = (size_t)(0);
-      pointerDevice[name] = "None";
-      return true;
-   }
-
-   // Create a new pointer with a base name and an index
-   bool createSubPointer(const std::string& basePointerName, const uint index) {
-      // Ensure the base pointer exists
-      if (!gpuMemoryPointers.count(basePointerName)){
-         std::cerr << "Error: Pointer name '" << basePointerName << "' not found.\n";
-         return false;
-      }
-
-      std::string pointerName = basePointerName + "#" + std::to_string(index);
-
-      if (gpuMemoryPointers.count(pointerName)){
-         return false;
-      }
-
-      std::string uniqueName = "null";
-
-      bool success = createPointer(pointerName, uniqueName);
+      maxPointerIndex++;
+      pointerIndex = maxPointerIndex;
       
-      if(pointerName != uniqueName){
-         std::cerr << "Error: Pointer '" << pointerName << "' already exists.\n";
+      return true;
+   }
+
+   #define CREATE_SUBPOINTERS(object, member, amount) object.createSubPointers(object.member, amount)
+   // Create a given number of subpointers
+   bool createSubPointers(size_t& firstPointerIndex, const size_t numberOfPointers) {
+      if (firstPointerIndex != 0 || numberOfPointers == 0){
          return false;
       }
 
-      return success;
+      std::lock_guard<std::mutex> lock(memoryMutex);
+
+      // Leave first pointer empty
+      if (maxPointerIndex == 0) {
+         gpuMemoryPointers.push_back(nullptr);
+         allocationSizes.push_back((size_t)(0));
+         pointerDevice.push_back(NO_POINTER_DEVICE);
+      }
+
+      maxPointerIndex++;
+      firstPointerIndex = maxPointerIndex;
+
+      for (size_t i = 0; i < numberOfPointers; i++) {
+         gpuMemoryPointers.push_back(nullptr);
+         allocationSizes.push_back((size_t)(0));
+         pointerDevice.push_back(NO_POINTER_DEVICE);
+      }
+      
+      return true;
    }
 
    // Start a session, where we have one big session pointer which can be split into multiple smaller pointers
@@ -323,12 +354,8 @@ struct GPUMemoryManager {
       size_t host_requiredSessionSize = max(host_previousSessionSize, host_bytes);
       size_t dev_requiredSessionSize = max(dev_previousSessionSize, dev_bytes);
 
-      if (gpuMemoryPointers.count("dev_sessionPointer") == 0) {
-         createUniquePointer("dev_sessionPointer");
-      }
-      if (gpuMemoryPointers.count("host_sessionPointer") == 0) {
-         createUniquePointer("host_sessionPointer");
-      }
+      createPointer(dev_sessionPointer);
+      createPointer(host_sessionPointer);
 
       if(sessionOn){
          std::cerr << "Concurrent sessions not supported. Please end previous session before starting a new one.\n";
@@ -338,18 +365,18 @@ struct GPUMemoryManager {
 
       // Reallocate session pointers if the required size increases
       if(dev_requiredSessionSize > dev_sessionAllocationSize){
-         allocate("dev_sessionPointer", dev_requiredSessionSize);
+         allocate(dev_sessionPointer, dev_requiredSessionSize);
          dev_sessionAllocationSize = dev_requiredSessionSize;
       }
       dev_sessionSize = 0;
-      pointerDevice["dev_sessionPointer"] = "dev";
+      pointerDevice[dev_sessionPointer] = DEVICE_POINTER;
 
       if(host_requiredSessionSize > host_sessionAllocationSize){
-         hostAllocate("host_sessionPointer", host_requiredSessionSize);
+         hostAllocate(host_sessionPointer, host_requiredSessionSize);
          host_sessionAllocationSize = host_requiredSessionSize;
       }
       host_sessionSize = 0;
-      pointerDevice["host_sessionPointer"] = "host";
+      pointerDevice[host_sessionPointer] = HOST_POINTER;
 
       return true;
    }
@@ -369,183 +396,154 @@ struct GPUMemoryManager {
       // Free the pointers that did not fit into the session pointer
       freeSessionPointers();
 
+      maxSessionPointerIndex = 0;
+
       return true;
    }
 
-   // Allocate memory to a pointer by name
-   bool allocate(const std::string& name, size_t bytes) {
-      std::lock_guard<std::mutex> lock(memoryMutex);
-      if (gpuMemoryPointers.count(name) == 0) {
-         std::cerr << "Error: Pointer name '" << name << "' not found.\n";
+   #define ALLOCATE_GPU(object, member, bytes) object.allocate(object.member, bytes)
+   // Allocate memory to a pointer by index
+   bool allocate(const size_t& pointerIndex, size_t bytes) {
+      if (pointerIndex == 0) {
+         std::cerr << "Error: Pointer not found in 'gpuMemoryManager.allocate'.\n";
          return false;
       }
 
-      if (allocationSizes[name] >= bytes) {
+      std::lock_guard<std::mutex> lock(memoryMutex);
+
+      if (allocationSizes[pointerIndex] >= bytes) {
          //No need to reallocate
          return false;
       }
       
-      if (gpuMemoryPointers[name] != nullptr) {
-         CHK_ERR( gpuFree(gpuMemoryPointers[name]) );
+      if (gpuMemoryPointers[pointerIndex] != nullptr) {
+         CHK_ERR( gpuFree(gpuMemoryPointers[pointerIndex]) );
       }
 
-      CHK_ERR( gpuMalloc(&gpuMemoryPointers[name], bytes) );
-      allocationSizes[name] = bytes;
-      pointerDevice[name] = "dev";
+      CHK_ERR( gpuMalloc(&gpuMemoryPointers[pointerIndex], bytes) );
+      allocationSizes[pointerIndex] = bytes;
+      pointerDevice[pointerIndex] = DEVICE_POINTER;
+
       return true;
    }
 
-   // Allocate memory to a pointer by name with an extra buffer added
-   bool allocateWithBuffer(const std::string& name, size_t bytes, size_t buffer) {
-      std::lock_guard<std::mutex> lock(memoryMutex);
-      if (gpuMemoryPointers.count(name) == 0) {
-         std::cerr << "Error: Pointer name '" << name << "' not found.\n";
+   #define ALLOCATE_WITH_BUFFER(object, member, bytes, buffer) object.allocateWithBuffer(object.member, bytes, buffer)
+   // Allocate memory to a pointer by index with an extra buffer added
+   bool allocateWithBuffer(const size_t& pointerIndex, size_t bytes, size_t buffer) {
+      if (pointerIndex == 0) {
+         std::cerr << "Error: Pointer not found in 'gpuMemoryManager.allocateWithBuffer'.\n";
          return false;
       }
 
-      if (allocationSizes[name] >= bytes) {
+      std::lock_guard<std::mutex> lock(memoryMutex);
+
+      if (allocationSizes[pointerIndex] >= bytes) {
          //No need to reallocate
          return false;
       }
       
-      if (gpuMemoryPointers[name] != nullptr) {
-         CHK_ERR( gpuFree(gpuMemoryPointers[name]) );
+      if (gpuMemoryPointers[pointerIndex] != nullptr) {
+         CHK_ERR( gpuFree(gpuMemoryPointers[pointerIndex]) );
       }
 
-      CHK_ERR( gpuMalloc(&gpuMemoryPointers[name], bytes*buffer) );
-      allocationSizes[name] = bytes*buffer;
-      pointerDevice[name] = "dev";
+      CHK_ERR( gpuMalloc(&gpuMemoryPointers[pointerIndex], bytes*buffer) );
+      allocationSizes[pointerIndex] = bytes*buffer;
+      pointerDevice[pointerIndex] = DEVICE_POINTER;
+
       return true;
    }
 
-   // Allocate pinned host memory to a pointer by name
-   bool hostAllocate(const std::string& name, size_t bytes) {
-      std::lock_guard<std::mutex> lock(memoryMutex);
-      if (gpuMemoryPointers.count(name) == 0) {
-         std::cerr << "Error: Pointer name '" << name << "' not found.\n";
+   #define HOST_ALLOCATE_GPU(object, member, bytes) object.hostAllocate(object.member, bytes)
+   // Allocate pinned host memory to a pointer by index
+   bool hostAllocate(const size_t& pointerIndex, size_t bytes) {
+      if (pointerIndex == 0) {
+         std::cerr << "Error: Pointer not found in 'gpuMemoryManager.hostAllocate'.\n";
          return false;
       }
 
-      if (allocationSizes[name] >= bytes) {
+      std::lock_guard<std::mutex> lock(memoryMutex);
+
+      if (allocationSizes[pointerIndex] >= bytes) {
          //No need to reallocate
          return false;
       }
 
-      if (gpuMemoryPointers[name] != nullptr) {
-         CHK_ERR( gpuFreeHost(gpuMemoryPointers[name]) );
+      if (gpuMemoryPointers[pointerIndex] != nullptr) {
+         CHK_ERR( gpuFreeHost(gpuMemoryPointers[pointerIndex]) );
       }
 
-      CHK_ERR( gpuMallocHost(&gpuMemoryPointers[name], bytes) );
-      allocationSizes[name] = bytes;
-      pointerDevice[name] = "host";
+      CHK_ERR( gpuMallocHost(&gpuMemoryPointers[pointerIndex], bytes) );
+      allocationSizes[pointerIndex] = bytes;
+      pointerDevice[pointerIndex] = HOST_POINTER;
+
       return true;
    }
 
-   // Allocate pinned host memory to a pointer by name with an extra buffer
-   bool hostAllocateWithBuffer(const std::string& name, size_t bytes, size_t buffer) {
-      std::lock_guard<std::mutex> lock(memoryMutex);
-      if (gpuMemoryPointers.count(name) == 0) {
-         std::cerr << "Error: Pointer name '" << name << "' not found.\n";
+   #define HOST_ALLOCATE_WITH_BUFFER(object, member, bytes, buffer) object.hostAllocateWithBuffer(object.member, bytes, buffer)
+   // Allocate pinned host memory to a pointer by index with an extra buffer
+   bool hostAllocateWithBuffer(const size_t& pointerIndex, size_t bytes, size_t buffer) {
+      if (pointerIndex == 0) {
+         std::cerr << "Error: Pointer not found in 'gpuMemoryManager.hostAllocateWithBuffer'.\n";
          return false;
       }
 
-      if (allocationSizes[name] >= bytes) {
+      std::lock_guard<std::mutex> lock(memoryMutex);
+
+      if (allocationSizes[pointerIndex] >= bytes) {
          //No need to reallocate
          return false;
       }
 
-      if (gpuMemoryPointers[name] != nullptr) {
-         CHK_ERR( gpuFreeHost(gpuMemoryPointers[name]) );
+      if (gpuMemoryPointers[pointerIndex] != nullptr) {
+         CHK_ERR( gpuFreeHost(gpuMemoryPointers[pointerIndex]) );
       }
 
-      CHK_ERR( gpuMallocHost(&gpuMemoryPointers[name], bytes*buffer) );
-      allocationSizes[name] = bytes*buffer;
-      pointerDevice[name] = "host";
-      return true;
-   }
-
-   // Allocate memory to a sub pointer by name and index
-   bool subPointerAllocate(const std::string& basePointerName, const uint index, size_t bytes) {
-      if (gpuMemoryPointers.count(basePointerName) == 0) {
-         std::cerr << "Error: Pointer name '" << basePointerName << "' not found.\n";
-         return false;
-      }
-
-      std::string pointerName = basePointerName + "#" + std::to_string(index);
-
-      if (!gpuMemoryPointers.count(pointerName)){
-         std::cerr << "Error: Pointer name '" << pointerName << "' not found.\n";
-         return false;
-      }
-
-      return allocate(pointerName, bytes);
-   }
-
-   // Allocate memory to a sub pointer by name and index and copy data from old pointer
-   bool subPointerCopyAndReallocate(const std::string& basePointerName, const uint index, size_t bytes) {
-      if (gpuMemoryPointers.count(basePointerName) == 0) {
-         std::cerr << "Error: Pointer name '" << basePointerName << "' not found.\n";
-         return false;
-      }
-
-      std::string pointerName = basePointerName + "#" + std::to_string(index);
-
-      if (!gpuMemoryPointers.count(pointerName)){
-         std::cerr << "Error: Pointer name '" << pointerName << "' not found.\n";
-         return false;
-      }
-
-      if (allocationSizes[pointerName] == 0) {
-         return allocate(pointerName, bytes);
-      }
-
-      if (allocationSizes[pointerName] >= bytes) {
-         return false;
-      }
-
-      void *newPointer;
-      CHK_ERR( gpuMalloc((void**)&newPointer, bytes) );
-      CHK_ERR( gpuMemcpy(newPointer, gpuMemoryPointers[pointerName], allocationSizes[pointerName], gpuMemcpyDeviceToDevice) );
-      CHK_ERR( gpuFree(gpuMemoryPointers[pointerName]) );
-      updatePointer(pointerName, newPointer);
-
-      allocationSizes[pointerName] = bytes;
+      CHK_ERR( gpuMallocHost(&gpuMemoryPointers[pointerIndex], bytes*buffer) );
+      allocationSizes[pointerIndex] = bytes*buffer;
+      pointerDevice[pointerIndex] = HOST_POINTER;
 
       return true;
    }
 
-   // Allocate memory to a sub pointer by name and index with an extra buffer
-   bool subPointerAllocateWithBuffer(const std::string& basePointerName, const uint index, size_t bytes, size_t buffer) {
-      if (gpuMemoryPointers.count(basePointerName) == 0) {
-         std::cerr << "Error: Pointer name '" << basePointerName << "' not found.\n";
+   #define SUBPOINTER_ALLOCATE(object, member, index, bytes) object.subPointerAllocate(object.member, index, bytes)
+   // Allocate memory to a sub pointer by base index and index
+   bool subPointerAllocate(const size_t& firstPointerIndex, const uint index, size_t bytes) {
+
+      size_t pointerIndex = firstPointerIndex + index;
+
+      if (firstPointerIndex == 0 || pointerIndex > maxPointerIndex) {
+         std::cerr << "Error: Pointer not found in 'gpuMemoryManager.subPointerAllocate'.\n";
          return false;
       }
 
-      std::string pointerName = basePointerName + "#" + std::to_string(index);
-
-      if (!gpuMemoryPointers.count(pointerName)){
-         std::cerr << "Error: Pointer name '" << pointerName << "' not found.\n";
-         return false;
-      }
-
-      return allocateWithBuffer(pointerName, bytes, buffer);
+      return allocate(pointerIndex, bytes);
    }
 
-   // Allocate host memory to a sub pointer by name and index
-   bool subPointerHostAllocate(const std::string& basePointerName, const uint index, size_t bytes) {
-      if (gpuMemoryPointers.count(basePointerName) == 0) {
-         std::cerr << "Error: Pointer name '" << basePointerName << "' not found.\n";
+   // Allocate memory to a sub pointer by base index and index with an extra buffer
+   bool subPointerAllocateWithBuffer(const size_t& firstPointerIndex, const uint index, size_t bytes, size_t buffer) {
+
+      size_t pointerIndex = firstPointerIndex + index;
+
+      if (firstPointerIndex == 0 || pointerIndex > maxPointerIndex) {
+         std::cerr << "Error: Pointer not found in 'gpuMemoryManager.subPointerAllocate'.\n";
          return false;
       }
 
-      std::string pointerName = basePointerName + "#" + std::to_string(index);
+      return allocateWithBuffer(pointerIndex, bytes, buffer);
+   }
 
-      if (!gpuMemoryPointers.count(pointerName)){
-         std::cerr << "Error: Pointer name '" << pointerName << "' not found.\n";
+   #define SUBPOINTER_HOST_ALLOCATE(object, member, index, bytes) object.subPointerHostAllocate(object.member, index, bytes)
+   // Allocate host memory to a sub pointer by base index and index
+   bool subPointerHostAllocate(const size_t& firstPointerIndex, const uint index, size_t bytes) {
+
+      size_t pointerIndex = firstPointerIndex + index;
+
+      if (firstPointerIndex == 0 || pointerIndex > maxPointerIndex) {
+         std::cerr << "Error: Pointer not found in 'gpuMemoryManager.subPointerAllocate'.\n";
          return false;
       }
 
-      return hostAllocate(pointerName, bytes);
+      return hostAllocate(pointerIndex, bytes);
    }
 
    // Calculate the offset required to align a pointer
@@ -557,60 +555,96 @@ struct GPUMemoryManager {
       return alignedAddress - reinterpret_cast<uintptr_t>(base);
    }
 
+   #define SESSION_ALLOCATE(object, type, member, bytes) object.sessionAllocate<type>(object.member, bytes)
    // Create a new pointer by partitioning the session pointer
    template<typename T>
-   bool sessionAllocate(const std::string& name, size_t bytes){
+   bool sessionAllocate(size_t& pointerIndex, size_t bytes){
       if(!sessionOn){
          std::cerr << "No session is currently on. Please start a session before allocating to it.\n";
          return false;
       }
-      void *sessionPointer = getPointer<void>("dev_sessionPointer");
+
+      void *sessionPointer = getPointer<void>(dev_sessionPointer);
       size_t offset = alignOffset<T>(sessionPointer, dev_sessionSize);
-      sessionPointerOffset[name] = offset;
+
+      std::lock_guard<std::mutex> lock(memoryMutex);
+
+      // Leave first pointer empty
+      if (maxSessionPointerIndex == 0) {
+         sessionPointerOffset.push_back((size_t)(0));
+         sessionPointers.push_back(nullptr);
+         sessionPointerDevice.push_back(NO_POINTER_DEVICE);
+         sessionAllocationSizes.push_back((size_t)(0));
+      }
+
+      maxSessionPointerIndex++;
+      pointerIndex = maxSessionPointerIndex;
 
       int padding = offset - dev_sessionSize;
       dev_sessionSize += bytes + padding;
+      
+      sessionPointerOffset.push_back(offset);
+      sessionPointers.push_back(nullptr);
+      sessionPointerDevice.push_back(DEVICE_POINTER);
+      sessionAllocationSizes.push_back((size_t)(0));
 
       // If the pointer does not fit into the session pointer, create a new pointer
       if (dev_sessionSize > dev_sessionAllocationSize){
-         std::lock_guard<std::mutex> lock(memoryMutex);
-         sessionPointerOffset[name] = dev_sessionSize;
-         sessionPointers[name] = nullptr;
-         pointerDevice[name] = "dev";
-         allocationSizes[name] = bytes;
-         CHK_ERR( gpuMalloc(&sessionPointers[name], bytes) );
+         sessionPointerOffset[pointerIndex] = dev_sessionSize;
+         sessionAllocationSizes[pointerIndex] = bytes;
+         CHK_ERR( gpuMalloc(&sessionPointers[pointerIndex], bytes) );
       }
 
       return true;
    }
 
+   #define SESSION_HOST_ALLOCATE(object, type, member, bytes) object.sessionHostAllocate<type>(object.member, bytes)
    // Create a new pointer by partitioning the host session pointer
    template<typename T>
-   bool sessionHostAllocate(const std::string& name, size_t bytes){
-      void *sessionPointer = getPointer<void>("host_sessionPointer");
+   bool sessionHostAllocate(size_t& pointerIndex, size_t bytes){
+      if(!sessionOn){
+         std::cerr << "No session is currently on. Please start a session before allocating to it.\n";
+         return false;
+      }
+
+      void *sessionPointer = getPointer<void>(host_sessionPointer);
       size_t offset = alignOffset<T>(sessionPointer, host_sessionSize);
-      sessionPointerOffset[name] = offset;
+
+      std::lock_guard<std::mutex> lock(memoryMutex);
+
+      // Leave first pointer empty
+      if (maxSessionPointerIndex == 0) {
+         sessionPointerOffset.push_back((size_t)(0));
+         sessionPointers.push_back(nullptr);
+         sessionPointerDevice.push_back(NO_POINTER_DEVICE);
+         sessionAllocationSizes.push_back((size_t)(0));
+      }
+
+      maxSessionPointerIndex++;
+      pointerIndex = maxSessionPointerIndex;
 
       int padding = offset - host_sessionSize;
       host_sessionSize += bytes + padding;
+      
+      sessionPointerOffset.push_back(offset);
+      sessionPointers.push_back(nullptr);
+      sessionPointerDevice.push_back(HOST_POINTER);
+      sessionAllocationSizes.push_back((size_t)(0));
 
       // If the pointer does not fit into the session pointer, create a new pointer
       if (host_sessionSize > host_sessionAllocationSize){
-         std::lock_guard<std::mutex> lock(memoryMutex);
-         sessionPointerOffset[name] = host_sessionSize;
-         sessionPointers[name] = nullptr;
-         pointerDevice[name] = "host";
-         allocationSizes[name] = bytes;
-         CHK_ERR( gpuMallocHost(&sessionPointers[name], bytes) );
+         sessionPointerOffset[pointerIndex] = host_sessionSize;
+         sessionAllocationSizes[pointerIndex] = bytes;
+         CHK_ERR( gpuMallocHost(&sessionPointers[pointerIndex], bytes) );
       }
 
       return true;
    }
 
    // Get allocated size for a pointer
-   size_t getSize(const std::string& name) const {
-      if (allocationSizes.count(name)){
-         return allocationSizes.at(name);
+   size_t getSize(const size_t& pointerIndex) const {
+      if (pointerIndex != 0){
+         return allocationSizes[pointerIndex];
       }
       return 0;
    }
@@ -619,20 +653,18 @@ struct GPUMemoryManager {
    size_t totalGpuAllocation(){
       size_t total = 0;
 
-      for (auto& pair : gpuMemoryPointers) {
-         if (pair.second != nullptr) {
-            std::string name = pair.first;
-            if (pointerDevice[name] == "dev"){
-               total += allocationSizes[name];
+      for (size_t pointerIndex = 0; pointerIndex < gpuMemoryPointers.size(); pointerIndex++) {
+         if (gpuMemoryPointers[pointerIndex] != nullptr) {
+            if (pointerDevice[pointerIndex] == DEVICE_POINTER){
+               total += allocationSizes[pointerIndex];
             }
          }
       }
 
-      for (auto& pair : sessionPointers) {
-         if (pair.second != nullptr) {
-            std::string name = pair.first;
-            if (pointerDevice[name] == "dev"){
-               total += allocationSizes[name];
+      for (size_t pointerIndex = 0; pointerIndex < sessionPointers.size(); pointerIndex++) {
+         if (sessionPointers[pointerIndex] != nullptr) {
+            if (sessionPointerDevice[pointerIndex] == DEVICE_POINTER){
+               total += sessionAllocationSizes[pointerIndex];
             }
          }
       }
@@ -640,66 +672,22 @@ struct GPUMemoryManager {
       return total;
    }
 
-   std::vector<std::tuple<std::string, size_t>> largestGpuAllocations(size_t numberOfOutputPointers) {
-      std::unordered_map<std::string, size_t> aggregatedSizes;
-
-      // Sizes of subpointers are added to the size of the basepointer
-      auto addPointers = [&](auto& pointerMap) {
-         for (auto& pair : pointerMap) {
-            if (pair.second != nullptr) {
-               const std::string& name = pair.first;
-               if (pointerDevice[name] == "dev") {
-                  std::string baseName = name;
-                  size_t hashtagPosition = name.find('#');
-                  if (hashtagPosition != std::string::npos) {
-                     baseName = name.substr(0, hashtagPosition);
-                  }
-                  aggregatedSizes[baseName] += allocationSizes[name];
-               }
-            }
-         }
-      };
-
-      addPointers(gpuMemoryPointers);
-      addPointers(sessionPointers);
-
-      // Convert map to vector of tuples
-      std::vector<std::tuple<std::string, size_t>> allocations;
-      for (auto& pair : aggregatedSizes) {
-         allocations.emplace_back(pair.first, pair.second);
-      }
-
-      // Sort descending by size
-      std::sort(allocations.begin(), allocations.end(), [](auto& a, auto& b) {
-         return std::get<1>(a) > std::get<1>(b);
-      });
-
-      // Extract the largest pointers
-      if (allocations.size() > numberOfOutputPointers) {
-         allocations.resize(numberOfOutputPointers);
-      }
-
-      return allocations;
-   }
-
    // get the total amount of host memory allocated with the memory manager
    size_t totalCpuAllocation(){
       size_t total = 0;
 
-      for (auto& pair : gpuMemoryPointers) {
-         if (pair.second != nullptr) {
-            std::string name = pair.first;
-            if (pointerDevice[name] == "host"){
-               total += allocationSizes[name];
+      for (size_t pointerIndex = 0; pointerIndex < gpuMemoryPointers.size(); pointerIndex++) {
+         if (gpuMemoryPointers[pointerIndex] != nullptr) {
+            if (pointerDevice[pointerIndex] == HOST_POINTER){
+               total += allocationSizes[pointerIndex];
             }
          }
       }
 
-      for (auto& pair : sessionPointers) {
-         if (pair.second != nullptr) {
-            std::string name = pair.first;
-            if (pointerDevice[name] == "host"){
-               total += allocationSizes[name];
+      for (size_t pointerIndex = 0; pointerIndex < sessionPointers.size(); pointerIndex++) {
+         if (sessionPointers[pointerIndex] != nullptr) {
+            if (sessionPointerDevice[pointerIndex] == HOST_POINTER){
+               total += sessionAllocationSizes[pointerIndex];
             }
          }
       }
@@ -709,41 +697,39 @@ struct GPUMemoryManager {
 
    // Free all allocated pointers from session, besides the sessionpointer itself
    void freeSessionPointers() {
-      for (auto& pair : sessionPointers) {
-         if (pair.second != nullptr) {
-            std::string name = pair.first;
-            if (pointerDevice[name] == "dev"){
-               CHK_ERR( gpuFree(pair.second) );
-            }else if (pointerDevice[name] == "host"){
-               CHK_ERR( gpuFreeHost(pair.second) );
+      for (size_t pointerIndex = 0; pointerIndex < sessionPointers.size(); pointerIndex++) {
+         if (sessionPointers[pointerIndex] != nullptr) {
+            if (sessionPointerDevice[pointerIndex] == DEVICE_POINTER){
+               CHK_ERR( gpuFree(sessionPointers[pointerIndex]) );
+            }else if (sessionPointerDevice[pointerIndex] == HOST_POINTER){
+               CHK_ERR( gpuFreeHost(sessionPointers[pointerIndex]) );
             }
-            allocationSizes[name] = 0;
-            pair.second = nullptr;
          }
       }
+
       sessionPointers.clear();
+      sessionPointerOffset.clear();
+      sessionPointerDevice.clear();
+      sessionAllocationSizes.clear();
    }
 
    // Free all allocated GPU memory
    void freeAll() {
-      for (auto& pair : gpuMemoryPointers) {
-         if (pair.second != nullptr) {
-            std::string name = pair.first;
-            if (allocationSizes[name] > 0){
-               if (pointerDevice[name] == "dev"){
-                  CHK_ERR( gpuFree(pair.second) );
-               }else if (pointerDevice[name] == "host"){
-                  CHK_ERR( gpuFreeHost(pair.second) );
+      for (size_t pointerIndex = 0; pointerIndex < gpuMemoryPointers.size(); pointerIndex++) {
+         if (gpuMemoryPointers[pointerIndex] != nullptr) {
+            if (allocationSizes[pointerIndex] > 0){
+               if (pointerDevice[pointerIndex] == DEVICE_POINTER){
+                  CHK_ERR( gpuFree(gpuMemoryPointers[pointerIndex]) );
+               }else if (pointerDevice[pointerIndex] == HOST_POINTER){
+                  CHK_ERR( gpuFreeHost(gpuMemoryPointers[pointerIndex]) );
                }
             }
-            pair.second = nullptr;
          }
       }
       freeSessionPointers();
 
       gpuMemoryPointers.clear();
       allocationSizes.clear();
-      nameCounters.clear();
       pointerDevice.clear();
       sessionPointerOffset.clear();
       sessionOn = false;
@@ -753,92 +739,92 @@ struct GPUMemoryManager {
       host_sessionAllocationSize = 0;
       dev_previousSessionSize = 0;
       host_previousSessionSize = 0;
+      maxPointerIndex = 0;
+      maxSessionPointerIndex = 0;
+      dev_sessionPointer = 0;
+      host_sessionPointer = 0;
    }
 
+   #define GET_POINTER(object, type, member) object.getPointer<type>(object.member)
    // Get typed pointer
    template <typename T>
-   T* getPointer(const std::string& name) const {
-      if (!gpuMemoryPointers.count(name)){
-         throw std::runtime_error("Unknown pointer name: " + name);
+   T* getPointer(const size_t& pointerIndex) const {
+      if (pointerIndex == 0){
+         throw std::runtime_error("Unknown pointer name at gpuMemoryManager.getPointer!\n");
       }
-      return static_cast<T*>(gpuMemoryPointers.at(name));
+      return static_cast<T*>(gpuMemoryPointers[pointerIndex]);
    }
 
+   #define GET_SUBPOINTER(object, type, member, index) object.getSubPointer<type>(object.member, index)
    // Get typed subpointer with an index
    template <typename T>
-   T* getSubPointer(const std::string& basePointerName, const uint index) const {
-      if (!gpuMemoryPointers.count(basePointerName)){
-         throw std::runtime_error("Unknown base pointer name: " + basePointerName);
+   T* getSubPointer(const size_t& firstPointerIndex, const uint index) const {
+
+      size_t pointerIndex = firstPointerIndex + index;
+
+      if (firstPointerIndex == 0 || pointerIndex > maxPointerIndex) {
+         throw std::runtime_error("Unknown pointer name at gpuMemoryManager.getSubPointer!\n");
       }
-      std::string pointerName = basePointerName + "#" + std::to_string(index);
-      return getPointer<T>(pointerName);
+
+      return getPointer<T>(pointerIndex);
    }
 
+   #define GET_SESSION_POINTER(object, type, member) object.getSessionPointer<type>(object.member)
    // Get pointer in a session
    template <typename T>
-   T* getSessionPointer(const std::string& name) const {
-      if (!sessionPointerOffset.count(name)){
-         throw std::runtime_error("Unknown pointer name: " + name);
+   T* getSessionPointer(const size_t& pointerIndex) const {
+      if (pointerIndex == 0 || pointerIndex > maxSessionPointerIndex){
+         throw std::runtime_error("Unknown pointer name at gpuMemoryManager.getSessionPointer!\n");
       }
 
       // The pointer is usually contained in the session pointer and distinguished by an offset
-      char *sessionPointer = static_cast<char*>(gpuMemoryPointers.at("dev_sessionPointer"));
-      size_t offset = sessionPointerOffset.at(name);
+      char *sessionPointer = static_cast<char*>(gpuMemoryPointers[dev_sessionPointer]);
+      size_t offset = sessionPointerOffset[pointerIndex];
 
       // If the pointer did not fit inside the session pointer, retrieve it from the separate map
       if (offset > dev_sessionAllocationSize){
-         if (!sessionPointers.count(name)){
-            throw std::runtime_error("Unknown pointer name: " + name);
-         }
-         return static_cast<T*>(sessionPointers.at(name));
+         return static_cast<T*>(sessionPointers[pointerIndex]);
       }
       
       return reinterpret_cast<T*>(sessionPointer + offset);
    }
 
+   #define GET_SESSION_HOST_POINTER(object, type, member) object.getSessionHostPointer<type>(object.member)
    // Get host pointer in a session
    template <typename T>
-   T* getSessionHostPointer(const std::string& name) const {
-      if (!sessionPointerOffset.count(name)){
-         throw std::runtime_error("Unknown pointer name: " + name);
+   T* getSessionHostPointer(const size_t& pointerIndex) const {
+      if (pointerIndex == 0 || pointerIndex > maxSessionPointerIndex){
+         throw std::runtime_error("Unknown pointer name at gpuMemoryManager.getSessionHostPointer!\n");
       }
 
       // The pointer is usually contained in the session pointer and distinguished by an offset
-      char *sessionPointer = static_cast<char*>(gpuMemoryPointers.at("host_sessionPointer"));
-      size_t offset = sessionPointerOffset.at(name);
+      char *sessionPointer = static_cast<char*>(gpuMemoryPointers[host_sessionPointer]);
+      size_t offset = sessionPointerOffset[pointerIndex];
 
       // If the pointer did not fit inside the session pointer, retrieve it from the separate map
       if (offset > host_sessionAllocationSize){
-         if (!sessionPointers.count(name)){
-            throw std::runtime_error("Unknown pointer name: " + name);
-         }
-         return static_cast<T*>(sessionPointers.at(name));
+         return static_cast<T*>(sessionPointers[pointerIndex]);
       }
       
       return reinterpret_cast<T*>(sessionPointer + offset);
    }
 
    // Update a new pointer to the memory manager
-   void updatePointer(const std::string& name, void* newPtr) {
+   void updatePointer(const size_t& pointerIndex, void* newPtr) {
       std::lock_guard<std::mutex> lock(memoryMutex);
-      gpuMemoryPointers[name] = newPtr;
+      gpuMemoryPointers[pointerIndex] = newPtr;
    }
 
+   #define SET_SUBPOINTER(object, type, member, index, subPointerIndex) object.setSubPointer<type>(object.member, index, subPointerIndex)
    // Set the value of the base pointer at a given index to be the corresponding sub pointer
    template <typename T>
-   void setSubPointer(const std::string& basePointerName, const uint index){
-      if (!gpuMemoryPointers.count(basePointerName)){
-         throw std::runtime_error("Unknown base pointer name: " + basePointerName);
+   void setSubPointer(const size_t basePointerIndex, const size_t index, const size_t subPointerIndex){
+      if (basePointerIndex == 0 || subPointerIndex == 0) {
+         throw std::runtime_error("Error: Pointer not found in 'gpuMemoryManager.setSubPointer'.");
       }
 
-      std::string pointerName = basePointerName + "#" + std::to_string(index);
-
-      if (!gpuMemoryPointers.count(pointerName)){
-         throw std::runtime_error("Unknown pointer name: " + pointerName);
-      }
-
-      T** basePointer = static_cast<T**>(gpuMemoryPointers[basePointerName]);
-      T* subPointer  = static_cast<T*>(gpuMemoryPointers[pointerName]);
+      T** basePointer = static_cast<T**>(gpuMemoryPointers[basePointerIndex]);
+      T* subPointer  = static_cast<T*>(gpuMemoryPointers[subPointerIndex]);
       basePointer[index] = subPointer;
    }
 };
