@@ -137,10 +137,6 @@ namespace vmesh {
       }
 
       ARCH_HOSTDEV Real getCellIndex(Real coord, int dim, Real intersection, Real factor) const {
-         if (intersection < 0.0) {
-            intersection = meshMinLimits[dim];
-         }
-         
          coord -= intersection;
          // TODO can be cached
          Real hiResMinCoord {hiResRange[2 * dim] * factor * blockSize[dim]};
