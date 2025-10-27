@@ -151,4 +151,8 @@ vmesh::MeshParameters::MeshParameters(std::string_view name, std::array<Real, 6>
    meshMaxLimits {meshLimits[1], meshLimits[3], meshLimits[5]},
    gridSize {meshMaxLimits[0] - meshMinLimits[0], meshMaxLimits[1] - meshMinLimits[1], meshMaxLimits[2] - meshMinLimits[2]},
    blockSize {gridSize[0] / gridLengthIn[0], gridSize[1] / gridLengthIn[1], gridSize[2] / gridLengthIn[2]}
-{ }
+{ 
+   // TODO remove these once they're irrelevant
+   std::cerr << "Grid length: " << gridLength[0] << ", " << gridLength[1] << ", " << gridLength[2] << "\n";
+   std::cerr << "Base block size: " << blockSize[0] << ", " << blockSize[1] << ", " << blockSize[2] << "\n";
+}
