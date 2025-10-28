@@ -83,9 +83,9 @@ namespace vmesh {
          if (index > (2 * hiResRange[2 * dim + 1] - hiResRange[2 * dim]) * blockLength[dim]) {
             //std::cerr << "index " << index << " = " << (index - (2 * hiResRange[2 * dim + 1] - hiResRange[2 * dim])) << "\n";
             //std::cerr << "factor: " << factor << ", blockSize: " << blockSize[dim] << " = " << factor * blockSize[dim] / blockLength[dim] << "\n";
-            return intersection + hiResMaxCoord + (index - (2 * hiResRange[2 * dim + 1] - hiResRange[2 * dim])) * factor * blockSize[dim] / blockLength[dim];
+            return intersection + hiResMaxCoord + (index - (2 * hiResRange[2 * dim + 1] - hiResRange[2 * dim]) * blockLength[dim]) * factor * blockSize[dim] / blockLength[dim];
          } else if (index > hiResRange[2 * dim] * blockLength[dim]) {
-            return intersection + hiResMinCoord + (index - hiResRange[2 * dim]) * factor * blockSize[dim] / blockLength[dim] / 2;
+            return intersection + hiResMinCoord + (index - hiResRange[2 * dim] * blockLength[dim]) * factor * blockSize[dim] / blockLength[dim] / 2;
          } else {
             return intersection + index * factor * blockSize[dim] / blockLength[dim];
          }
@@ -96,17 +96,7 @@ namespace vmesh {
       }
 
       ARCH_HOSTDEV Real getBlockCoordinate(uint32_t index, int dim, Real intersection, Real factor) const {
-         // TODO can be cached
-         Real hiResMinCoord {hiResRange[2 * dim] * factor * blockSize[dim]};
-         Real hiResMaxCoord {(hiResRange[2 * dim + 1]) * factor * blockSize[dim]};
-
-         if (index > (2 * hiResRange[2 * dim + 1] - hiResRange[2 * dim])) {
-            return intersection + hiResMaxCoord + (index - (2 * hiResRange[2 * dim + 1] - hiResRange[2 * dim])) * factor * blockSize[dim];
-         } else if (index > hiResRange[2 * dim]) {
-            return intersection + hiResMinCoord + (index - hiResRange[2 * dim]) * factor * blockSize[dim] / 2;
-         } else {
-            return intersection + index * factor * blockSize[dim];
-         }
+         return getCellCoordinate(blockLength[dim] * index, dim, intersection, factor);
       }
 
       ARCH_HOSTDEV Real getBlockCoordinate(uint32_t index, int dim) const {
@@ -137,18 +127,7 @@ namespace vmesh {
       }
 
       ARCH_HOSTDEV Real getCellIndex(Real coord, int dim, Real intersection, Real factor) const {
-         coord -= intersection;
-         // TODO can be cached
-         Real hiResMinCoord {hiResRange[2 * dim] * factor * blockSize[dim]};
-         Real hiResMaxCoord {(hiResRange[2 * dim + 1]) * factor * blockSize[dim]};
-
-         if (coord > hiResMaxCoord) {
-            return 2 * hiResRange[2 * dim + 1] - hiResRange[2 * dim] + (coord - hiResMaxCoord) / (factor * blockSize[dim] / blockLength[dim]);
-         } else if (coord > hiResMinCoord) {
-            return hiResRange[2 * dim] + 2 * (coord - hiResMinCoord) / (factor * blockSize[dim] / blockLength[dim]);
-         } else {
-            return coord / (factor * blockSize[dim]);
-         }
+         return blockLength[dim] * getBlockIndex(coord, dim, intersection, factor);
       }
 
       ARCH_HOSTDEV Real getCellIndex(Real coord, int dim) const {
@@ -175,7 +154,7 @@ namespace vmesh {
       // Assumption: cell size in coordinate i only depends on the grid coordinate x_i
       ARCH_HOSTDEV Real getBlockDxFromIndex(uint32_t cellIndex, int dim) const {
          // TODO janky statement... should encode the stretchy stuff into hiResRange
-         return blockSize[dim] * (cellIndex >= hiResRange[2 * dim] && cellIndex < hiResRange[2 * dim + 1] + hiResRange[2 * dim + 1] - hiResRange[2 * dim] ? 0.5 : 1.0);
+         return blockSize[dim] * (cellIndex >= hiResRange[2 * dim] && cellIndex < 2 * hiResRange[2 * dim + 1] - hiResRange[2 * dim] ? 0.5 : 1.0);
       }
 
       ARCH_HOSTDEV Real getBlockDx(const vmesh::GlobalID globalID, int dim) const {
