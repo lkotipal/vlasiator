@@ -512,7 +512,7 @@ struct GPUMemoryManager {
       size_t pointerIndex = firstPointerIndex + index;
 
       if (firstPointerIndex == 0 || pointerIndex > maxPointerIndex) {
-         std::cerr << "Error: Pointer not found in 'gpuMemoryManager.subPointerAllocate'.\n";
+         std::cerr << "Error: Pointer not found in 'gpuMemoryManager.subPointerAllocate': firstPointerIndex = " << firstPointerIndex << ", pointerIndex = " << pointerIndex << ", maxPointerIndex = " << maxPointerIndex << "\n";
          return false;
       }
 
@@ -525,7 +525,7 @@ struct GPUMemoryManager {
       size_t pointerIndex = firstPointerIndex + index;
 
       if (firstPointerIndex == 0 || pointerIndex > maxPointerIndex) {
-         std::cerr << "Error: Pointer not found in 'gpuMemoryManager.subPointerAllocate'.\n";
+         std::cerr << "Error: Pointer not found in 'gpuMemoryManager.subPointerAllocateWithBuffer'.\n";
          return false;
       }
 
@@ -539,7 +539,7 @@ struct GPUMemoryManager {
       size_t pointerIndex = firstPointerIndex + index;
 
       if (firstPointerIndex == 0 || pointerIndex > maxPointerIndex) {
-         std::cerr << "Error: Pointer not found in 'gpuMemoryManager.subPointerAllocate'.\n";
+         std::cerr << "Error: Pointer not found in 'gpuMemoryManager.subPointerHostAllocate'.\n";
          return false;
       }
 
