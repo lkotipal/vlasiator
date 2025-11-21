@@ -240,8 +240,7 @@ struct ColumnOffsets {
 Usage options:
 (a):
 1. Create your pointer using one of the macros for creating pointers. Pass the "name" of your
-pointer to that macro. A corresponding variable in the memory manager will be automatically generated
-by running the updateGpuMemoryPointerList.sh script.
+pointer to that macro. A corresponding variable in the memory manager will be automatically generated.
 2. Allocate memory to that pointer by passing the "name" to one of the allocation macros
 3. Get the pointer by passing the "name" to one of the get pointer methods macros
 (b):
@@ -550,7 +549,7 @@ struct GPUMemoryManager {
    template<typename T>
    size_t alignOffset(void* base, size_t offset) {
       uintptr_t fullAddress = reinterpret_cast<uintptr_t>(base) + offset;
-      size_t alignment = alignof(T);
+      size_t alignment = std::max(alignof(T),size_t(256)); // Align to at least 256 bits
       size_t alignedAddress = (fullAddress + alignment - 1) & ~(alignment - 1);
       return alignedAddress - reinterpret_cast<uintptr_t>(base);
    }
