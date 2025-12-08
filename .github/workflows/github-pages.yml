@@ -62,6 +62,23 @@ jobs:
           sed s+^OUTPUT_DIRECTORY.*+"OUTPUT_DIRECTORY = ${VLASIATOR_DOXYGENDOCS}\n"+ <Doxyfile.template >Doxyfile
 
           doxygen
+
+          mkdir _gh_pages
+          rsync -a ${VLASIATOR_DOXYGENDOCS}/html/ _gh_pages/
+
+          
+          VLASIATOR_COMMITLOG=${BUILD_DIR}/vlasiator-dev/commitlog.html
+          VLASIATOR_DOXYGENDOCS=${BUILD_DIR}/vlasiator-dev/doc
+          mkdir -p $VLASIATOR_DOXYGENDOCS
+          sed s+^OUTPUT_DIRECTORY.*+"OUTPUT_DIRECTORY = ${VLASIATOR_DOXYGENDOCS}\n"+ <Doxyfile.template >Doxyfile
+          git checkout dev
+          git log > $VLASIATOR_COMMITLOG # unformatted git log
+
+          doxygen
+
+          mkdir _gh_pages/vlasiator-dev
+          rsync -a ${VLASIATOR_DOXYGENDOCS}/html/ _gh_pages/vlasiator-dev
+
           
 
       # Stage all deployed assets in _gh-pages/ for simplicity, and to
@@ -86,14 +103,14 @@ jobs:
       # Add the .nojekyll file
       - name: nojekyll
         run: |
-          touch doc/_build_doxygen/.nojekyll
+          touch _gh_pages/.nojekyll
 
       # Save artifact for the next step.
       - uses: actions/upload-artifact@v4
         if: ${{ github.event_name == 'push' }}
         with:
           name: gh-pages-build
-          path: doc/_build_doxygen/
+          path: _gh_pages/
 
   # Deploy in a separate job so that write permissions are restricted
   # to the minimum steps.
@@ -110,7 +127,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: gh-pages-build
-          path: doc/_build_doxygen/
+          path: _gh_pages/
 
       # As of 2023, we could publish to pages via a Deployment.  This
       # isn't done yet to give it time to stabilize (out of beta), and
@@ -124,5 +141,5 @@ jobs:
         with:
           publish_branch: gh-pages
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: doc/_build_doxygen/
+          publish_dir: _gh_pages/
           force_orphan: true
