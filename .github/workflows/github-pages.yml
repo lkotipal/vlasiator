@@ -27,6 +27,9 @@ jobs:
       - name: install Doxygen
         uses: ssciwr/doxygen-install@v1
 
+      - name: install dependencies
+        run: sudo apt-get install graphviz
+
         # Debug
       - name: Debugging information
         env:
