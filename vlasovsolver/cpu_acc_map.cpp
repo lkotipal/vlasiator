@@ -102,6 +102,7 @@ bool calculate_intersections (
    Realf& intersection_dk,
    int intersections_id
 ) {
+   //phiprof::Timer timer {"calculate_intersections"};
    Population& pop = spatial_cell->get_population(popID);
    compute_cell_intersections(spatial_cell, block, popID, map_order, pop.subcycleDt, intersections_id);
    switch(dimension){
@@ -138,6 +139,7 @@ Real to_lagrangian(Real z, Real intersection)
 // gk_ratio = dk/dv in this column
 int to_indexK(Real z, Real intersection, Real gk_ratio, int dim, int meshID)
 {
+   //phiprof::Timer timer {"to_indexK"};
    // Old way
    // return (z - intersection) / (vmesh::getMeshWrapper()->at(meshID).getBlockDxFromIndex(0, dim) * gk_ratio);
 
@@ -165,6 +167,7 @@ Vec to_lagrangian(Real z, Vec intersection) {
 */
 
 Vec to_lagrangian(Vec z, Vec intersection) {
+   //phiprof::Timer timer {"to_lagrangian"};
    return z - intersection;
 }
 
@@ -172,6 +175,7 @@ Vec to_lagrangian(Vec z, Vec intersection) {
 // These functions are probably slow as hell
 Veci to_gk(Vec z, Vec intersection, Real gk_ratio, int dim, int meshID)
 {
+   //phiprof::Timer timer {"to_gk"};
    // Old way
    // return truncatei((z - intersection) / (vmesh::getMeshWrapper()->at(meshID).getCellDxFromIndex(0, dim) * gk_ratio));
 
@@ -206,6 +210,7 @@ Veci to_gk(Vec z, Vec intersection, Real gk_ratio, int dim, int meshID)
 
 Veci to_gk(Real z, Vec intersection, Real gk_ratio, int dim, int meshID)
 {
+   //phiprof::Timer timer {"to_gk"};
    // Old way
    // return truncatei((z - intersection) / (vmesh::getMeshWrapper()->at(meshID).getCellDxFromIndex(0, dim) * gk_ratio));
 
@@ -240,6 +245,7 @@ Veci to_gk(Real z, Vec intersection, Real gk_ratio, int dim, int meshID)
 
 Vec gk_to_lagrangian(int gk, Vec intersection, Real gk_ratio, int dim, int meshID)
 {
+   //phiprof::Timer timer {"gk_to_lagrangian"};
    // Old way
    // return intersection + gk * (gk_ratio * vmesh::getMeshWrapper()->at(meshID).getCellDxFromIndex(0, dim));
 
@@ -248,19 +254,10 @@ Vec gk_to_lagrangian(int gk, Vec intersection, Real gk_ratio, int dim, int meshI
       coords.insert(i, vmesh::getMeshWrapper()->at(meshID).getCellCoordinate(gk, dim, intersection[i], gk_ratio));
    }
    return coords;
-
-   /*
-   Vec coords = intersection;
-   for (uint32_t cell = 0; cell < gk; ++cell) {
-      Real dk = vmesh::getMeshWrapper()->at(meshID).getCellDxFromIndex(cell , dim) * gk_ratio;
-      coords += dk;
-   }
-
-   return coords;
-   */
 }
 
 Vec lagrangian_to_euler(Vec coords, int dim, int meshID) {
+   //phiprof::Timer timer {"lagrangian_to_euler"};
    // Old way
    // return coords / vmesh::getMeshWrapper()->at(meshID).getCellDxFromIndex(0, dim);
 
@@ -269,28 +266,16 @@ Vec lagrangian_to_euler(Vec coords, int dim, int meshID) {
       rval.insert(i, vmesh::getMeshWrapper()->at(meshID).getCellIndex(coords[i], dim));
    }
    return rval;
+}
 
-   /*
-   Vec rval = coords;
-   for (int i = 0; i < rval.size(); ++i) {
-      rval.insert(i, vmesh::VelocityMesh::invalidGlobalID());
+Vec get_source_dx(Vec euler_gk, int dim, int meshID) {
+   //phiprof::Timer timer {"get_source_dx"};
+   Vec rval = euler_gk;
+   for (uint32_t i = 0; i < euler_gk.size(); ++i) {
+      rval.insert(i, vmesh::getMeshWrapper()->at(meshID).getCellDxFromIndex(euler_gk[i], dim)); // Floor should be correct here
+      //std::cerr << "source_dx[" << i << "] is " << rval[i] << "\n";
    }
-   Veci is_set = truncatei(rval);
-   is_set *= 0;
-   
-   for (uint32_t cell = 0; cell < vmesh::getMeshWrapper()->at(meshID).gridLength[dim] * WID; ++cell) {
-      Real dk = vmesh::getMeshWrapper()->at(meshID).getCellDxFromIndex(cell, dim);
-      coords -= dk;
-      for (uint32_t j = 0; j < coords.size(); ++j) {
-         if (is_set[j] == 0 && coords[j] < 0) {
-            rval.insert(j, cell + coords[j] / dk + 1);
-            is_set.insert(j, 1);
-         }
-      }
-   }
-
    return rval;
-   */
 }
 
 /*
@@ -467,6 +452,7 @@ bool map_1d(SpatialCell* spatial_cell,
 
       //now, record which blocks are target blocks
       for(uint columnIndex = setColumnOffsets[setIndex]; columnIndex < setColumnOffsets[setIndex] + setNumColumns[setIndex]; ++columnIndex){
+         //phiprof::Timer recordTimer {"record_target_blocks"};
          const vmesh::LocalID n_cblocks = columnNumBlocks[columnIndex];
          vmesh::GlobalID* cblocks = blocks + columnBlockOffsets[columnIndex]; //column blocks
          velocity_block_indices_t firstBlockIndices;
@@ -592,6 +578,7 @@ bool map_1d(SpatialCell* spatial_cell,
       // loop over columns in set and do the mapping
       valuesColumnOffset = 0; //offset to values array for data in a column in this set
       for(uint columnIndex = setColumnOffsets[setIndex]; columnIndex < setColumnOffsets[setIndex] + setNumColumns[setIndex] ; columnIndex ++){
+         //phiprof::Timer columnTimer {"mapping_over_columns"};
          const vmesh::LocalID n_cblocks = columnNumBlocks[columnIndex];
          vmesh::GlobalID* cblocks = blocks + columnBlockOffsets[columnIndex]; //column blocks
 
@@ -634,6 +621,7 @@ bool map_1d(SpatialCell* spatial_cell,
              Note that the i dimension is vectorized, and thus there are no loops over i
          */
          for (int j = 0; j < WID; j += VECL/WID){
+            //phiprof::Timer jTimer {"j_loop"};
             // create vectors with the i and j indices in the vector position on the plane.
             #if VECL == 4 && WID == 4
             const Veci i_indices = Veci({0, 1, 2, 3});
@@ -779,6 +767,7 @@ bool map_1d(SpatialCell* spatial_cell,
 
             // loop through all blocks in column and compute the mapping as integrals.
             for (uint k=0; k < WID * n_cblocks; ++k ){
+               //phiprof::Timer kTimer {"k_loop"};
                // Compute reconstructions
                // values + i_pcolumnv(n_cblocks, -1, j, 0) is the starting point of the column data for fixed j
                // k + WID is the index where we have stored k index, WID amount of padding.
@@ -838,6 +827,7 @@ bool map_1d(SpatialCell* spatial_cell,
                // std::cerr << "minGk: " << minGk << ", maxGk: " << maxGk << "\n";
 
                for(int gk = minGk; gk <= maxGk; gk++){
+                  //phiprof::Timer gkTimer {"gk_loop"};
                   const int blockK = gk/WID;
                   const int gk_mod_WID = (gk - blockK * WID);
 
@@ -856,9 +846,17 @@ bool map_1d(SpatialCell* spatial_cell,
 
                   // std::cerr << "old v_norm_r: " << (gk + 1) * intersection_dk << ", new v_norm_r: " << (euler_v - vMin[2]) * intersection_dk / dv << "\n";
 
+                  Real targetDx {vmesh::getMeshWrapper()->at(popID).getCellDxFromIndex(gk, dimension)};
+                  //std::cerr << "targetDx is " << targetDx << "\n";
+
                   // TODO there's still something wrong in here...
                   Vec lagrangian_coord = gk_to_lagrangian(gk + 1, intersection_min, gk_ratio, dimension, popID);
                   const Vec euler_gk = lagrangian_to_euler(lagrangian_coord, dimension, popID);
+
+                  // Which one is it??
+                  //Vec sourceDx = get_source_dx(euler_gk, dimension, popID);
+                  Real sourceDx = dvs[k + WID];
+
                   const Vec v_norm_r = (min(max(euler_gk, k_l), k_r) - k_l);
                   // std::cerr << std::fixed << std::setprecision(6);
                   // std::cerr << "intersection_min: " << intersection_min[0] << ", intersection_dk: " << intersection_dk << "\n";
@@ -898,7 +896,8 @@ bool map_1d(SpatialCell* spatial_cell,
                      Realf* targetDataPointer = blockIndexToBlockData[blockK] + j * cell_indices_to_id[1] + gk_mod_WID * cell_indices_to_id[2];
                      Vec targetData;
                      targetData.load_a(targetDataPointer);
-                     targetData += target_density_r - target_density_l;
+                     targetData += (sourceDx / targetDx) * (target_density_r - target_density_l);
+                     //targetData += (target_density_r - target_density_l);
                      targetData.store_a(targetDataPointer);
                   }
                   else{
@@ -908,7 +907,8 @@ bool map_1d(SpatialCell* spatial_cell,
                      for (int target_i=0; target_i < VECL; ++target_i) {
                         const Realf tval = target_density[target_i];
                         const uint tcell = target_cell[target_i];
-                        blockIndexToBlockData[blockK][tcell] += tval;
+                        blockIndexToBlockData[blockK][tcell] += (sourceDx / targetDx) * tval;
+                        //blockIndexToBlockData[blockK][tcell] += tval;
                      }  // for-loop over vector elements
                   }
 
