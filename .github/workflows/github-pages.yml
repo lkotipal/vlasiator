@@ -53,6 +53,7 @@ jobs:
           export PROJECT_NUMBER=$(git rev-parse --short HEAD)
           export VLASIATOR_COMMITLOG=${BUILD_DIR}/vlasiator/commitlog.html
           export VLASIATOR_DOXYGENDOCS=${BUILD_DIR}/vlasiator/doc
+          mkdir -vp $VLASIATOR_DOXYGENDOCS
           git log > $VLASIATOR_COMMITLOG # unformatted git log
           sed s+^OUTPUT_DIRECTORY.*+"OUTPUT_DIRECTORY = ${VLASIATOR_DOXYGENDOCS}\n"+ <Doxyfile.template >Doxyfile
 
