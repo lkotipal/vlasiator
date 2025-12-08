@@ -49,7 +49,7 @@ jobs:
       - name: Build Doxygen docs
         run: |
           # add the thing here, now a dummy html file
-          mkdir -p doc/_build_doxygen/
+          mkdir -vp doc/_build_doxygen/
           touch doc/_build_doxygen/index.html
 
       # Stage all deployed assets in _gh-pages/ for simplicity, and to
@@ -74,14 +74,14 @@ jobs:
       # Add the .nojekyll file
       - name: nojekyll
         run: |
-          touch docs/_build_doxygen/.nojekyll
+          touch doc/_build_doxygen/.nojekyll
 
       # Save artifact for the next step.
       - uses: actions/upload-artifact@v4
         if: ${{ github.event_name == 'push' }}
         with:
           name: gh-pages-build
-          path: docs/_build_doxygen/
+          path: doc/_build_doxygen/
 
   # Deploy in a separate job so that write permissions are restricted
   # to the minimum steps.
@@ -98,7 +98,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: gh-pages-build
-          path: docs/_build_doxygen/
+          path: doc/_build_doxygen/
 
       # As of 2023, we could publish to pages via a Deployment.  This
       # isn't done yet to give it time to stabilize (out of beta), and
@@ -112,5 +112,5 @@ jobs:
         with:
           publish_branch: gh-pages
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: docs/_build_doxygen/
+          publish_dir: doc/_build_doxygen/
           force_orphan: true
