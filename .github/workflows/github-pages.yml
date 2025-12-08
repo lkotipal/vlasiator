@@ -49,11 +49,12 @@ jobs:
       - name: Build Doxygen docs
         run: |
           # add the thing here, now a dummy html file
-          mkdir -vp doc/_build_doxygen/
-          export PROJECT_NUMBER=$(git rev-parse --short HEAD)
+          export BUILD_DIR=doc/_build_doxygen/
           export VLASIATOR_COMMITLOG=${BUILD_DIR}/vlasiator/commitlog.html
           export VLASIATOR_DOXYGENDOCS=${BUILD_DIR}/vlasiator/doc
           mkdir -vp $VLASIATOR_DOXYGENDOCS
+
+          export PROJECT_NUMBER=$(git rev-parse --short HEAD)
           git log > $VLASIATOR_COMMITLOG # unformatted git log
           sed s+^OUTPUT_DIRECTORY.*+"OUTPUT_DIRECTORY = ${VLASIATOR_DOXYGENDOCS}\n"+ <Doxyfile.template >Doxyfile
 
