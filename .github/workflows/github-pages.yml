@@ -53,30 +53,33 @@ jobs:
         run: |
           # add the thing here, now a dummy html file
           export BUILD_DIR=doc/_build_doxygen/
-          export VLASIATOR_COMMITLOG=${BUILD_DIR}/vlasiator/commitlog.html
+          export VLASIATOR_COMMITLOG=${BUILD_DIR}/vlasiator/doc/html/commitlog.html
           export VLASIATOR_DOXYGENDOCS=${BUILD_DIR}/vlasiator/doc
           mkdir -vp $VLASIATOR_DOXYGENDOCS
 
           export PROJECT_NUMBER=$(git rev-parse --short HEAD)
-          git log > $VLASIATOR_COMMITLOG # unformatted git log
+          
           sed s+^OUTPUT_DIRECTORY.*+"OUTPUT_DIRECTORY = ${VLASIATOR_DOXYGENDOCS}\n"+ <Doxyfile.template >Doxyfile
 
           doxygen
+          git log > $VLASIATOR_COMMITLOG # unformatted git log
 
           mkdir _gh_pages
           rsync -a ${VLASIATOR_DOXYGENDOCS}/html/ _gh_pages/
 
           rm Doxyfile
-          VLASIATOR_COMMITLOG=${BUILD_DIR}/vlasiator-dev/commitlog.html
+          VLASIATOR_COMMITLOG=${BUILD_DIR}/vlasiator-dev/doc/html/commitlog.html
           VLASIATOR_DOXYGENDOCS=${BUILD_DIR}/vlasiator-dev/doc
           mkdir -p $VLASIATOR_DOXYGENDOCS
           sed s+^OUTPUT_DIRECTORY.*+"OUTPUT_DIRECTORY = ${VLASIATOR_DOXYGENDOCS}\n"+ <Doxyfile.template >Doxyfile.tmp
           git checkout dev
-          git log > $VLASIATOR_COMMITLOG # unformatted git log
+          
           mv Doxyfile.tmp Doxyfile # overwrite the dev Doxyfile with the new one
           export PROJECT_NUMBER=$(git rev-parse --short HEAD)
 
           doxygen
+
+          git log > $VLASIATOR_COMMITLOG # unformatted git log
 
           mkdir _gh_pages/vlasiator-dev
           rsync -a ${VLASIATOR_DOXYGENDOCS}/html/ _gh_pages/vlasiator-dev
