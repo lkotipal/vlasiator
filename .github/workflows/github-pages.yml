@@ -53,7 +53,7 @@ jobs:
           touch doc/_build_doxygen/index.html
           export PROJECT_NUMBER=$(git rev-parse --short HEAD)
           cd doc
-          make_documentation.sh
+          ./make_documentation.sh
           cd ..
 
       # Stage all deployed assets in _gh-pages/ for simplicity, and to
