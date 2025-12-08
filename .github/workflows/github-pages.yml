@@ -3,12 +3,12 @@
 name: generate-pages
 on:
    push:
-      branches : ["dev","master"]
+      branches : ["dev","master", "gh-doxygen"]
    workflow_dispatch:
 
 
 env:
-  DEFAULT_BRANCH: "master"
+  DEFAULT_BRANCH: "gh-doxygen"
 
 jobs:
   build:
@@ -48,14 +48,16 @@ jobs:
       # Build
       - name: Build Doxygen docs
         run: |
-          # add the thing here
+          # add the thing here, now a dummy html file
+          mkdir -p doc/_build_doxygen/
+          touch doc/_build_doxygen/index.html
 
       # Stage all deployed assets in _gh-pages/ for simplicity, and to
       # prepare to do a multi-branch deployment.
-      - name: Copy deployment data to _gh-pages/
-        if: ${{ github.event_name == 'push' }}
-        run:
-          rsync -a Documentation/sphinx/_build/dirhtml/ _gh-pages/
+      # - name: Copy deployment data to _gh-pages/
+      #   if: ${{ github.event_name == 'push' }}
+      #   run:
+      #     rsync -a Documentation/sphinx/_build/dirhtml/ _gh-pages/
 
       # This would be nice, didn't work for analysator somehow
       # # Use gh-pages-multibranch to multiplex different branches into
