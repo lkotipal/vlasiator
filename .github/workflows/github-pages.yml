@@ -50,11 +50,14 @@ jobs:
         run: |
           # add the thing here, now a dummy html file
           mkdir -vp doc/_build_doxygen/
-          touch doc/_build_doxygen/index.html
           export PROJECT_NUMBER=$(git rev-parse --short HEAD)
-          cd doc
-          ./make_documentation.sh
-          cd ..
+          export VLASIATOR_COMMITLOG=${BUILD_DIR}/vlasiator/commitlog.html
+          export VLASIATOR_DOXYGENDOCS=${BUILD_DIR}/vlasiator/doc
+          git log > $VLASIATOR_COMMITLOG # unformatted git log
+          sed s+^OUTPUT_DIRECTORY.*+"OUTPUT_DIRECTORY = ${VLASIATOR_DOXYGENDOCS}\n"+ <Doxyfile.template >Doxyfile
+
+          doxygen
+          
 
       # Stage all deployed assets in _gh-pages/ for simplicity, and to
       # prepare to do a multi-branch deployment.
