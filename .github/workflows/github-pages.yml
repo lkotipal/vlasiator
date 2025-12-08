@@ -66,13 +66,15 @@ jobs:
           mkdir _gh_pages
           rsync -a ${VLASIATOR_DOXYGENDOCS}/html/ _gh_pages/
 
-          
+          rm Doxyfile
           VLASIATOR_COMMITLOG=${BUILD_DIR}/vlasiator-dev/commitlog.html
           VLASIATOR_DOXYGENDOCS=${BUILD_DIR}/vlasiator-dev/doc
           mkdir -p $VLASIATOR_DOXYGENDOCS
-          sed s+^OUTPUT_DIRECTORY.*+"OUTPUT_DIRECTORY = ${VLASIATOR_DOXYGENDOCS}\n"+ <Doxyfile.template >Doxyfile
+          sed s+^OUTPUT_DIRECTORY.*+"OUTPUT_DIRECTORY = ${VLASIATOR_DOXYGENDOCS}\n"+ <Doxyfile.template >Doxyfile.tmp
           git checkout dev
           git log > $VLASIATOR_COMMITLOG # unformatted git log
+          mv Doxyfile.tmp Doxyfile # overwrite the dev Doxyfile with the new one
+          export PROJECT_NUMBER=$(git rev-parse --short HEAD)
 
           doxygen
 
