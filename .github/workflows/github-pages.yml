@@ -76,7 +76,7 @@ jobs:
             if [[ -z "$DISTANCE" ]]; then
               HIST=$PREV_TAG_FIRST
             else
-              HIST="$PREV_TAG_FIRST $DISTANCE commits"
+              HIST="$PREV_TAG_FIRST + $DISTANCE commits"
             fi
             HIST="$HIST$PREV_TAG"
           fi
