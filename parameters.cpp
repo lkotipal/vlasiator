@@ -128,7 +128,7 @@ uint P::maxFieldSolverSubcycles = 0.0;
 int P::maxSlAccelerationSubcycles = 0.0;
 Real P::resistivity = NAN;
 bool P::fieldSolverDiffusiveEterms = true;
-bool P::fieldSolverFiniteDifferencing = true;
+bool P::fieldSolverFiniteDifferencing = false;
 uint P::ohmHallTerm = 0;
 uint P::ohmGradPeTerm = 0;
 Real P::electronTemperature = 0.0;
@@ -355,7 +355,7 @@ bool P::addParameters() {
    RP::add("fieldsolver.maxSubcycles", "Maximum allowed field solver subcycles", 1);
    RP::add("fieldsolver.resistivity", "Resistivity for the eta*J term in Ohm's law.", 0.0);
    RP::add("fieldsolver.diffusiveEterms", "Enable diffusive terms in the computation of E", true);
-   RP::add("fieldsolver.finiteDifferencing", "Enable finite differencing at sysboundaries", true);
+   RP::add("fieldsolver.finiteDifferencing", "Enable finite differencing at sysboundaries", false);
    RP::add(
        "fieldsolver.ohmHallTerm",
        "Enable/choose spatial order of the Hall term in Ohm's law. 0: off, 1: 1st spatial order, 2: 2nd spatial order",
