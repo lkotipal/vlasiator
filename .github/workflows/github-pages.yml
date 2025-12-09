@@ -38,6 +38,7 @@ jobs:
           head_ref: ${{github.head_ref}}
           base_ref: ${{github.base_ref}}
         run: |
+          git fetch origin
           echo "github.ref: ${ref}"
           echo "github.event_name: ${event_name}"
           echo "github.head_ref: ${head_ref}"
