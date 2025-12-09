@@ -74,11 +74,11 @@ jobs:
               fi
             fi
             if [[ -z "$DISTANCE" ]]; then
-              HIST=$PREV_TAG_FIRST $DISTANCE commits
-            else
               HIST=$PREV_TAG_FIRST
+            else
+              HIST="$PREV_TAG_FIRST $DISTANCE commits"
             fi
-            HIST=$HIST$PREV_TAG
+            HIST="$HIST$PREV_TAG"
           fi
           if [[ -z "$HIST" ]]; then
             export PROJECT_NUMBER=$(git rev-parse --short HEAD)
