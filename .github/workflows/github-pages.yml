@@ -79,7 +79,7 @@ jobs:
           if [[ -z "$HIST" ]]; then
             export PROJECT_NUMBER=$(git rev-parse --short HEAD)
           else
-            export PROJECT_NUMBER=$(git rev-parse --short HEAD) "($HIST)"
+            export PROJECT_NUMBER="$(git rev-parse --short HEAD) ($HIST)"
           fi
           
           sed s+^OUTPUT_DIRECTORY.*+"OUTPUT_DIRECTORY = ${VLASIATOR_DOXYGENDOCS}\n"+ <Doxyfile.template >Doxyfile
