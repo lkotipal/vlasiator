@@ -70,11 +70,11 @@ jobs:
             fi
             DISTANCE=$(git rev-list $PREV_TAG..HEAD --count)||echo Error in git rev-list
             if [[ -z "$DISTANCE" ]]; then
-              HIST=$PREV_TAG_FIRST + $DISTANCE commits
+              HIST=$PREV_TAG_FIRST $DISTANCE commits
             else
               HIST=$PREV_TAG_FIRST
             fi
-            HIST=$HIST+$PREV_TAG
+            HIST=$HIST$PREV_TAG
           fi
           export PROJECT_NUMBER=$(git rev-parse --short HEAD) ($HIST)
           
