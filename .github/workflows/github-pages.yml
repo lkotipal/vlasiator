@@ -66,7 +66,7 @@ jobs:
             if [[ -z "$PREV_TAG" ]]; then
               PREV_TAG=
             else
-              PREV_TAG=, including $PREV_TAG
+              PREV_TAG=", including "$PREV_TAG
             fi
             DISTANCE=$(git rev-list $PREV_TAG..HEAD --count)||echo Error in git rev-list
             if [[ -z "$DISTANCE" ]]; then
