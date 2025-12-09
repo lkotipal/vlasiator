@@ -32,6 +32,8 @@
 #include <array>
 #include "definitions.h"
 #include <iostream>
+#include "vlasovsolver/vec.h"
+#include <phiprof.hpp>
 
 #include "arch/arch_device_api.h"
 #ifdef USE_GPU
@@ -72,8 +74,25 @@ namespace vmesh {
 
       MeshParameters(std::string_view name, std::array<Real, 6> meshLimits, std::array<uint32_t, 6> hiResRange, std::array<uint32_t, 3> gridLength, std::array<uint32_t, 3> blockLength);
 
-      // TODO these are a little bit off idk why
+      ARCH_HOSTDEV Vec getCellCoordinate(uint32_t index, int dim, Vec intersection, Real factor) const {
+         //phiprof::Timer timer {"getCellCoordinate"};
+         // TODO can be cached
+         Real hiResMinCoord {hiResRange[2 * dim] * factor * blockSize[dim]};
+         Real hiResMaxCoord {(hiResRange[2 * dim + 1]) * factor * blockSize[dim]};
+
+         if (index > (2 * hiResRange[2 * dim + 1] - hiResRange[2 * dim]) * blockLength[dim]) {
+            //std::cerr << "index " << index << " = " << (index - (2 * hiResRange[2 * dim + 1] - hiResRange[2 * dim])) << "\n";
+            //std::cerr << "factor: " << factor << ", blockSize: " << blockSize[dim] << " = " << factor * blockSize[dim] / blockLength[dim] << "\n";
+            return intersection + hiResMaxCoord + (index - (2 * hiResRange[2 * dim + 1] - hiResRange[2 * dim]) * blockLength[dim]) * factor * blockSize[dim] / blockLength[dim];
+         } else if (index > hiResRange[2 * dim] * blockLength[dim]) {
+            return intersection + hiResMinCoord + (index - hiResRange[2 * dim] * blockLength[dim]) * factor * blockSize[dim] / blockLength[dim] / 2;
+         } else {
+            return intersection + index * factor * blockSize[dim] / blockLength[dim];
+         }
+      }
+
       ARCH_HOSTDEV Real getCellCoordinate(uint32_t index, int dim, Real intersection, Real factor) const {
+         //phiprof::Timer timer {"getCellCoordinate"};
          // TODO can be cached
          Real hiResMinCoord {hiResRange[2 * dim] * factor * blockSize[dim]};
          Real hiResMaxCoord {(hiResRange[2 * dim + 1]) * factor * blockSize[dim]};
@@ -106,6 +125,7 @@ namespace vmesh {
       // These can return fractional index
       // Cast to int if you don't want that
       ARCH_HOSTDEV Real getBlockIndex(Real coord, int dim, Real intersection, Real factor) const {
+         //phiprof::Timer timer {"getBlockIndex"};
          //std::cerr << "Coord: " << coord << ", intersection: " << intersection << " = " << coord - intersection << "\n";
          coord -= intersection;
          // TODO can be cached
@@ -131,6 +151,36 @@ namespace vmesh {
       }
 
       ARCH_HOSTDEV Real getCellIndex(Real coord, int dim) const {
+         return getCellIndex(coord, dim, meshMinLimits[dim], 1.0);
+      }
+
+      ARCH_HOSTDEV Vec getBlockIndex(Vec coord, int dim, Real intersection, Real factor) const {
+         //phiprof::Timer timer {"getBlockIndex"};
+         //std::cerr << "Coord: " << coord << ", intersection: " << intersection << " = " << coord - intersection << "\n";
+         coord -= intersection;
+         // TODO can be cached
+         Real hiResMinCoord {hiResRange[2 * dim] * factor * blockSize[dim]};
+         Real hiResMaxCoord {(hiResRange[2 * dim + 1]) * factor * blockSize[dim]};
+         //std::cerr << "hiResMin: " << hiResRange[2 * dim] << ", " << hiResMinCoord << ", hiResMax: " << hiResRange[2 * dim + 1] << ", " << hiResMaxCoord << "\n";
+
+         return select(coord > hiResMaxCoord, 
+            2 * hiResRange[2 * dim + 1] - hiResRange[2 * dim] + (coord - hiResMaxCoord) / (factor * blockSize[dim]), 
+            select(coord > hiResMinCoord, 
+               hiResRange[2 * dim] + 2 * (coord - hiResMinCoord) / (factor * blockSize[dim]), 
+               coord / (factor * blockSize[dim])
+            )
+         );
+      }
+
+      ARCH_HOSTDEV Vec getBlockIndex(Vec coord, int dim) const {
+         return getBlockIndex(coord, dim, meshMinLimits[dim], 1.0);
+      }
+
+      ARCH_HOSTDEV Vec getCellIndex(Vec coord, int dim, Real intersection, Real factor) const {
+         return blockLength[dim] * getBlockIndex(coord, dim, intersection, factor);
+      }
+
+      ARCH_HOSTDEV Vec getCellIndex(Vec coord, int dim) const {
          return getCellIndex(coord, dim, meshMinLimits[dim], 1.0);
       }
 

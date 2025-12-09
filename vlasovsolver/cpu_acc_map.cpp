@@ -173,6 +173,7 @@ Vec to_lagrangian(Vec z, Vec intersection) {
 
 // Oh dear...
 // These functions are probably slow as hell
+// TODO vectorize these
 Veci to_gk(Vec z, Vec intersection, Real gk_ratio, int dim, int meshID)
 {
    //phiprof::Timer timer {"to_gk"};
@@ -184,28 +185,6 @@ Veci to_gk(Vec z, Vec intersection, Real gk_ratio, int dim, int meshID)
       rval.insert(i, vmesh::getMeshWrapper()->at(meshID).getCellIndex(z[i], dim, intersection[i], gk_ratio));
    }
    return rval;
-
-   /*
-   Vec coords = to_lagrangian(z, intersection);
-   Veci rval = truncatei(coords);
-   for (int i = 0; i < rval.size(); ++i) {
-      rval.insert(i, vmesh::VelocityMesh::invalidGlobalID());
-   }
-   Veci is_set = rval * 0;
-
-   for (uint32_t cell = 0; cell < vmesh::getMeshWrapper()->at(meshID).gridLength[dim] * WID; ++cell) {
-      Real dk = vmesh::getMeshWrapper()->at(meshID).getCellDxFromIndex(cell, dim) * gk_ratio;
-      coords -= dk;
-      for (uint32_t j = 0; j < coords.size(); ++j) {
-         if (is_set[j] == 0 && coords[j] < 0) {
-            rval.insert(j, cell);
-            is_set.insert(j, 1);
-         }
-      }
-   }
-
-   return rval;
-   */
 }
 
 Veci to_gk(Real z, Vec intersection, Real gk_ratio, int dim, int meshID)
@@ -219,28 +198,6 @@ Veci to_gk(Real z, Vec intersection, Real gk_ratio, int dim, int meshID)
       rval.insert(i, vmesh::getMeshWrapper()->at(meshID).getCellIndex(z, dim, intersection[i], gk_ratio));
    }
    return rval;
-
-   /*
-   Vec coords = to_lagrangian(z, intersection);
-   Veci rval = truncatei(coords);
-   for (int i = 0; i < rval.size(); ++i) {
-      rval.insert(i, vmesh::VelocityMesh::invalidGlobalID());
-   }
-   Veci is_set = rval * 0;
-
-   for (uint32_t cell = 0; cell < vmesh::getMeshWrapper()->at(meshID).gridLength[dim] * WID; ++cell) {
-      Real dk = vmesh::getMeshWrapper()->at(meshID).getCellDxFromIndex(cell, dim) * gk_ratio;
-      coords -= dk;
-      for (uint32_t j = 0; j < coords.size(); ++j) {
-         if (is_set[j] == 0 && coords[j] < 0) {
-            rval.insert(j, cell);
-            is_set.insert(j, 1);
-         }
-      }
-   }
-
-   return rval;
-   */
 }
 
 Vec gk_to_lagrangian(int gk, Vec intersection, Real gk_ratio, int dim, int meshID)
@@ -249,11 +206,13 @@ Vec gk_to_lagrangian(int gk, Vec intersection, Real gk_ratio, int dim, int meshI
    // Old way
    // return intersection + gk * (gk_ratio * vmesh::getMeshWrapper()->at(meshID).getCellDxFromIndex(0, dim));
 
-   Vec coords = intersection;
-   for (uint32_t i = 0; i < intersection.size(); ++i) {
-      coords.insert(i, vmesh::getMeshWrapper()->at(meshID).getCellCoordinate(gk, dim, intersection[i], gk_ratio));
-   }
-   return coords;
+   return vmesh::getMeshWrapper()->at(meshID).getCellCoordinate(gk, dim, intersection, gk_ratio);
+
+   //Vec coords = intersection;
+   //for (uint32_t i = 0; i < intersection.size(); ++i) {
+   //   coords.insert(i, vmesh::getMeshWrapper()->at(meshID).getCellCoordinate(gk, dim, intersection[i], gk_ratio));
+   //}
+   //return coords;
 }
 
 Vec lagrangian_to_euler(Vec coords, int dim, int meshID) {
@@ -261,22 +220,24 @@ Vec lagrangian_to_euler(Vec coords, int dim, int meshID) {
    // Old way
    // return coords / vmesh::getMeshWrapper()->at(meshID).getCellDxFromIndex(0, dim);
 
-   Vec rval = coords;
-   for (uint32_t i = 0; i < coords.size(); ++i) {
-      rval.insert(i, vmesh::getMeshWrapper()->at(meshID).getCellIndex(coords[i], dim));
-   }
-   return rval;
+   return vmesh::getMeshWrapper()->at(meshID).getCellIndex(coords, dim);
+
+   //Vec rval = coords;
+   //for (uint32_t i = 0; i < coords.size(); ++i) {
+   //   rval.insert(i, vmesh::getMeshWrapper()->at(meshID).getCellIndex(coords[i], dim));
+   //}
+   //return rval;
 }
 
-Vec get_source_dx(Vec euler_gk, int dim, int meshID) {
-   //phiprof::Timer timer {"get_source_dx"};
-   Vec rval = euler_gk;
-   for (uint32_t i = 0; i < euler_gk.size(); ++i) {
-      rval.insert(i, vmesh::getMeshWrapper()->at(meshID).getCellDxFromIndex(euler_gk[i], dim)); // Floor should be correct here
-      //std::cerr << "source_dx[" << i << "] is " << rval[i] << "\n";
-   }
-   return rval;
-}
+//Vec get_source_dx(Vec euler_gk, int dim, int meshID) {
+//   phiprof::Timer timer {"get_source_dx"};
+//   Vec rval = euler_gk;
+//   for (uint32_t i = 0; i < euler_gk.size(); ++i) {
+//      rval.insert(i, vmesh::getMeshWrapper()->at(meshID).getCellDxFromIndex(euler_gk[i], dim)); // Floor should be correct here
+//      //std::cerr << "source_dx[" << i << "] is " << rval[i] << "\n";
+//   }
+//   return rval;
+//}
 
 /*
    Here we map from the current time step grid, to a target grid which
@@ -764,6 +725,17 @@ bool map_1d(SpatialCell* spatial_cell,
                }
             }
 
+            // Precalculate values for innermost loop
+            //phiprof::Timer precalcLoop {"precalc_loop"};
+            int gkMinGlobal {columnMinBlockK[columnIndex] * WID};
+            int gkMaxGlobal {(columnMaxBlockK[columnIndex] + 1) * WID - 1};
+            std::vector<Vec> euler_gks (gkMaxGlobal - gkMinGlobal + 1);
+            for (size_t i = 0; i < euler_gks.size(); ++i) {
+               int gk = i + gkMinGlobal;
+               Vec lagrangian_coord = gk_to_lagrangian(gk + 1, intersection_min, gk_ratio, dimension, popID);
+               euler_gks[i] = lagrangian_to_euler(lagrangian_coord, dimension, popID);
+            }
+            //precalcLoop.stop();
 
             // loop through all blocks in column and compute the mapping as integrals.
             for (uint k=0; k < WID * n_cblocks; ++k ){
@@ -850,14 +822,14 @@ bool map_1d(SpatialCell* spatial_cell,
                   //std::cerr << "targetDx is " << targetDx << "\n";
 
                   // TODO there's still something wrong in here...
-                  Vec lagrangian_coord = gk_to_lagrangian(gk + 1, intersection_min, gk_ratio, dimension, popID);
-                  const Vec euler_gk = lagrangian_to_euler(lagrangian_coord, dimension, popID);
+                  // Vec lagrangian_coord = gk_to_lagrangian(gk + 1, intersection_min, gk_ratio, dimension, popID);
+                  // const Vec euler_gk = lagrangian_to_euler(lagrangian_coord, dimension, popID);
 
                   // Which one is it??
                   //Vec sourceDx = get_source_dx(euler_gk, dimension, popID);
                   Real sourceDx = dvs[k + WID];
 
-                  const Vec v_norm_r = (min(max(euler_gk, k_l), k_r) - k_l);
+                  const Vec v_norm_r = (min(max(euler_gks[gk - gkMinGlobal], k_l), k_r) - k_l);
                   // std::cerr << std::fixed << std::setprecision(6);
                   // std::cerr << "intersection_min: " << intersection_min[0] << ", intersection_dk: " << intersection_dk << "\n";
                   // std::cerr << "Old lagrangian_coord: " << ((gk + 1) * intersection_dk + intersection_min)[0] << ", new lagrangian_coord: " << lagrangian_coord[0] << "\n";
