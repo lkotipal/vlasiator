@@ -57,32 +57,51 @@ jobs:
           export VLASIATOR_DOXYGENDOCS=${BUILD_DIR}/vlasiator/doc
           mkdir -vp $VLASIATOR_DOXYGENDOCS
 
-          export PROJECT_NUMBER=$(git rev-parse --short HEAD)
+          PREV_TAG=$(git describe --tags --abbrev=0)||echo Error in git-describe
+          PREV_TAG_FIRST=$(git describe --tags --abbrev=0 --first-parent)||echo Error in git-describe
+          if [[ -z "$PREV_TAG_FIRST" ]]; then
+            PREV_TAG_FIRST=unknown
+            HIST=
+          else
+            if [[ -z "$PREV_TAG" ]]; then
+              PREV_TAG=
+            else
+              PREV_TAG=, including $PREV_TAG
+            fi
+            DISTANCE=$(git rev-list $PREV_TAG..HEAD --count)||echo Error in git rev-list
+            if [[ -z "$DISTANCE" ]]; then
+              HIST=$PREV_TAG_FIRST + $DISTANCE commits
+            else
+              HIST=$PREV_TAG_FIRST
+            fi
+            HIST=$HIST+$PREV_TAG
+          fi
+          export PROJECT_NUMBER=$(git rev-parse --short HEAD) ($HIST)
           
           sed s+^OUTPUT_DIRECTORY.*+"OUTPUT_DIRECTORY = ${VLASIATOR_DOXYGENDOCS}\n"+ <Doxyfile.template >Doxyfile
 
           doxygen
-          git log > $VLASIATOR_COMMITLOG # unformatted git log
+          #  git log > $VLASIATOR_COMMITLOG # unformatted git log
 
           mkdir _gh_pages
           rsync -a ${VLASIATOR_DOXYGENDOCS}/html/ _gh_pages/
 
           rm Doxyfile
-          VLASIATOR_COMMITLOG=${BUILD_DIR}/vlasiator-dev/doc/html/commitlog.html
-          VLASIATOR_DOXYGENDOCS=${BUILD_DIR}/vlasiator-dev/doc
-          mkdir -p $VLASIATOR_DOXYGENDOCS
-          sed s+^OUTPUT_DIRECTORY.*+"OUTPUT_DIRECTORY = ${VLASIATOR_DOXYGENDOCS}\n"+ <Doxyfile.template >Doxyfile.tmp
-          git checkout dev
-          
-          mv Doxyfile.tmp Doxyfile # overwrite the dev Doxyfile with the new one
-          export PROJECT_NUMBER=$(git rev-parse --short HEAD)
+          #  VLASIATOR_COMMITLOG=${BUILD_DIR}/vlasiator-dev/doc/html/commitlog.html
+          #  VLASIATOR_DOXYGENDOCS=${BUILD_DIR}/vlasiator-dev/doc
+          #  mkdir -p $VLASIATOR_DOXYGENDOCS
+          #  sed s+^OUTPUT_DIRECTORY.*+"OUTPUT_DIRECTORY = ${VLASIATOR_DOXYGENDOCS}\n"+ <Doxyfile.template >Doxyfile.tmp
+          #  git checkout dev
+           
+          #  mv Doxyfile.tmp Doxyfile # overwrite the dev Doxyfile with the new one
+          #  export PROJECT_NUMBER=$(git rev-parse --short HEAD)
 
-          doxygen
+          # doxygen
 
-          git log > $VLASIATOR_COMMITLOG # unformatted git log
+          # git log > $VLASIATOR_COMMITLOG # unformatted git log
 
-          mkdir _gh_pages/vlasiator-dev
-          rsync -a ${VLASIATOR_DOXYGENDOCS}/html/ _gh_pages/vlasiator-dev
+          #mkdir _gh_pages/vlasiator-dev
+          #rsync -a ${VLASIATOR_DOXYGENDOCS}/html/ _gh_pages/vlasiator-dev
 
           
 
