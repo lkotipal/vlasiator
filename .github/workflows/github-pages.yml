@@ -67,7 +67,11 @@ jobs:
             if [[ -z "$PREV_TAG" ]]; then
               PREV_TAG=
             else
-              PREV_TAG=", including "$PREV_TAG
+              if [ "$PREV_TAG" == "$PREV_TAG_FIRST" ]; then
+                PREV_TAG=
+              else
+                PREV_TAG=", including "$PREV_TAG
+              fi
             fi
             if [[ -z "$DISTANCE" ]]; then
               HIST=$PREV_TAG_FIRST $DISTANCE commits
