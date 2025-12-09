@@ -63,12 +63,12 @@ jobs:
             PREV_TAG_FIRST=unknown
             HIST=
           else
+            DISTANCE=$(git rev-list $PREV_TAG_FIRST..HEAD --count)||echo Error in git rev-list
             if [[ -z "$PREV_TAG" ]]; then
               PREV_TAG=
             else
               PREV_TAG=", including "$PREV_TAG
             fi
-            DISTANCE=$(git rev-list $PREV_TAG..HEAD --count)||echo Error in git rev-list
             if [[ -z "$DISTANCE" ]]; then
               HIST=$PREV_TAG_FIRST $DISTANCE commits
             else
