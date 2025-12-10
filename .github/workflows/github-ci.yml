@@ -74,7 +74,7 @@ jobs:
           rm -rf libraries library-build libraries-pioneer.tar.gz
       - name: Submit library job
         run: |
-          srun --interactive -p pioneer -J vlasiator-libs -n 1 -c 64 -t 01:00:00 bash -lc 'module load openmpi; ./fetch_and_build_libraries.sh pioneer'
+          srun --interactive -p pioneer -J vlasiator-libs -n 1 -c 64 -t 01:00:00 bash -lc 'module load llvm openmpi; ./fetch_and_build_libraries.sh pioneer'
           #ssh synth-hca 'source /etc/profile.d/lmod.sh; export PATH=$PATH:$HOME/bin; module load llvm/cross/EPI-0.7-development; cd '$GITHUB_WORKSPACE'; ./fetch_and_build_libraries.sh pioneer'
       - name: Build libraries tar
         run: tar -czvf libraries-pioneer.tar.gz libraries-pioneer/
@@ -551,7 +551,7 @@ jobs:
       run: VLASIATOR_ARCH=pioneer make clean
     - name: Compile vlasiator (RISC-V)
       run: |
-        srun --interactive -p pioneer -J vlasiator_build -n 1 -c 64 --pty -t 01:00:00 bash -lc 'module load boost papi openmpi; export VLASIATOR_ARCH=pioneer; make -j64'
+        srun --interactive -p pioneer -J vlasiator_build -n 1 -c 64 --pty -t 01:00:00 bash -lc 'module load boost papi llvm openmpi; export VLASIATOR_ARCH=pioneer; make -j64'
         #ssh synth-hca 'source /etc/profile.d/lmod.sh; export PATH=$PATH:$HOME/bin; module load llvm/cross/EPI-0.7-development; export VLASIATOR_ARCH=pioneer; cd '$GITHUB_WORKSPACE'; make -j 12'
     - name: Upload riscv binary
       uses: actions/upload-artifact@v4
