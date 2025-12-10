@@ -13,24 +13,20 @@ LNK = mpic++
 #Options: 
 # AVX:      VEC4D_AGNER, VEC4F_AGNER, VEC8F_AGNER
 # AVX512:   VEC8D_AGNER, VEC16F_AGNER
-# Fallback: VEC4D_FALLBACK, VEC4F_FALLBACK, VEC8F_FALLBACK
+# Fallback: VEC_FALLBACK_GENERIC
 
 ifeq ($(DISTRIBUTION_FP_PRECISION),SPF)
 #Single-precision        
-        VECTORCLASS = VEC8F_FALLBACK
-        INC_VECTORCLASS = -I$(LIBRARY_PREFIX)/../vlasiator/vlasovsolver
+        VECTORCLASS = VEC_FALLBACK_GENERIC
 else
 #Double-precision
-#       VECTORCLASS = VEC4D_AGNER
-#       INC_VECTORCLASS = -I$(LIBRARY_PREFIX)/vectorclass
-        VECTORCLASS = VEC4D_FALLBACK
-        INC_VECTORCLASS = -I$(LIBRARY_PREFIX)/../vlasiator/vlasovsolver
+        VECTORCLASS = VEC_FALLBACK_GENERIC
 endif
 
 FLAGS =
 # note: std was c++11
 # note: testpackage settings missing
-CXXFLAGS = -I$(HOME)/include -O3 -std=c++17 -W -Wall -pedantic -Wno-unused -Wno-unused-parameter -Wno-missing-braces  -fopenmp -march=native
+CXXFLAGS = -I$(HOME)/include -O3 -std=c++20 -W -Wall -pedantic -Wno-unused -Wno-unused-parameter -Wno-missing-braces  -fopenmp -march=native
 
 MATHFLAGS = -ffast-math -fno-finite-math-only
 testpackage: MATHFLAGS = -fno-unsafe-math-optimizations
