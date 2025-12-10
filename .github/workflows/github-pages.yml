@@ -3,12 +3,12 @@
 name: generate-pages
 on:
    push:
-      branches : ["dev","master", "gh-doxygen"]
+      branches : ["dev"]
    workflow_dispatch:
 
 
 env:
-  DEFAULT_BRANCH: "gh-doxygen"
+  DEFAULT_BRANCH: "dev"
 
 jobs:
   build:
