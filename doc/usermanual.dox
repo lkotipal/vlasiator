@@ -14,6 +14,7 @@ Please see https://github.com/fmihpc/vlasiator/wiki/Installing-Vlasiator for ins
 
 \section  sec-options Program options
 
+Nb. to be updated/automated.
 \verbatim
 Usage: main [options (options given on the command line override options given everywhere else)], where options are::
   --help                                print this help message
