@@ -42,6 +42,10 @@ jobs:
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++ build-essential cmake make libopenmpi-dev openmpi-bin libboost-program-options-dev
       - name: Run library build script
         run: |
           . ./fetch_and_build_libraries.sh arm64
@@ -567,7 +571,8 @@ jobs:
         submodules: true
     - name: Install boost
       run: |
-        sudo apt-get install libboost-program-options-dev
+       sudo apt-get update
+       sudo apt-get install -y g++ build-essential cmake make libopenmpi-dev openmpi-bin libboost-program-options-dev
     - name: Download libraries
       uses: actions/download-artifact@v5
       with:
