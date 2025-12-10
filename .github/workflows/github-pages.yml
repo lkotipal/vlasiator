@@ -83,9 +83,9 @@ jobs:
             HIST="$HIST$PREV_TAG"
           fi
           if [[ -z "$HIST" ]]; then
-            export PROJECT_NUMBER="$(git rev-parse --short HEAD) on $(git branch)"
+            export PROJECT_NUMBER="$(git rev-parse --short HEAD) on $(git branch --show-current)"
           else
-            export PROJECT_NUMBER="$(git rev-parse --short HEAD) on $(git branch) ($HIST)"
+            export PROJECT_NUMBER="$(git rev-parse --short HEAD) on $(git branch --show-current) ($HIST)"
           fi
           
           
