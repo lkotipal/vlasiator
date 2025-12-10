@@ -7,13 +7,9 @@
 \tableofcontents
   Vlasiator: hybrid-Vlasov simulations
 
-\section sec-intro Introduction
-
-Intro
-
 \section sec-install Installation
 
-Please read dccrg manual for hints on installing libraries: http://gitorious.org/dccrg/pages/Install
+Please see https://github.com/fmihpc/vlasiator/wiki/Installing-Vlasiator for installation instructions.
 
 
 \section  sec-options Program options
