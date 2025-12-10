@@ -124,6 +124,11 @@ ifeq ($(USE_HIP),1)
 	INC_VECTORCLASS =
 endif
 
+#Update GPU memeory pointer list
+ifeq ($(USE_GPU),1)
+$(shell ./updateGpuMemoryPointerList.sh 1>&2)
+endif
+
 #GPU specs
 ifeq ($(USE_GPU),1)
 	ifdef THREADS_PER_MP
