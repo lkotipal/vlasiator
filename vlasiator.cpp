@@ -1213,7 +1213,7 @@ int simulate(int argn,char* args[]) {
          phiprof::Timer timer {"Update system boundaries (Vlasov pre-translation)"};
          sysBoundaryContainer.updateState(mpiGrid, perBGrid, BgBGrid, P::t + 0.5 * P::dt);
 
-         // updateState leaves mpiGrid and fsgrid in mismatching states, synchronization is needed
+         // updateState leaves mpiGrid and fsgrid in mismatching states, interpolated moments need to be recalculated
          // TODO: Check whether updated state is the same as previously so synchronization can be skipped when not needed?
          calculateInterpolatedVelocityMoments(
             mpiGrid,
@@ -1229,33 +1229,6 @@ int simulate(int argn,char* args[]) {
             CellParams::P_13,
             CellParams::P_12
          );
-         if (P::propagateField) {
-            feedMomentsIntoFsGrid(mpiGrid, cells, momentsGrid, technicalGrid, false);
-            propagateFields(
-               perBGrid,
-               perBDt2Grid,
-               EGrid,
-               EDt2Grid,
-               EHallGrid,
-               EGradPeGrid,
-               EGradPeDt2Grid,
-               momentsGrid,
-               momentsDt2Grid,
-               dPerBGrid,
-               dMomentsGrid,
-               dMomentsDt2Grid,
-               BgBGrid,
-               volGrid,
-               technicalGrid,
-               sysBoundaryContainer,
-               0.0,
-               1.0
-            );
-            volGrid.updateGhostCells();
-            technicalGrid.updateGhostCells();
-            getFieldsFromFsGrid(volGrid, BgBGrid, EGradPeGrid, dMomentsGrid, technicalGrid, mpiGrid, cells);
-         }
-
          timer.stop();
          addTimedBarrier("barrier-boundary-conditions");
       }
